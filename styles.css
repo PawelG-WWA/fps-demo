@@ -1363,66 +1363,203 @@ h2 {
   color: #ffffff;
 }
 
-/* Separated floating scenario description footer */
+/* Modern eye-catching floating scenario notification banner */
 .sim-footer-card {
+  --sim-accent: #059669;
+  --sim-tint: rgba(5, 150, 105, 0.12);
+  --sim-bg: #ffffff;
+  --sim-border: rgba(5, 150, 105, 0.28);
+  position: relative;
+  overflow: hidden;
   flex: 0 0 auto;
   width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--sim-bg);
+  border: 1.5px solid var(--sim-border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
-  padding: clamp(10px, 1.3vh, 16px) clamp(14px, 1.6vw, 20px);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), 0 0 0 0 var(--sim-tint);
+  padding: clamp(10px, 1.3vh, 15px) clamp(14px, 1.6vw, 20px) clamp(10px, 1.3vh, 15px) clamp(18px, 1.8vw, 24px);
   display: flex;
   align-items: center;
-  gap: clamp(12px, 1.5vw, 20px);
+  gap: clamp(12px, 1.5vw, 18px);
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sim-footer-card[data-tier="mid"] {
+  --sim-accent: #d97706;
+  --sim-tint: rgba(217, 119, 6, 0.16);
+  --sim-bg: #fffdf7;
+  --sim-border: rgba(217, 119, 6, 0.42);
+}
+
+.sim-footer-card[data-tier="warn"] {
+  --sim-accent: #ea580c;
+  --sim-tint: rgba(234, 88, 12, 0.18);
+  --sim-bg: #fffaf5;
+  --sim-border: rgba(234, 88, 12, 0.46);
+}
+
+.sim-footer-card[data-tier="high"] {
+  --sim-accent: #dc2626;
+  --sim-tint: rgba(220, 38, 38, 0.2);
+  --sim-bg: #fff8f8;
+  --sim-border: rgba(220, 38, 38, 0.5);
+}
+
+/* Left severity accent bar */
+.sim-footer-accent {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  background: var(--sim-accent);
+  transition: background 0.25s ease;
+}
+
+/* Diagonal sheen sweep when level updates */
+.sim-footer-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, var(--sim-tint), transparent);
+  transform: skewX(-18deg);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.sim-footer-card.is-updating {
+  animation: simCardPop 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sim-footer-card.is-updating::after {
+  animation: simSheenSweep 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sim-footer-card.is-updating .sim-footer-badge {
+  animation: simBadgePop 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sim-footer-card.is-updating .sim-footer-title,
+.sim-footer-card.is-updating .sim-footer-desc,
+.sim-footer-card.is-updating .sim-impact-pill {
+  animation: simTextEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes simCardPop {
+  0%   { transform: scale(0.994); box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), 0 0 0 0 var(--sim-tint); }
+  38%  { transform: scale(1.012); box-shadow: 0 10px 28px rgba(15, 23, 42, 0.11), 0 0 0 6px var(--sim-tint); }
+  100% { transform: scale(1);     box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), 0 0 0 0 transparent; }
+}
+
+@keyframes simSheenSweep {
+  0%   { left: -40%; opacity: 0; }
+  25%  { opacity: 1; }
+  100% { left: 118%; opacity: 0; }
+}
+
+@keyframes simBadgePop {
+  0%   { transform: scale(0.88); }
+  55%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes simTextEnter {
+  0%   { opacity: 0.2; transform: translateY(6px); }
+  100% { opacity: 1;   transform: translateY(0); }
 }
 
 .sim-footer-left {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   padding-right: clamp(12px, 1.4vw, 18px);
   border-right: 1px solid var(--border-strong);
 }
 
 .sim-footer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: clamp(11px, 1.25vh, 12.5px);
   line-height: 24px;
   font-weight: 750;
-  padding: 0 9px;
-  border-radius: 6px;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #047857;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--sim-accent);
+  color: #ffffff;
   white-space: nowrap;
+  transition: background 0.25s ease;
 }
 
-.sim-footer-badge.mid {
-  background: #fffbeb;
-  border-color: #fcd34d;
-  color: #b45309;
+.sim-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  animation: simDotPulse 1.6s ease-in-out infinite;
 }
 
-.sim-footer-badge.high {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
+@keyframes simDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.75); }
+}
+
+.sim-footer-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sim-footer-title {
   font-size: clamp(13.5px, 1.5vh, 15.5px);
-  line-height: 24px;
+  line-height: 20px;
   font-weight: 750;
   color: var(--text);
   white-space: nowrap;
 }
 
+.sim-meter {
+  display: flex;
+  gap: 3px;
+}
+
+.sim-meter span {
+  width: 14px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.14);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.sim-meter span.is-lit {
+  background: var(--sim-accent);
+}
+
 .sim-footer-desc {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   font-size: clamp(12.5px, 1.4vh, 14.5px);
   line-height: clamp(18px, 2.1vh, 22px);
-  color: var(--text-muted);
+  color: var(--text);
+}
+
+.sim-impact-pill {
+  flex: 0 0 auto;
+  font-size: clamp(11px, 1.2vh, 12.5px);
+  line-height: 24px;
+  font-weight: 750;
+  padding: 2px 10px;
+  border-radius: 7px;
+  background: var(--sim-tint);
+  color: var(--sim-accent);
+  border: 1px solid var(--sim-border);
+  white-space: nowrap;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
 
 /* ============================================================================
@@ -1726,6 +1863,17 @@ h2 {
 .pipe-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.pipe-btn.is-finish {
+  background: var(--text);
+  border-color: var(--text);
+  color: #ffffff;
+}
+
+.pipe-btn.is-finish:hover:not(:disabled) {
+  background: #1e293b;
+  border-color: #1e293b;
 }
 
 .pipe-step-counter {
@@ -2740,4 +2888,79 @@ h2 {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
   }
+}
+
+/* Pause CSS animations inside completely off-screen slides */
+.stage-slide[data-visible="false"] *,
+.stage-slide[data-visible="false"] *::before,
+.stage-slide[data-visible="false"] *::after {
+  animation-play-state: paused !important;
+}
+
+/* ============================================================================
+   FIRST-VISIT PIPELINE INTRO GATE (COOKIE-CONTROLLED)
+   ============================================================================ */
+html.is-first-visit .top-chrome {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-20px);
+}
+
+html.is-first-visit .top-bar-shell {
+  pointer-events: none;
+}
+
+html.is-first-visit .rail-nav {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(20px);
+}
+
+html.is-first-visit .notice-host {
+  display: none;
+}
+
+html.is-first-visit .stage-slide:not(#pipelineSection) {
+  display: none;
+}
+
+html.is-first-visit #pipelineSection {
+  padding: 28px 0;
+}
+
+html.is-intro-vanishing #pipelineSection .slide-inner {
+  opacity: 0 !important;
+  transform: translate3d(0, -26px, 0) scale(0.985) !important;
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+html.is-intro-revealed .top-chrome {
+  transition: opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+              visibility 0.48s ease;
+}
+
+html.is-intro-revealed .rail-nav {
+  transition: opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
+              transform 0.48s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
+              visibility 0.48s ease 0.08s;
+}
+
+@keyframes introMotionReveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 26px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+html.is-intro-revealed #motionSection .slide-inner {
+  animation: introMotionReveal 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
 }

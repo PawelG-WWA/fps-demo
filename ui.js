@@ -8,8 +8,13 @@
   const navButtons = Array.from(document.querySelectorAll('[data-target]'));
   const stepPills = Array.from(document.querySelectorAll('.step-pill'));
   const railDots = Array.from(document.querySelectorAll('.rail-dot'));
+  const pipelineIdx = slides.findIndex((s) => s.id === 'pipelineSection');
 
-  let activeIndex = 0;
+  function isFirstVisitLocked() {
+    return document.documentElement.classList.contains('is-first-visit');
+  }
+
+  let activeIndex = (isFirstVisitLocked() && pipelineIdx >= 0) ? pipelineIdx : 0;
   let rafPending = false;
 
   // Smooth programmatic view glide state
@@ -41,6 +46,18 @@
 
   function updateScrollPresentation() {
     rafPending = false;
+
+    if (isFirstVisitLocked()) {
+      if (pipelineIdx >= 0) {
+        activeIndex = pipelineIdx;
+        const inner = slides[pipelineIdx] && slides[pipelineIdx].querySelector('.slide-inner');
+        if (inner) {
+          inner.style.opacity = '1';
+          inner.style.transform = 'translate3d(0, 0px, 0)';
+        }
+      }
+      return;
+    }
 
     if (isStackedLayout()) {
       slides.forEach((slide) => {
@@ -173,6 +190,9 @@
       }
     }
 
+    // During first-visit intro, stay locked on Pipeline until the final step unlocks the site
+    if (isFirstVisitLocked()) return;
+
     const nextIdx = activeIndex + dir;
     if (nextIdx < 0 || nextIdx >= slides.length) return;
 
@@ -245,10 +265,10 @@
   let scrollEndTimer = null;
   scroller.addEventListener('scroll', () => {
     scheduleUpdate();
-    if (isAnimating || isStackedLayout()) return;
+    if (isAnimating || isStackedLayout() || isFirstVisitLocked()) return;
     clearTimeout(scrollEndTimer);
     scrollEndTimer = setTimeout(() => {
-      if (isAnimating || isStackedLayout()) return;
+      if (isAnimating || isStackedLayout() || isFirstVisitLocked()) return;
       const vh = scroller.clientHeight || window.innerHeight;
       const nearest = Math.round(scroller.scrollTop / vh);
       if (Math.abs(scroller.scrollTop - slides[nearest].offsetTop) > 2) {
@@ -281,11 +301,23 @@
 
   // Keep active slide perfectly aligned on window resize
   window.addEventListener('resize', () => {
-    if (!isStackedLayout() && slides[activeIndex]) {
+    if (!isStackedLayout() && !isFirstVisitLocked() && slides[activeIndex]) {
       scroller.scrollTop = slides[activeIndex].offsetTop;
     }
     scheduleUpdate();
   }, { passive: true });
+
+  // When first-visit Pipeline intro finishes vanishing, redirect directly to 01 Motion
+  window.addEventListener('fpslab:intro-unlocked', () => {
+    if (!slides[0]) return;
+    if (isStackedLayout()) {
+      slides[0].scrollIntoView({ behavior: 'instant', block: 'start' });
+    } else {
+      scroller.scrollTop = slides[0].offsetTop;
+    }
+    setActiveIndicators(0);
+    updateScrollPresentation();
+  });
 
   // Top bar stepper, right-edge dots, and scroll cues
   navButtons.forEach((btn) => {

@@ -86,7 +86,18 @@
   }
   </script>
 
-  <link rel="stylesheet" href="styles.css?v=17" />
+  <script>
+    (function () {
+      var resetIntro = /[?&](reset_intro|intro)=1(?:&|$)/.test(location.search);
+      if (resetIntro) {
+        document.cookie = 'fps_lab_pipeline_seen=; path=/; max-age=0';
+      }
+      if (resetIntro || !document.cookie.split(';').some(function (c) { return c.trim().indexOf('fps_lab_pipeline_seen=1') === 0; })) {
+        document.documentElement.classList.add('is-first-visit');
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css?v=21" />
 </head>
 <body>
   <!-- FLOATING ANCHORED TOP BAR -->
@@ -432,15 +443,25 @@
           </aside>
         </div>
 
-        <!-- SEPARATED FLOATING SIMULATION SCENARIO FOOTER -->
-        <div class="sim-footer-card" id="simFooterCard">
+        <!-- SEPARATED FLOATING SIMULATION SCENARIO BANNER -->
+        <div class="sim-footer-card" id="simFooterCard" data-tier="low" aria-live="polite">
+          <div class="sim-footer-accent" aria-hidden="true"></div>
           <div class="sim-footer-left">
-            <span class="sim-footer-badge mono" id="simScenarioBadge">LEVEL 1</span>
-            <span class="sim-footer-title" id="simScenarioTitle">Calm Street</span>
+            <span class="sim-footer-badge mono" id="simScenarioBadge">
+              <span class="sim-pulse-dot" aria-hidden="true"></span>
+              <span id="simScenarioLvlTxt">LEVEL 1</span>
+            </span>
+            <div class="sim-footer-title-wrap">
+              <span class="sim-footer-title" id="simScenarioTitle">Calm Street</span>
+              <div class="sim-meter" id="simMeter" aria-hidden="true">
+                <span class="is-lit"></span><span></span><span></span><span></span><span></span>
+              </div>
+            </div>
           </div>
           <p class="sim-footer-desc" id="simScenarioDesc">
             The player stands still or cruises through light traffic—minimal AI checks, simple patrol paths, and plenty of headroom for 60, 40, and 30 FPS.
           </p>
+          <span class="sim-impact-pill mono" id="simImpactTag">All FPS Locked</span>
         </div>
       </div>
     </section>
@@ -678,7 +699,7 @@
               <button class="pipe-step-pill" type="button" data-pipe-step="2">3. V-Sync</button>
               <button class="pipe-step-pill" type="button" data-pipe-step="3">4. HDMI</button>
               <button class="pipe-step-pill" type="button" data-pipe-step="4">5. Display</button>
-              <span class="pipe-scroll-hint">Scroll ↓ to advance</span>
+              <span class="pipe-scroll-hint" id="pipeScrollHint">Scroll ↓ to advance</span>
             </div>
           </div>
         </div>
@@ -754,7 +775,7 @@
     </div>
   </noscript>
 
-  <script src="app.js?v=17"></script>
-  <script src="ui.js?v=17"></script>
+  <script src="app.js?v=21"></script>
+  <script src="ui.js?v=21"></script>
 </body>
 </html>

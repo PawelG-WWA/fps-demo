@@ -160,9 +160,12 @@
     simLevelVal: document.getElementById('simLevelVal'),
     simEntityVal: document.getElementById('simEntityVal'),
     simCostVal: document.getElementById('simCostVal'),
-    simScenarioBadge: document.getElementById('simScenarioBadge'),
+    simFooterCard: document.getElementById('simFooterCard'),
+    simScenarioLvlTxt: document.getElementById('simScenarioLvlTxt'),
     simScenarioTitle: document.getElementById('simScenarioTitle'),
-    simScenarioDesc: document.getElementById('simScenarioDesc')
+    simScenarioDesc: document.getElementById('simScenarioDesc'),
+    simImpactTag: document.getElementById('simImpactTag'),
+    simMeterBars: Array.from(document.querySelectorAll('#simMeter span'))
   };
 
   const simCanvases = {};
@@ -288,11 +291,15 @@
     dom.btn60Hz.classList.toggle('active', hz === 60);
     dom.btn120Hz.classList.toggle('active', hz === 120);
     resetLaneSimulators();
-    updateLaneReadouts();
-    updateArenaStaticStats();
     updateSimBanner();
-    drawTimeline();
-    updatePipelineView();
+    if (isSectionVisible('motionSection')) updateLaneReadouts();
+    if (isSectionVisible('simSection')) {
+      updateSimReadouts();
+      drawExpCurve();
+    }
+    if (isSectionVisible('inputSection')) updateArenaStaticStats();
+    if (isSectionVisible('timelineSection')) drawTimeline();
+    if (isSectionVisible('pipelineSection')) updatePipelineView();
   }
 
   function setSpeed(spd) {
@@ -319,12 +326,14 @@
   function setLoad(val) {
     state.load = Math.max(1, Math.min(5, val));
     updateLoadDisplay();
-    updateLaneReadouts();
-    updateSimReadouts();
-    drawExpCurve();
-    updateArenaStaticStats();
-    drawTimeline();
-    updatePipelineView();
+    if (isSectionVisible('motionSection')) updateLaneReadouts();
+    if (isSectionVisible('simSection')) {
+      updateSimReadouts();
+      drawExpCurve();
+    }
+    if (isSectionVisible('inputSection')) updateArenaStaticStats();
+    if (isSectionVisible('timelineSection')) drawTimeline();
+    if (isSectionVisible('pipelineSection')) updatePipelineView();
   }
 
   function triggerExplode() {
@@ -333,9 +342,14 @@
     state.simSpikeMs = SPIKE_PEAK_MS;
     state.realSpikeMs = SPIKE_PEAK_MS;
     updateLoadDisplay();
-    updateLaneReadouts();
-    updateArenaStaticStats();
-    drawTimeline();
+    if (isSectionVisible('motionSection')) updateLaneReadouts();
+    if (isSectionVisible('simSection')) {
+      updateSimReadouts();
+      drawExpCurve();
+    }
+    if (isSectionVisible('inputSection')) updateArenaStaticStats();
+    if (isSectionVisible('timelineSection')) drawTimeline();
+    if (isSectionVisible('pipelineSection')) updatePipelineView();
   }
 
   function updateSimBanner() {
@@ -487,20 +501,33 @@
       ? `-${Math.round(dropPct60)}% eff · missed 16.7 ms`
       : (is120 ? 'Locked · even 2-2-2' : 'Locked · even 1-1-1');
     ftCapEl['60'].className = drop60 ? 'ft-note judder' : 'ft-note';
-
-    dom.timelineHzText.textContent = is120
-      ? `120 Hz = 8.33 ms · Scene ${sceneMs.toFixed(1)} ms (Load level ${load.toFixed(1)})`
-      : `60 Hz = 16.67 ms · Scene ${sceneMs.toFixed(1)} ms (Load level ${load.toFixed(1)})`;
   }
 
   // ============================================================================
   // SECTION 1: MOTION SIMULATION WITH LOAD PHYSICS
   // ============================================================================
-  function stepLaneSimulators(dtSimMs) {
-    state.tSim += dtSimMs;
-    state.simSpikeMs = state.spikeStartSim >= 0
-      ? getSpikeEnvelopeMs(state.tSim - state.spikeStartSim)
-      : 0;
+  function resyncLaneSimulators() {
+    const dispPeriod = 1000 / state.displayHz;
+    const targetTick = Math.floor(state.tSim / dispPeriod);
+    const tNowSim = targetTick * dispPeriod;
+    MODES.forEach((mode) => {
+      const ls = laneState[mode];
+      if (ls.lastDisplayTick >= 0 && targetTick - ls.lastDisplayTick > 12) {
+        ls.lastDisplayTick = targetTick - 1;
+        ls.holdTicks = 1;
+        ls.srcHoldTicks = 1;
+        if (mode === 'interp') {
+          ls.srcNextReadyTime = tNowSim;
+          ls.presentedTime = Math.max(0, tNowSim - ls.currentLagMs);
+        } else {
+          ls.nextFrameReadyTime = tNowSim;
+          ls.presentedTime = tNowSim;
+        }
+      }
+    });
+  }
+
+  function stepLaneSimulators() {
     const dispPeriod = 1000 / state.displayHz;
     const targetTick = Math.floor(state.tSim / dispPeriod);
 
@@ -1123,6 +1150,12 @@
     const hz = state.displayHz;
     const load = state.load;
     const spikeMs = state.simSpikeMs;
+    const sceneMs = getMeanSceneRenderMs(load, spikeMs);
+    if (dom.timelineHzText) {
+      dom.timelineHzText.textContent = hz === 120
+        ? `120 Hz = 8.33 ms · Scene ${sceneMs.toFixed(1)} ms (Load level ${load.toFixed(1)})`
+        : `60 Hz = 16.67 ms · Scene ${sceneMs.toFixed(1)} ms (Load level ${load.toFixed(1)})`;
+    }
     const key = `${hz}|${load.toFixed(1)}|${Math.round(spikeMs)}`;
     if (key === lastTimelineKey) return;
     lastTimelineKey = key;
@@ -1489,6 +1522,27 @@
   }
   initSimArenaState();
 
+  function resyncSimArenas() {
+    const dispPeriod = 1000 / state.displayHz;
+    const targetTick = Math.floor(state.tSim / dispPeriod);
+    const tNowSim = targetTick * dispPeriod;
+    MODES.forEach((mode) => {
+      const ss = simState[mode];
+      if (ss.lastDisplayTick >= 0 && targetTick - ss.lastDisplayTick > 12) {
+        ss.lastDisplayTick = targetTick - 1;
+        ss.holdTicks = 1;
+        ss.srcHoldTicks = 1;
+        if (mode === 'interp') {
+          ss.srcNextReadyTime = tNowSim;
+          ss.presentedTime = Math.max(0, tNowSim - ss.currentLagMs);
+        } else {
+          ss.nextFrameReadyTime = tNowSim;
+          ss.presentedTime = tNowSim;
+        }
+      }
+    });
+  }
+
   function stepSimArenas() {
     if (!dom.expCurveCanvas) return;
     const dispPeriod = 1000 / state.displayHz;
@@ -1664,25 +1718,50 @@
   const SIM_SCENARIOS = [
     {
       title: 'Calm Street',
+      impact: 'All FPS Locked',
+      tier: 'low',
       desc: 'The player stands still or cruises through light traffic—minimal AI checks, simple patrol paths, and plenty of headroom for 60, 40, and 30 FPS.'
     },
     {
       title: 'Busy District',
-      desc: 'Traffic thickens and NPCs make complex decisions around lane changes, crosswalks, and avoidance—pushing past 16.7 ms so 60 FPS begins to dip while 40 and 30 FPS stay locked.'
+      impact: '60 FPS Struggling',
+      tier: 'mid',
+      desc: 'Traffic thickens and NPCs make complex decisions around lane changes, crosswalks, and avoidance—pushing past 16.7 ms so 60 FPS dips while 40 and 30 FPS stay locked.'
     },
     {
       title: 'Active Pursuit',
+      impact: 'Only 30 FPS Locked',
+      tier: 'warn',
       desc: 'AI calculates real-time flanking paths for enemies while civilian NPCs react and decide where to run away—both 60 and 40 FPS miss their budgets while 30 FPS still holds 0% drop.'
     },
     {
       title: 'Physics & Crowd Storm',
+      impact: 'All Targets Dropping',
+      tier: 'high',
       desc: 'Chain-reaction collisions, destructible debris, dense crowd pathfinding, and dynamic shadows stack up—even 30 FPS crosses its 33.3 ms budget and begins dipping.'
     },
     {
       title: 'Worst-Case Overload',
+      impact: 'Severe Overload',
+      tier: 'high',
       desc: 'Extreme entity swarm with heavy O(N²) collision checks, multi-agent AI, and full particle bursts—every FPS target drops sharply and interpolation lag swells past 100 ms.'
     }
   ];
+
+  let lastAnnouncedSimLvl = -1;
+  let simUpdateTimer = null;
+
+  function triggerSimFooterPulse() {
+    if (!dom.simFooterCard) return;
+    dom.simFooterCard.classList.remove('is-updating');
+    // Force reflow so rapid level clicks replay the sheen & pop cleanly
+    void dom.simFooterCard.offsetWidth;
+    dom.simFooterCard.classList.add('is-updating');
+    clearTimeout(simUpdateTimer);
+    simUpdateTimer = setTimeout(() => {
+      dom.simFooterCard.classList.remove('is-updating');
+    }, 540);
+  }
 
   function updateSimReadouts() {
     if (!dom.simLevelVal) return;
@@ -1705,15 +1784,30 @@
       btn.classList.toggle('active', Number(btn.dataset.simLevel) === nearestLvl);
     });
 
-    if (dom.simScenarioBadge && dom.simScenarioTitle && dom.simScenarioDesc) {
+    if (dom.simFooterCard && dom.simScenarioLvlTxt && dom.simScenarioTitle && dom.simScenarioDesc) {
       const sc = SIM_SCENARIOS[Math.max(0, Math.min(4, nearestLvl - 1))];
       const extraTop = getTopBarExtraLoadMs();
-      dom.simScenarioBadge.textContent = `LEVEL ${nearestLvl}`;
-      dom.simScenarioBadge.className = 'sim-footer-badge mono' + (cost > 33.3 ? ' high' : cost > 16.7 ? ' mid' : '');
+      const tier = cost > 33.3 ? 'high' : cost > 25.0 ? 'warn' : cost > 16.7 ? 'mid' : sc.tier;
+      dom.simFooterCard.dataset.tier = tier;
+      dom.simScenarioLvlTxt.textContent = `LEVEL ${nearestLvl}`;
       dom.simScenarioTitle.textContent = sc.title;
       dom.simScenarioDesc.textContent = extraTop > 0.5
-        ? `${sc.desc} (+${extraTop.toFixed(1)} ms added from top-bar Load level ${state.load.toFixed(1)}.)`
+        ? `${sc.desc} (+${extraTop.toFixed(1)} ms added from top-bar Load ${state.load.toFixed(1)}.)`
         : sc.desc;
+      if (dom.simImpactTag) {
+        dom.simImpactTag.textContent = cost > 33.3
+          ? (nearestLvl >= 5 ? 'Severe Overload' : 'All Targets Dropping')
+          : cost > 25.0 ? 'Only 30 FPS Locked'
+          : cost > 16.7 ? '60 FPS Struggling'
+          : sc.impact;
+      }
+      if (dom.simMeterBars) {
+        dom.simMeterBars.forEach((bar, i) => bar.classList.toggle('is-lit', i < nearestLvl));
+      }
+      if (lastAnnouncedSimLvl !== -1 && lastAnnouncedSimLvl !== nearestLvl) {
+        triggerSimFooterPulse();
+      }
+      lastAnnouncedSimLvl = nearestLvl;
     }
 
     MODES.forEach((m) => {
@@ -1949,6 +2043,7 @@
     segDisp: document.getElementById('pipeSegDisp'),
     title: document.getElementById('pipeStageTitle'),
     desc: document.getElementById('pipeStageDesc'),
+    scrollHint: document.getElementById('pipeScrollHint'),
     nodes: Array.from(document.querySelectorAll('.pipe-node')),
     links: Array.from(document.querySelectorAll('.pipe-link')),
     pills: Array.from(document.querySelectorAll('.pipe-step-pill')),
@@ -1957,6 +2052,40 @@
 
   let pipeStage = 0;
   let pipeMode = '60';
+  const INTRO_COOKIE_NAME = 'fps_lab_pipeline_seen';
+  let introCompleting = false;
+
+  function setIntroCookie() {
+    document.cookie = `${INTRO_COOKIE_NAME}=1; path=/; max-age=31536000; SameSite=Lax`;
+  }
+
+  function completeFirstVisitIntro() {
+    const root = document.documentElement;
+    if (introCompleting || !root.classList.contains('is-first-visit')) return;
+    introCompleting = true;
+    setIntroCookie();
+
+    // Gently vanish the Pipeline intro before revealing the Motion section
+    root.classList.add('is-intro-vanishing');
+
+    setTimeout(() => {
+      root.classList.remove('is-first-visit', 'is-intro-vanishing');
+      root.classList.add('is-intro-revealed');
+
+      // Reset Pipeline to step 1 for when the user visits section 04 later
+      pipeStage = 0;
+      updatePipelineView();
+
+      window.dispatchEvent(new CustomEvent('fpslab:intro-unlocked'));
+      syncVisibleSectionsNow();
+      introCompleting = false;
+
+      // Remove one-shot entrance class after reveal transitions finish
+      setTimeout(() => {
+        root.classList.remove('is-intro-revealed');
+      }, 650);
+    }, 430);
+  }
 
   function getPipelineStageCopy(stageIdx, ctx) {
     const { mode, hz, dispPeriod, sceneMs, cpuMs, gpuMs, budgetMs, missed, waitMs, interpBufMs, effFps, dropPct } = ctx;
@@ -2069,10 +2198,15 @@
       }
     }
 
+    const isFirstVisit = document.documentElement.classList.contains('is-first-visit');
+    const isFinishStep = isFirstVisit && pipeStage >= 4;
+
     pipeEls.totalMs.textContent = `Input→Photon: ~${totalMs.toFixed(1)} ms`;
     pipeEls.stepCounter.textContent = `${pipeStage + 1} / 5`;
     pipeEls.prevBtn.disabled = pipeStage <= 0;
-    pipeEls.nextBtn.disabled = pipeStage >= 4;
+    pipeEls.nextBtn.disabled = !isFirstVisit && pipeStage >= 4;
+    pipeEls.nextBtn.textContent = isFinishStep ? 'Enter Lab →' : 'Next →';
+    pipeEls.nextBtn.classList.toggle('is-finish', isFinishStep);
 
     pipeEls.msCpu.textContent = `${cpuMs.toFixed(1)} ms`;
     pipeEls.msGpu.textContent = `${gpuMs.toFixed(1)} ms`;
@@ -2142,16 +2276,37 @@
     });
     pipeEls.title.textContent = info.title;
     pipeEls.desc.textContent = info.desc;
+
+    if (pipeEls.scrollHint) {
+      if (isFirstVisit) {
+        pipeEls.scrollHint.textContent = pipeStage >= 4
+          ? 'Scroll ↓ to enter FPS Lab'
+          : 'Scroll ↓ or click Next to continue';
+      } else if (pipeStage >= 4) {
+        pipeEls.scrollHint.textContent = 'Scroll ↓ for Refresh Map';
+      } else {
+        pipeEls.scrollHint.textContent = 'Scroll ↓ to advance';
+      }
+    }
   }
 
   function setPipelineStep(idx) {
+    if (introCompleting) return;
     pipeStage = Math.max(0, Math.min(4, idx));
     updatePipelineView();
   }
 
   function stepPipeline(dir) {
+    if (introCompleting) return true;
     const next = pipeStage + dir;
-    if (next < 0 || next >= 5) return false;
+    if (next < 0) return false;
+    if (next >= 5) {
+      if (document.documentElement.classList.contains('is-first-visit')) {
+        completeFirstVisitIntro();
+        return true;
+      }
+      return false;
+    }
     pipeStage = next;
     updatePipelineView();
     return true;
@@ -2204,9 +2359,76 @@
     count: 5
   };
 
+  // ============================================================================
+  // VIEWPORT VISIBILITY GATING (ONLY VISIBLE SCREEN DOES WORK)
+  // ============================================================================
+  const SECTION_IDS = ['motionSection', 'simSection', 'inputSection', 'pipelineSection', 'timelineSection'];
+  const visibleSections = new Set();
+
+  function isSectionVisible(id) {
+    return visibleSections.has(id);
+  }
+
+  function setSectionVisibility(id, visible) {
+    const el = document.getElementById(id);
+    if (el) el.dataset.visible = visible ? 'true' : 'false';
+    const wasVisible = visibleSections.has(id);
+    if (visible) {
+      visibleSections.add(id);
+      if (!wasVisible) onSectionWake(id);
+    } else {
+      visibleSections.delete(id);
+    }
+  }
+
+  function onSectionWake(id) {
+    if (id === 'motionSection') {
+      resyncLaneSimulators();
+      updateLaneReadouts();
+    } else if (id === 'simSection') {
+      resyncSimArenas();
+      updateSimReadouts();
+      drawExpCurve();
+    } else if (id === 'inputSection') {
+      arena.lastDispTick = -1;
+      arena.nextFrameReadyTime = 0;
+      updateArenaStaticStats();
+    } else if (id === 'pipelineSection') {
+      updatePipelineView();
+    } else if (id === 'timelineSection') {
+      drawTimeline();
+    }
+  }
+
+  function syncVisibleSectionsNow() {
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    SECTION_IDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setSectionVisibility(id, r.bottom > 1 && r.top < vh - 1);
+    });
+  }
+
+  if ('IntersectionObserver' in window) {
+    const sectionObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const id = entry.target.id;
+        if (!id) return;
+        setSectionVisibility(id, entry.isIntersecting && entry.intersectionRatio > 0.01);
+      });
+    }, { root: null, threshold: [0, 0.01, 0.05] });
+
+    SECTION_IDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) sectionObserver.observe(el);
+    });
+  }
+
   window.addEventListener('resize', () => {
-    drawTimeline();
-    drawExpCurve();
+    syncVisibleSectionsNow();
+    if (isSectionVisible('timelineSection')) drawTimeline();
+    if (isSectionVisible('simSection')) drawExpCurve();
   });
 
   // ============================================================================
@@ -2221,39 +2443,63 @@
     const dtReal = Math.min(now - lastRafTime, 50);
     lastRafTime = now;
 
+    if (!state.paused) {
+      state.tSim += dtReal * state.speed;
+    }
+
+    state.simSpikeMs = state.spikeStartSim >= 0
+      ? getSpikeEnvelopeMs(state.tSim - state.spikeStartSim)
+      : 0;
     state.realSpikeMs = state.spikeStartReal >= 0
       ? getSpikeEnvelopeMs(now - state.spikeStartReal)
       : 0;
 
+    const motionVisible = isSectionVisible('motionSection');
+    const simVisible = isSectionVisible('simSection');
+    const inputVisible = isSectionVisible('inputSection');
+    const pipelineVisible = isSectionVisible('pipelineSection');
+    const timelineVisible = isSectionVisible('timelineSection');
+
     if (!state.paused) {
-      stepLaneSimulators(dtReal * state.speed);
-      stepSimArenas();
+      if (motionVisible) stepLaneSimulators();
+      if (simVisible) stepSimArenas();
     }
 
     const isSpiking = state.simSpikeMs > 0.1 || state.realSpikeMs > 0.1;
     if (isSpiking || wasSpiking) {
       updateLoadDisplay();
-      updateSimReadouts();
-      drawExpCurve();
-      updateArenaStaticStats();
-      drawTimeline();
-      updatePipelineView();
+      if (simVisible) {
+        updateSimReadouts();
+        drawExpCurve();
+      }
+      if (inputVisible) updateArenaStaticStats();
+      if (timelineVisible) drawTimeline();
+      if (pipelineVisible) updatePipelineView();
       wasSpiking = isSpiking;
     }
 
-    MODES.forEach((m) => {
-      drawLane(m);
-      drawFrametimeGraph(m);
-      drawSimArena(m);
-    });
+    if (motionVisible) {
+      MODES.forEach((m) => {
+        drawLane(m);
+        drawFrametimeGraph(m);
+      });
+    }
+
+    if (simVisible) {
+      MODES.forEach((m) => {
+        drawSimArena(m);
+      });
+    }
 
     if (now - lastReadoutTime > (isSpiking ? 90 : 260)) {
       lastReadoutTime = now;
-      updateLaneReadouts();
-      updateSimReadouts();
+      if (motionVisible) updateLaneReadouts();
+      if (simVisible) updateSimReadouts();
     }
 
-    updateAndDrawArena(now);
+    if (inputVisible) {
+      updateAndDrawArena(now);
+    }
 
     requestAnimationFrame(loop);
   }
@@ -2261,12 +2507,8 @@
   // ============================================================================
   // INIT
   // ============================================================================
-  updateLaneReadouts();
-  updateSimReadouts();
-  drawExpCurve();
-  updateArenaStaticStats();
-  drawTimeline();
-  updatePipelineView();
+  syncVisibleSectionsNow();
+  updateLoadDisplay();
   detectRefreshRate(true);
   requestAnimationFrame(loop);
 })();
