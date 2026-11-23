@@ -131,9 +131,11 @@
     btn120Hz: document.getElementById('btn120Hz'),
     btnSpeed1x: document.getElementById('btnSpeed1x'),
     btnSpeedSlow: document.getElementById('btnSpeedSlow'),
+    loadPod: document.getElementById('loadPod'),
     loadSlider: document.getElementById('loadSlider'),
     loadVal: document.getElementById('loadVal'),
     loadMs: document.getElementById('loadMs'),
+    loadResetBtn: document.getElementById('loadResetBtn'),
     explodeBtn: document.getElementById('explodeBtn'),
     toggleTruePos: document.getElementById('toggleTruePos'),
     toggleArtifacts: document.getElementById('toggleArtifacts'),
@@ -302,6 +304,9 @@
 
   function updateLoadDisplay() {
     const sceneMs = getMeanSceneRenderMs(state.load, state.simSpikeMs);
+    const tier = (state.load >= 3.0 || state.simSpikeMs > 8) ? 'high' : (state.load >= 1.5 || state.simSpikeMs > 1) ? 'mid' : 'low';
+    if (dom.loadPod) dom.loadPod.dataset.tier = tier;
+    if (dom.loadResetBtn) dom.loadResetBtn.hidden = state.load <= 1.01;
     dom.loadVal.textContent = `${state.load.toFixed(1)}`;
     dom.loadVal.className = 'load-val mono' + (state.load >= 3.0 ? ' high' : state.load >= 1.5 ? ' mid' : '');
     dom.loadMs.textContent = `${sceneMs.toFixed(1)} ms`;
@@ -1290,6 +1295,20 @@
     syncRangeFill(dom.loadSlider);
     setLoad(parseFloat(e.target.value));
   });
+
+  dom.loadSlider.addEventListener('dblclick', () => {
+    dom.loadSlider.value = '1';
+    syncRangeFill(dom.loadSlider);
+    setLoad(1.0);
+  });
+
+  if (dom.loadResetBtn) {
+    dom.loadResetBtn.addEventListener('click', () => {
+      dom.loadSlider.value = '1';
+      syncRangeFill(dom.loadSlider);
+      setLoad(1.0);
+    });
+  }
 
   function togglePause() {
     state.paused = !state.paused;

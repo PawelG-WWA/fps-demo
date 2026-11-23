@@ -3,8 +3,90 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FPS &amp; Refresh Rate Showcase</title>
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <title>FPS &amp; Refresh Rate Lab — Compare 30, 40, 60 FPS &amp; Motion Interpolation (60Hz vs 120Hz)</title>
+  <meta name="description" content="Interactive showcase comparing 30 FPS, 40 FPS, 60 FPS, and motion interpolation across 60Hz and 120Hz displays. Test 3:2 pulldown judder, input lag, load spikes, and the full CPU-to-display frame pipeline." />
+  <meta name="keywords" content="30 fps vs 60 fps, 40 fps 120hz, 40 fps 60hz judder, motion interpolation input lag, TruMotion, frame pacing, frametime, refresh rate test, input latency simulator, frame pipeline" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#eef0f4" />
+
+  <!-- Replace https://example.com/ with your live domain when deploying -->
+  <link rel="canonical" href="https://example.com/" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+  <!-- Open Graph / Social Sharing -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="FPS &amp; Refresh Rate Lab" />
+  <meta property="og:title" content="FPS &amp; Refresh Rate Lab — 30 vs 40 vs 60 FPS &amp; Motion Interpolation" />
+  <meta property="og:description" content="See and feel the difference between 30 FPS, 40 FPS, 60 FPS, and motion smoothing on 60Hz vs 120Hz displays, including input lag, load spikes, and the full frame pipeline." />
+  <meta property="og:url" content="https://example.com/" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="FPS &amp; Refresh Rate Lab — 30 vs 40 vs 60 FPS &amp; Motion Interpolation" />
+  <meta name="twitter:description" content="Interactive demo of 30, 40, and 60 FPS frame pacing, 60Hz vs 120Hz refresh cadence, motion interpolation lag, workload spikes, and the CPU-to-display pipeline." />
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "FPS & Refresh Rate Lab",
+        "url": "https://example.com/",
+        "description": "Interactive web laboratory demonstrating 30 FPS, 40 FPS, 60 FPS, and motion interpolation across 60Hz and 120Hz displays, including frame pacing, exponential workload scaling, input latency, and the CPU-to-display pipeline.",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires a modern web browser with HTML5 Canvas and JavaScript enabled.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "Automatic browser display refresh-rate detection (60Hz vs 120Hz+)",
+          "Side-by-side 30 FPS, 40 FPS, 30 FPS + Motion Interpolation, and 60 FPS motion and frametime comparison",
+          "Exponential simulation workload curve across 5 levels with live FPS drops",
+          "Interactive input latency and pointer tracking test with true OS pointer ghost",
+          "5-stage animated CPU, GPU, V-Sync, HDMI, and Display scanout frame pipeline",
+          "100 ms HTML/CSS refresh cycle mapping diagram showing 3:2 pulldown judder vs even 120Hz pacing"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why does 40 FPS require a 120Hz display for smooth frame pacing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "At 40 FPS, each frame lasts 25.0 ms, which is halfway in frame time between 30 FPS (33.3 ms) and 60 FPS (16.7 ms). On a 120Hz display, 120 divides evenly by 40 (3 refreshes per frame), producing uniform pacing. On a 60Hz display, 60 divided by 40 is 1.5, forcing alternating 1-refresh (16.7 ms) and 2-refresh (33.3 ms) holds that create visible 3:2 pulldown judder."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does TV motion interpolation (TruMotion / MotionFlow) add input lag?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Display motion smoothing synthesizes intermediate frames between Frame A and Frame B. To compute the in-between frame, the TV must hold back Frame A in a buffer until Frame B arrives and is analyzed, adding roughly 50 to 100+ ms of extra input latency and potential halo artifacts around static UI overlays."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do 60 FPS targets drop frames earlier under heavy load than 30 FPS?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When all frame-rate targets render the same scene workload, 60 FPS only has a 16.7 ms budget per frame, 40 FPS has 25.0 ms, and 30 FPS has 33.3 ms. A 28 ms scene or sudden workload spike exceeds both the 60 FPS and 40 FPS budgets while 30 FPS absorbs it with 0% frame drop."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <link rel="stylesheet" href="styles.css?v=17" />
 </head>
 <body>
   <!-- FLOATING ANCHORED TOP BAR -->
@@ -71,11 +153,27 @@
 
         <span class="dock-sep" aria-hidden="true"></span>
 
-        <div class="dock-group load-group" title="Simulate shared scene GPU/CPU render time from Load level 1.0 (14 ms) to 5.0 (44 ms)">
-          <label class="dock-label" for="loadSlider">Load level</label>
-          <input type="range" id="loadSlider" min="1" max="5" step="0.1" value="1" />
-          <span class="load-val mono" id="loadVal">1.0</span>
-          <span class="load-ms mono" id="loadMs">14.0 ms</span>
+        <div class="dock-group load-pod" id="loadPod" data-tier="low" title="Drag to scale GPU/CPU workload from Load level 1.0 (14 ms) to 5.0 (44 ms). Double-click slider to reset.">
+          <label class="load-pod-head" for="loadSlider">
+            <svg class="load-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2.5 12a6 6 0 1 1 11 0" />
+              <path d="M8 10l2.8-3.6" />
+              <circle cx="8" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
+            </svg>
+            <span class="load-pod-lbl">Load</span>
+          </label>
+          <div class="load-slider-wrap">
+            <input type="range" id="loadSlider" min="1" max="5" step="0.1" value="1" aria-label="Scene Load level" />
+            <div class="load-ticks" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="load-readout">
+            <span class="load-val mono" id="loadVal">1.0</span>
+            <span class="load-dot" aria-hidden="true">·</span>
+            <span class="load-ms mono" id="loadMs">14.0 ms</span>
+          </div>
+          <button class="load-reset-btn" id="loadResetBtn" type="button" title="Reset Load level to 1.0" hidden aria-label="Reset Load level to 1.0">↺</button>
         </div>
 
         <div class="dock-spacer" aria-hidden="true"></div>
@@ -649,7 +747,14 @@
     </button>
   </nav>
 
-  <script src="app.js?v=16"></script>
-  <script src="ui.js?v=13"></script>
+  <noscript>
+    <div style="max-width:720px;margin:24px auto;padding:16px 20px;background:#fff;border:1px solid #cbd5e1;border-radius:12px;font-family:sans-serif;color:#0f172a;">
+      <strong>JavaScript is required for interactive simulations.</strong>
+      This tool compares 30 FPS, 40 FPS, 60 FPS, and 30 FPS with motion interpolation across 60Hz and 120Hz displays, including live frame pacing, exponential workload scaling, input latency tracking, the CPU-to-display frame pipeline, and a 100 ms refresh cycle map.
+    </div>
+  </noscript>
+
+  <script src="app.js?v=17"></script>
+  <script src="ui.js?v=17"></script>
 </body>
 </html>
