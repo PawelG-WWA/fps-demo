@@ -157,7 +157,10 @@
     expCurveCanvas: document.getElementById('expCurveCanvas'),
     simLevelVal: document.getElementById('simLevelVal'),
     simEntityVal: document.getElementById('simEntityVal'),
-    simCostVal: document.getElementById('simCostVal')
+    simCostVal: document.getElementById('simCostVal'),
+    simScenarioBadge: document.getElementById('simScenarioBadge'),
+    simScenarioTitle: document.getElementById('simScenarioTitle'),
+    simScenarioDesc: document.getElementById('simScenarioDesc')
   };
 
   const simCanvases = {};
@@ -1639,6 +1642,29 @@
     ctx.fill();
   }
 
+  const SIM_SCENARIOS = [
+    {
+      title: 'Calm Street',
+      desc: 'The player stands still or cruises through light traffic—minimal AI checks, simple patrol paths, and plenty of headroom for 60, 40, and 30 FPS.'
+    },
+    {
+      title: 'Busy District',
+      desc: 'Traffic thickens and NPCs make complex decisions around lane changes, crosswalks, and avoidance—pushing past 16.7 ms so 60 FPS begins to dip while 40 and 30 FPS stay locked.'
+    },
+    {
+      title: 'Active Pursuit',
+      desc: 'AI calculates real-time flanking paths for enemies while civilian NPCs react and decide where to run away—both 60 and 40 FPS miss their budgets while 30 FPS still holds 0% drop.'
+    },
+    {
+      title: 'Physics & Crowd Storm',
+      desc: 'Chain-reaction collisions, destructible debris, dense crowd pathfinding, and dynamic shadows stack up—even 30 FPS crosses its 33.3 ms budget and begins dipping.'
+    },
+    {
+      title: 'Worst-Case Overload',
+      desc: 'Extreme entity swarm with heavy O(N²) collision checks, multi-agent AI, and full particle bursts—every FPS target drops sharply and interpolation lag swells past 100 ms.'
+    }
+  ];
+
   function updateSimReadouts() {
     if (!dom.simLevelVal) return;
     const lvl = state.simLevel;
@@ -1659,6 +1685,17 @@
     simLevelBtns.forEach((btn) => {
       btn.classList.toggle('active', Number(btn.dataset.simLevel) === nearestLvl);
     });
+
+    if (dom.simScenarioBadge && dom.simScenarioTitle && dom.simScenarioDesc) {
+      const sc = SIM_SCENARIOS[Math.max(0, Math.min(4, nearestLvl - 1))];
+      const extraTop = getTopBarExtraLoadMs();
+      dom.simScenarioBadge.textContent = `LEVEL ${nearestLvl}`;
+      dom.simScenarioBadge.className = 'sim-footer-badge mono' + (cost > 33.3 ? ' high' : cost > 16.7 ? ' mid' : '');
+      dom.simScenarioTitle.textContent = sc.title;
+      dom.simScenarioDesc.textContent = extraTop > 0.5
+        ? `${sc.desc} (+${extraTop.toFixed(1)} ms added from top-bar Load level ${state.load.toFixed(1)}.)`
+        : sc.desc;
+    }
 
     MODES.forEach((m) => {
       const el = simStatEls[m];

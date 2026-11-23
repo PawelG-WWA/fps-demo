@@ -966,11 +966,12 @@ h2 {
    ============================================================================ */
 .sim-stack {
   justify-content: center;
+  gap: clamp(12px, 2vh, 22px);
 }
 
 .sim-row {
   width: 100%;
-  height: 54vh;
+  height: 50vh;
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.85fr) minmax(240px, 1fr);
@@ -1189,6 +1190,68 @@ h2 {
   background: var(--text);
   border-color: var(--text);
   color: #ffffff;
+}
+
+/* Separated floating scenario description footer */
+.sim-footer-card {
+  flex: 0 0 auto;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  padding: clamp(10px, 1.3vh, 16px) clamp(14px, 1.6vw, 20px);
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.5vw, 20px);
+}
+
+.sim-footer-left {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: clamp(12px, 1.4vw, 18px);
+  border-right: 1px solid var(--border-strong);
+}
+
+.sim-footer-badge {
+  font-size: clamp(11px, 1.25vh, 12.5px);
+  line-height: 24px;
+  font-weight: 750;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  white-space: nowrap;
+}
+
+.sim-footer-badge.mid {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #b45309;
+}
+
+.sim-footer-badge.high {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.sim-footer-title {
+  font-size: clamp(13.5px, 1.5vh, 15.5px);
+  line-height: 24px;
+  font-weight: 750;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.sim-footer-desc {
+  margin: 0;
+  font-size: clamp(12.5px, 1.4vh, 14.5px);
+  line-height: clamp(18px, 2.1vh, 22px);
+  color: var(--text-muted);
 }
 
 /* ============================================================================
