@@ -162,6 +162,28 @@
     }, 140);
   }
 
+  function handleDirectionalNavigation(dir) {
+    const currentSlide = slides[activeIndex];
+    const pres = window.pipelinePresentation;
+
+    // While on the Pipeline presentation screen, scroll moves the presentation forward/backward first
+    if (currentSlide && currentSlide.id === 'pipelineSection' && pres) {
+      if (pres.step(dir)) {
+        return;
+      }
+    }
+
+    const nextIdx = activeIndex + dir;
+    if (nextIdx < 0 || nextIdx >= slides.length) return;
+
+    // When entering Pipeline from above, start at Step 1; from below, start at final step
+    if (slides[nextIdx] && slides[nextIdx].id === 'pipelineSection' && pres) {
+      pres.setStep(dir > 0 ? 0 : pres.count - 1);
+    }
+
+    goToSlide(nextIdx);
+  }
+
   function onWheel(e) {
     if (isStackedLayout()) return;
     // Allow pinch-zoom or horizontal scrolling (e.g. narrow timeline overflow)
@@ -205,18 +227,14 @@
 
     wheelAccum += dy;
 
-    // Trigger automatic snap on a single gentle mouse wheel roll or trackpad swipe
+    // Trigger automatic snap / presentation step on a single gentle mouse wheel roll
     const THRESHOLD = 18;
     if (wheelAccum >= THRESHOLD) {
       lockWheelUntilQuiet();
-      if (activeIndex < slides.length - 1) {
-        goToSlide(activeIndex + 1);
-      }
+      handleDirectionalNavigation(1);
     } else if (wheelAccum <= -THRESHOLD) {
       lockWheelUntilQuiet();
-      if (activeIndex > 0) {
-        goToSlide(activeIndex - 1);
-      }
+      handleDirectionalNavigation(-1);
     }
   }
 
@@ -254,10 +272,10 @@
     const endY = e.changedTouches[0].clientY;
     const diff = touchStartY - endY;
     touchStartY = null;
-    if (diff > 45 && activeIndex < slides.length - 1) {
-      goToSlide(activeIndex + 1);
-    } else if (diff < -45 && activeIndex > 0) {
-      goToSlide(activeIndex - 1);
+    if (diff > 45) {
+      handleDirectionalNavigation(1);
+    } else if (diff < -45) {
+      handleDirectionalNavigation(-1);
     }
   }, { passive: true });
 
@@ -283,12 +301,12 @@
     const tag = document.activeElement && document.activeElement.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
-    if ((e.key === 'PageDown' || e.key === 'ArrowDown') && activeIndex < slides.length - 1) {
+    if (e.key === 'PageDown' || e.key === 'ArrowDown') {
       e.preventDefault();
-      goToSlide(activeIndex + 1);
-    } else if ((e.key === 'PageUp' || e.key === 'ArrowUp') && activeIndex > 0) {
+      handleDirectionalNavigation(1);
+    } else if (e.key === 'PageUp' || e.key === 'ArrowUp') {
       e.preventDefault();
-      goToSlide(activeIndex - 1);
+      handleDirectionalNavigation(-1);
     }
   });
 

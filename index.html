@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FPS &amp; Refresh Rate Showcase</title>
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
   <!-- FLOATING ANCHORED TOP BAR -->
@@ -29,8 +29,12 @@
             <span class="step-idx">03</span>
             <span>Latency</span>
           </button>
-          <button class="step-pill" type="button" data-target="timelineSection">
+          <button class="step-pill" type="button" data-target="pipelineSection">
             <span class="step-idx">04</span>
+            <span>Pipeline</span>
+          </button>
+          <button class="step-pill" type="button" data-target="timelineSection">
+            <span class="step-idx">05</span>
             <span>Refresh Map</span>
           </button>
         </nav>
@@ -391,15 +395,179 @@
       </div>
     </section>
 
-    <!-- VIEW 4: REFRESH CYCLE MAPPING -->
-    <section class="stage-slide" id="timelineSection" data-slide-index="3">
+    <!-- VIEW 4: ANIMATED FRAME PIPELINE PRESENTATION -->
+    <section class="stage-slide" id="pipelineSection" data-slide-index="3">
+      <div class="slide-inner pipe-stack">
+        <div class="pipe-card" id="pipeCard" data-stage="0">
+          <!-- Presentation Header -->
+          <div class="card-head pipe-head">
+            <div class="card-title-group">
+              <span class="view-kicker">04</span>
+              <h2>From Input to Pixel — Frame Pipeline</h2>
+            </div>
+
+            <div class="pipe-mode-tabs" role="tablist" aria-label="Pipeline FPS target">
+              <button class="pipe-mode-tab" type="button" data-pipe-mode="30">
+                <span class="tab-dot swatch-30"></span>30 FPS
+              </button>
+              <button class="pipe-mode-tab" type="button" data-pipe-mode="40">
+                <span class="tab-dot swatch-40"></span>40 FPS
+              </button>
+              <button class="pipe-mode-tab" type="button" data-pipe-mode="interp">
+                <span class="tab-dot swatch-interp"></span>30 + Interp
+              </button>
+              <button class="pipe-mode-tab active" type="button" data-pipe-mode="60">
+                <span class="tab-dot swatch-60"></span>60 FPS
+              </button>
+            </div>
+
+            <div class="pipe-head-right">
+              <span class="pipe-status mono" id="pipeTargetStatus">60.0 FPS · 0% drop</span>
+              <span class="pipe-total mono" id="pipeTotalMs">Latency: ~35.8 ms</span>
+              <div class="pipe-nav-btns">
+                <button class="pipe-btn" id="pipePrevBtn" type="button" aria-label="Previous step">← Prev</button>
+                <span class="pipe-step-counter mono" id="pipeStepCounter">1 / 5</span>
+                <button class="pipe-btn" id="pipeNextBtn" type="button" aria-label="Next step">Next →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Animated Hardware Pipeline Diagram -->
+          <div class="pipe-stage-area">
+            <div class="pipe-diagram">
+              <!-- NODE 1: CPU -->
+              <div class="pipe-node is-active" data-node="0">
+                <div class="pipe-node-top">
+                  <span class="pipe-node-badge">CPU</span>
+                  <span class="pipe-node-ms mono" id="pipeMsCpu">4.2 ms</span>
+                </div>
+                <div class="pipe-visual pipe-vis-cpu" aria-hidden="true">
+                  <span class="cpu-bar b1"></span>
+                  <span class="cpu-bar b2"></span>
+                  <span class="cpu-bar b3"></span>
+                  <span class="cpu-bar b4"></span>
+                </div>
+                <div class="pipe-node-lbl">State &amp; Physics</div>
+              </div>
+
+              <!-- LINK 1: PCIe Commands -->
+              <div class="pipe-link" data-link="1" aria-hidden="true">
+                <span class="pipe-link-lbl mono">PCIe</span>
+                <div class="pipe-wire">
+                  <span class="pipe-packet p1"></span>
+                  <span class="pipe-packet p2"></span>
+                </div>
+              </div>
+
+              <!-- NODE 2: GPU -->
+              <div class="pipe-node" data-node="1">
+                <div class="pipe-node-top">
+                  <span class="pipe-node-badge">GPU</span>
+                  <span class="pipe-node-ms mono" id="pipeMsGpu">9.8 ms</span>
+                </div>
+                <div class="pipe-visual pipe-vis-gpu" aria-hidden="true">
+                  <div class="gpu-frame">
+                    <span class="gpu-sweep"></span>
+                    <span class="gpu-tile t1"></span>
+                    <span class="gpu-tile t2"></span>
+                    <span class="gpu-tile t3"></span>
+                    <span class="gpu-tile t4"></span>
+                  </div>
+                </div>
+                <div class="pipe-node-lbl">Render Frame</div>
+              </div>
+
+              <!-- LINK 2: V-Sync Gate -->
+              <div class="pipe-link pipe-link-vsync" data-link="2" aria-hidden="true">
+                <span class="pipe-link-lbl mono" id="pipeVsyncLbl">V-Sync</span>
+                <div class="pipe-wire">
+                  <span class="pipe-gate"></span>
+                  <span class="pipe-packet p1"></span>
+                </div>
+                <span class="pipe-link-ms mono" id="pipeMsVsync">2.7 ms</span>
+              </div>
+
+              <!-- NODE 3: HDMI / Cable -->
+              <div class="pipe-node" data-node="3">
+                <div class="pipe-node-top">
+                  <span class="pipe-node-badge">HDMI</span>
+                  <span class="pipe-node-ms mono" id="pipeMsHdmi">16.7 ms</span>
+                </div>
+                <div class="pipe-visual pipe-vis-hdmi" aria-hidden="true">
+                  <span class="hdmi-pulse h1"></span>
+                  <span class="hdmi-pulse h2"></span>
+                  <span class="hdmi-pulse h3"></span>
+                </div>
+                <div class="pipe-node-lbl">Line-by-Line Stream</div>
+              </div>
+
+              <!-- LINK 3: TCON -->
+              <div class="pipe-link" data-link="4" aria-hidden="true">
+                <span class="pipe-link-lbl mono">Direct Scan</span>
+                <div class="pipe-wire">
+                  <span class="pipe-packet p1"></span>
+                  <span class="pipe-packet p2"></span>
+                </div>
+                <span class="pipe-link-ms mono">&lt;1 ms TCON</span>
+              </div>
+
+              <!-- NODE 4: DISPLAY -->
+              <div class="pipe-node" data-node="4">
+                <div class="pipe-node-top">
+                  <span class="pipe-node-badge">DISPLAY</span>
+                  <span class="pipe-node-ms mono" id="pipeMsDisp">2.5 ms GtG</span>
+                </div>
+                <div class="pipe-visual pipe-vis-disp" aria-hidden="true">
+                  <div class="disp-screen">
+                    <span class="disp-scanbeam"></span>
+                    <span class="disp-lit"></span>
+                  </div>
+                </div>
+                <div class="pipe-node-lbl">Simultaneous Scanout</div>
+              </div>
+            </div>
+
+            <!-- Proportional Live Millisecond Breakdown Bar -->
+            <div class="pipe-timeline-bar" aria-label="Pipeline timing breakdown">
+              <div class="pipe-seg seg-cpu" id="pipeSegCpu">CPU</div>
+              <div class="pipe-seg seg-gpu" id="pipeSegGpu">GPU</div>
+              <div class="pipe-seg seg-vsync" id="pipeSegVsync">V-Sync</div>
+              <div class="pipe-seg seg-hdmi" id="pipeSegHdmi">HDMI</div>
+              <div class="pipe-seg seg-disp" id="pipeSegDisp">Panel</div>
+            </div>
+          </div>
+
+          <!-- Narrative & Step Selector Footer -->
+          <div class="pipe-footer">
+            <div class="pipe-copy">
+              <div class="pipe-stage-title" id="pipeStageTitle">1. CPU Simulation &amp; Game State</div>
+              <p class="pipe-stage-desc" id="pipeStageDesc">
+                The CPU reads input, runs physics and NPC logic, and prepares draw commands for the GPU.
+              </p>
+            </div>
+
+            <div class="pipe-steps-bar" role="tablist" aria-label="Pipeline stages">
+              <button class="pipe-step-pill active" type="button" data-pipe-step="0">1. CPU</button>
+              <button class="pipe-step-pill" type="button" data-pipe-step="1">2. GPU</button>
+              <button class="pipe-step-pill" type="button" data-pipe-step="2">3. V-Sync</button>
+              <button class="pipe-step-pill" type="button" data-pipe-step="3">4. HDMI</button>
+              <button class="pipe-step-pill" type="button" data-pipe-step="4">5. Display</button>
+              <span class="pipe-scroll-hint">Scroll ↓ to advance</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: REFRESH CYCLE MAPPING -->
+    <section class="stage-slide" id="timelineSection" data-slide-index="4">
       <div class="slide-inner timeline-stack">
         <div class="timeline-row">
           <!-- SEPARATED FLOATING TIMELINE CARD (50vh) -->
           <div class="timeline-main-card">
             <div class="card-head">
               <div class="card-title-group">
-                <span class="view-kicker">04</span>
+                <span class="view-kicker">05</span>
                 <h2>Refresh Cycle Mapping (100 ms Window)</h2>
               </div>
               <span class="mono timeline-meta" id="timelineHzText">60 Hz = 16.67 ms</span>
@@ -434,7 +602,7 @@
     </section>
   </main>
 
-  <script src="app.js?v=8"></script>
-  <script src="ui.js?v=6"></script>
+  <script src="app.js?v=10"></script>
+  <script src="ui.js?v=10"></script>
 </body>
 </html>

@@ -286,6 +286,7 @@
     updateArenaStaticStats();
     updateSimBanner();
     drawTimeline();
+    updatePipelineView();
   }
 
   function setSpeed(spd) {
@@ -312,6 +313,7 @@
     drawExpCurve();
     updateArenaStaticStats();
     drawTimeline();
+    updatePipelineView();
   }
 
   function triggerExplode() {
@@ -1800,6 +1802,257 @@
     });
   });
 
+  // ============================================================================
+  // SECTION 4 (VIEW 04): ANIMATED FRAME PIPELINE PRESENTATION (PER-TARGET MODEL)
+  // ============================================================================
+  const pipeEls = {
+    card: document.getElementById('pipeCard'),
+    targetStatus: document.getElementById('pipeTargetStatus'),
+    totalMs: document.getElementById('pipeTotalMs'),
+    stepCounter: document.getElementById('pipeStepCounter'),
+    prevBtn: document.getElementById('pipePrevBtn'),
+    nextBtn: document.getElementById('pipeNextBtn'),
+    msCpu: document.getElementById('pipeMsCpu'),
+    msGpu: document.getElementById('pipeMsGpu'),
+    vsyncLbl: document.getElementById('pipeVsyncLbl'),
+    msVsync: document.getElementById('pipeMsVsync'),
+    msHdmi: document.getElementById('pipeMsHdmi'),
+    msDisp: document.getElementById('pipeMsDisp'),
+    segCpu: document.getElementById('pipeSegCpu'),
+    segGpu: document.getElementById('pipeSegGpu'),
+    segVsync: document.getElementById('pipeSegVsync'),
+    segHdmi: document.getElementById('pipeSegHdmi'),
+    segDisp: document.getElementById('pipeSegDisp'),
+    title: document.getElementById('pipeStageTitle'),
+    desc: document.getElementById('pipeStageDesc'),
+    nodes: Array.from(document.querySelectorAll('.pipe-node')),
+    links: Array.from(document.querySelectorAll('.pipe-link')),
+    pills: Array.from(document.querySelectorAll('.pipe-step-pill')),
+    modeTabs: Array.from(document.querySelectorAll('.pipe-mode-tab'))
+  };
+
+  let pipeStage = 0;
+  let pipeMode = '60';
+
+  function getPipelineStageCopy(stageIdx, ctx) {
+    const { mode, hz, dispPeriod, sceneMs, cpuMs, gpuMs, budgetMs, missed, waitMs, interpBufMs, effFps, dropPct } = ctx;
+    const modeName = MODE_META[mode].name;
+
+    if (stageIdx === 0) {
+      return {
+        title: `1. CPU Simulation & Game State (${cpuMs.toFixed(1)} ms)`,
+        desc: `Targeting ${modeName} (${budgetMs.toFixed(1)} ms frame budget), the CPU samples input, steps physics/AI with dt=${(1000 / effFps).toFixed(1)} ms, and prepares draw commands (while GPU renders the previous frame in parallel).`
+      };
+    }
+    if (stageIdx === 1) {
+      return {
+        title: `2. PCIe Command Queue & GPU Render (${gpuMs.toFixed(1)} ms · Total ${sceneMs.toFixed(1)} ms)`,
+        desc: missed
+          ? `OVER BUDGET: CPU+GPU take ${sceneMs.toFixed(1)} ms, exceeding ${modeName}’s ${budgetMs.toFixed(1)} ms deadline! The frame misses its target refresh and drops effective output to ${effFps.toFixed(1)} FPS (-${dropPct}%).`
+          : `WITHIN BUDGET: CPU+GPU finish in ${sceneMs.toFixed(1)} ms—leaving ${(budgetMs - sceneMs).toFixed(1)} ms of spare headroom inside ${modeName}’s ${budgetMs.toFixed(1)} ms frame budget.`
+      };
+    }
+    if (stageIdx === 2) {
+      if (mode === 'interp') {
+        return {
+          title: `3. Frame Pacer + Optical-Flow Lookahead Buffer (+${Math.round(waitMs + interpBufMs)} ms)`,
+          desc: `The engine caps source output at 30 FPS (${Math.max(33.3, sceneMs).toFixed(1)} ms), and the display processor must hold Frame A in a 2-frame buffer (+${Math.round(interpBufMs)} ms) until Frame B arrives to synthesize intermediate frames.`
+        };
+      }
+      if (mode === '40' && hz === 60 && !missed) {
+        return {
+          title: `3. Frame Pacer & 60 Hz V-Sync Mismatch (+${waitMs.toFixed(1)} ms avg · 3:2 Judder)`,
+          desc: `Because a 25.0 ms frame does not divide evenly into 16.7 ms (60 Hz) refresh ticks, frames alternate waiting 1 refresh (16.7 ms) and 2 refreshes (33.3 ms), causing uneven 3:2 pulldown judder.`
+        };
+      }
+      if (mode === '40' && hz === 120 && !missed) {
+        return {
+          title: `3. Frame Pacer & 120 Hz V-Sync Lock (+${waitMs.toFixed(1)} ms)`,
+          desc: `On 120 Hz (8.33 ms ticks), the 25.0 ms frame pacer aligns with exact 3-refresh precision (3 × 8.33 ms = 25.0 ms), giving locked 40 FPS with zero judder.`
+        };
+      }
+      return {
+        title: `3. Frame Pacer & V-Sync Gate (+${waitMs.toFixed(1)} ms)`,
+        desc: missed
+          ? `Because rendering (${sceneMs.toFixed(1)} ms) missed the ${budgetMs.toFixed(1)} ms v-sync window, the swap chain stalls an extra ${waitMs.toFixed(1)} ms waiting for the next ${hz} Hz refresh tick.`
+          : `The finished frame waits ${waitMs.toFixed(1)} ms at the swap-chain gate to align cleanly with ${modeName}’s ${budgetMs.toFixed(1)} ms cadence on the ${hz} Hz display.`
+      };
+    }
+    if (stageIdx === 3) {
+      return {
+        title: `4. HDMI Line-by-Line Signal Stream (${dispPeriod.toFixed(1)} ms @ ${hz} Hz)`,
+        desc: `Pixel rows stream top-to-bottom over HDMI in real time (${dispPeriod.toFixed(1)} ms for a full ${hz} Hz refresh). The monitor does not wait for the whole frame—it scans each line directly to the panel as it arrives (<1 ms TCON buffer).`
+      };
+    }
+    return {
+      title: `5. Simultaneous Panel Scanout & Pixel GtG (~2.5 ms)`,
+      desc: `Physical pixels transition (~2.5 ms GtG) as the scanbeam sweeps down the screen, completing the ${modeName} input-to-photon pipeline in ~${ctx.totalMs.toFixed(1)} ms at ${effFps.toFixed(1)} effective FPS.`
+    };
+  }
+
+  function updatePipelineView() {
+    if (!pipeEls.card) return;
+    const hz = state.displayHz;
+    const dispPeriod = 1000 / hz;
+    const sceneMs = getMeanSceneRenderMs(state.load, state.simSpikeMs);
+    const cpuMs = sceneMs * 0.30;
+    const gpuMs = sceneMs * 0.70;
+
+    const budgetMs = MODE_META[pipeMode].periodMs;
+    const missed = sceneMs > budgetMs + 0.5;
+    const pacedMs = Math.max(budgetMs, sceneMs);
+
+    // Align to display v-sync boundary (accounting for 40 FPS @ 60 Hz 1.5-tick average vs integer ticks)
+    let vSyncAlignedMs;
+    if (pipeMode === '40' && hz === 60 && !missed) {
+      vSyncAlignedMs = 25.0; // averages 16.7 / 33.3 ms across 3:2 pulldown, +4.2 ms avg v-sync phase wait
+    } else {
+      vSyncAlignedMs = Math.ceil((pacedMs - 0.01) / dispPeriod) * dispPeriod;
+    }
+
+    const waitMs = (pipeMode === '40' && hz === 60 && !missed)
+      ? (25.0 - sceneMs + 4.2)
+      : Math.max(0.4, vSyncAlignedMs - sceneMs);
+
+    const interpBufMs = pipeMode === 'interp' ? Math.max(33.33, sceneMs) * 2 : 0;
+    const gateTotalMs = waitMs + interpBufMs;
+
+    // HDMI streams line-by-line simultaneously with display scanout over 1 refresh period, +2.5 ms GtG
+    const hdmiMs = dispPeriod;
+    const dispMs = 2.5;
+    const totalMs = cpuMs + gpuMs + gateTotalMs + hdmiMs + dispMs;
+
+    const effFps = Math.min(MODE_META[pipeMode].gameFps, 1000 / pacedMs);
+    const dropPct = Math.round(getEfficiencyDropPct(effFps, MODE_META[pipeMode].gameFps));
+
+    pipeEls.card.dataset.stage = String(pipeStage);
+
+    // Header status & total latency badges
+    if (pipeEls.targetStatus) {
+      if (pipeMode === 'interp') {
+        pipeEls.targetStatus.textContent = dropPct > 1
+          ? `${hz} Hz out (${effFps.toFixed(0)} src · -${dropPct}%)`
+          : `${hz} Hz out (30 src · +${Math.round(interpBufMs)} ms buf)`;
+        pipeEls.targetStatus.className = 'pipe-status mono warn';
+      } else if (pipeMode === '40' && hz === 60 && !missed) {
+        pipeEls.targetStatus.textContent = '40.0 FPS · 3:2 judder';
+        pipeEls.targetStatus.className = 'pipe-status mono warn';
+      } else {
+        pipeEls.targetStatus.textContent = dropPct > 1
+          ? `${effFps.toFixed(1)} FPS · -${dropPct}% drop`
+          : `${effFps.toFixed(1)} FPS · 0% drop`;
+        pipeEls.targetStatus.className = 'pipe-status mono ' + (dropPct > 1 ? 'warn' : 'good');
+      }
+    }
+
+    pipeEls.totalMs.textContent = `Input→Photon: ~${totalMs.toFixed(1)} ms`;
+    pipeEls.stepCounter.textContent = `${pipeStage + 1} / 5`;
+    pipeEls.prevBtn.disabled = pipeStage <= 0;
+    pipeEls.nextBtn.disabled = pipeStage >= 4;
+
+    pipeEls.msCpu.textContent = `${cpuMs.toFixed(1)} ms`;
+    pipeEls.msGpu.textContent = `${gpuMs.toFixed(1)} ms`;
+    if (pipeEls.vsyncLbl) {
+      pipeEls.vsyncLbl.textContent = pipeMode === 'interp' ? 'Buffer + V-Sync' : 'Pacer / V-Sync';
+    }
+    pipeEls.msVsync.textContent = `+${gateTotalMs.toFixed(1)} ms`;
+    pipeEls.msHdmi.textContent = `${hdmiMs.toFixed(1)} ms`;
+    pipeEls.msDisp.textContent = `${dispMs.toFixed(1)} ms GtG`;
+
+    // Update proportional millisecond breakdown segments
+    const vsyncSegLbl = pipeMode === 'interp' ? 'Interp Buf' : 'Pacer/V-Sync';
+    const segs = [
+      { el: pipeEls.segCpu,   ms: cpuMs,       lbl: 'CPU',        idx: 0 },
+      { el: pipeEls.segGpu,   ms: gpuMs,       lbl: 'GPU',        idx: 1 },
+      { el: pipeEls.segVsync, ms: gateTotalMs, lbl: vsyncSegLbl,  idx: 2 },
+      { el: pipeEls.segHdmi,  ms: hdmiMs,      lbl: 'HDMI+Scan',  idx: 3 },
+      { el: pipeEls.segDisp,  ms: dispMs,      lbl: 'GtG',        idx: 4 }
+    ];
+    segs.forEach((s) => {
+      s.el.style.flexGrow = String(Math.max(2.2, s.ms));
+      s.el.textContent = s.ms >= 4.5 ? `${s.lbl} ${s.ms.toFixed(1)} ms` : s.lbl;
+      s.el.classList.toggle('is-active', s.idx === pipeStage);
+      s.el.classList.toggle('is-done', s.idx < pipeStage);
+    });
+    pipeEls.segGpu.classList.toggle('is-missed', missed);
+    pipeEls.segVsync.classList.toggle('is-interp', pipeMode === 'interp');
+    pipeEls.segVsync.classList.toggle('is-missed', missed && pipeMode !== 'interp');
+
+    // Update hardware node states
+    pipeEls.nodes.forEach((node) => {
+      const idx = Number(node.dataset.node);
+      node.classList.toggle('is-active', idx === pipeStage);
+      node.classList.toggle('is-done', idx < pipeStage);
+      if (idx === 1) node.classList.toggle('is-missed', missed);
+    });
+
+    // Update signal link states
+    pipeEls.links.forEach((link) => {
+      const idx = Number(link.dataset.link);
+      link.classList.toggle('is-active', idx === pipeStage);
+      link.classList.toggle('is-done', idx < pipeStage);
+    });
+
+    // Update step pills, mode tabs & narrative copy
+    pipeEls.pills.forEach((p) => {
+      p.classList.toggle('active', Number(p.dataset.pipeStep) === pipeStage);
+    });
+    pipeEls.modeTabs.forEach((tab) => {
+      tab.classList.toggle('active', tab.dataset.pipeMode === pipeMode);
+    });
+
+    const info = getPipelineStageCopy(pipeStage, {
+      mode: pipeMode,
+      hz,
+      dispPeriod,
+      sceneMs,
+      cpuMs,
+      gpuMs,
+      budgetMs,
+      missed,
+      waitMs,
+      interpBufMs,
+      effFps,
+      dropPct,
+      totalMs
+    });
+    pipeEls.title.textContent = info.title;
+    pipeEls.desc.textContent = info.desc;
+  }
+
+  function setPipelineStep(idx) {
+    pipeStage = Math.max(0, Math.min(4, idx));
+    updatePipelineView();
+  }
+
+  function stepPipeline(dir) {
+    const next = pipeStage + dir;
+    if (next < 0 || next >= 5) return false;
+    pipeStage = next;
+    updatePipelineView();
+    return true;
+  }
+
+  if (pipeEls.prevBtn) pipeEls.prevBtn.addEventListener('click', () => stepPipeline(-1));
+  if (pipeEls.nextBtn) pipeEls.nextBtn.addEventListener('click', () => stepPipeline(1));
+  pipeEls.pills.forEach((p) => {
+    p.addEventListener('click', () => setPipelineStep(Number(p.dataset.pipeStep)));
+  });
+  pipeEls.modeTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      pipeMode = tab.dataset.pipeMode;
+      updatePipelineView();
+    });
+  });
+
+  // Expose presentation controller for ui.js scroll integration
+  window.pipelinePresentation = {
+    step: stepPipeline,
+    setStep: setPipelineStep,
+    getStep: () => pipeStage,
+    count: 5
+  };
+
   window.addEventListener('resize', () => {
     drawTimeline();
     drawExpCurve();
@@ -1833,6 +2086,7 @@
       drawExpCurve();
       updateArenaStaticStats();
       drawTimeline();
+      updatePipelineView();
       wasSpiking = isSpiking;
     }
 
@@ -1861,6 +2115,7 @@
   drawExpCurve();
   updateArenaStaticStats();
   drawTimeline();
+  updatePipelineView();
   detectRefreshRate(true);
   requestAnimationFrame(loop);
 })();
