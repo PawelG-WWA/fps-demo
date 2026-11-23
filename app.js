@@ -138,6 +138,7 @@
     toggleTruePos: document.getElementById('toggleTruePos'),
     toggleArtifacts: document.getElementById('toggleArtifacts'),
     pauseBtn: document.getElementById('pauseBtn'),
+    pauseLbl: document.getElementById('pauseLbl'),
     simBanner: document.getElementById('simBanner'),
     panSpeedSlider: document.getElementById('panSpeedSlider'),
     panSpeedLabel: document.getElementById('panSpeedLabel'),
@@ -302,6 +303,8 @@
     dom.loadVal.className = 'load-val mono' + (state.load >= 3.0 ? ' high' : state.load >= 1.5 ? ' mid' : '');
     dom.loadMs.textContent = `${sceneMs.toFixed(1)} ms`;
     dom.loadMs.className = 'load-ms mono' + (state.simSpikeMs > 0.5 ? ' spike' : '');
+    const spikePct = Math.max(0, Math.min(100, (state.simSpikeMs / SPIKE_PEAK_MS) * 100));
+    dom.explodeBtn.style.setProperty('--spike-pct', `${spikePct.toFixed(1)}%`);
     dom.explodeBtn.classList.toggle('active', state.simSpikeMs > 2.0);
   }
 
@@ -449,7 +452,7 @@
     const dropPctInterp = getEfficiencyDropPct(srcFps, 30);
     const totalInterpLag = Math.round(bufLag + (1000 / srcFps) + 18);
     laneMetricsEl['interp'].innerHTML = `
-      <span class="meta-item">${hz} Hz (${srcFps.toFixed(0)} FPS src)</span>
+      <span class="meta-item">${hz} Hz (${srcFps.toFixed(0)} src)</span>
       ${formatDropBadge(dropPctInterp)}
       <span class="meta-item warn">+${bufLag} ms buf</span>
       <span class="meta-item warn">~${totalInterpLag} ms lag</span>
@@ -642,6 +645,12 @@
     ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
     for (let px = w - tickOffset; px > -10; px -= tickSpacing) {
       ctx.fillRect(Math.round(px), 10, 1, h - 20);
+    }
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+    for (let rx = 60; rx < w; rx += 60) {
+      const maj = rx % 120 === 0 ? 5 : 3;
+      ctx.fillRect(rx, 0, 1, maj);
+      ctx.fillRect(rx, h - maj, 1, maj);
     }
 
     const span = w + 100;
@@ -1054,6 +1063,17 @@
       ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
       ctx.textAlign = 'left';
       ctx.fillText('OS POINTER', arena.trueX + 8, arena.trueY - 12);
+
+      if (dist > 18) {
+        const mx = (arena.trueX + arena.renderedX) * 0.5;
+        const my = (arena.trueY + arena.renderedY) * 0.5;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillRect(mx - 26, my - 9, 52, 16);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '700 9.5px ui-monospace, SFMono-Regular, Menlo, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${Math.round(dist)} px lag`, mx, my + 2.5);
+      }
     }
 
     const cx = arena.renderedX;
@@ -1229,7 +1249,7 @@
       }
 
       html += `
-        <div class="tl-row">
+        <div class="tl-row" data-row-mode="${row.mode}">
           <div class="tl-row-head">
             <div class="tl-row-title"><span class="swatch swatch-${row.mode}"></span><span>${row.label}</span></div>
             <div class="tl-row-sub${subWarn ? ' warn' : ''}">${row.sub}</div>
@@ -1254,12 +1274,46 @@
   dom.btnSpeed1x.addEventListener('click', () => setSpeed(1));
   dom.btnSpeedSlow.addEventListener('click', () => setSpeed(0.25));
 
+  function syncRangeFill(input) {
+    if (!input) return;
+    const min = parseFloat(input.min) || 0;
+    const max = parseFloat(input.max) || 100;
+    const val = parseFloat(input.value) || min;
+    const pct = ((val - min) / Math.max(0.001, max - min)) * 100;
+    input.style.setProperty('--range-pct', `${pct.toFixed(1)}%`);
+  }
+
   dom.loadSlider.addEventListener('input', (e) => {
+    syncRangeFill(dom.loadSlider);
     setLoad(parseFloat(e.target.value));
   });
 
+  function togglePause() {
+    state.paused = !state.paused;
+    if (dom.pauseLbl) {
+      dom.pauseLbl.textContent = state.paused ? 'Resume' : 'Pause';
+    } else {
+      dom.pauseBtn.textContent = state.paused ? 'Resume' : 'Pause';
+    }
+    dom.pauseBtn.classList.toggle('is-paused', state.paused);
+  }
+
   dom.explodeBtn.addEventListener('click', () => {
     triggerExplode();
+  });
+
+  // Keyboard shortcuts: 'S' for Load Spike, 'P' for Pause / Resume
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === 's' || e.key === 'S') {
+      e.preventDefault();
+      triggerExplode();
+    } else if (e.key === 'p' || e.key === 'P') {
+      e.preventDefault();
+      togglePause();
+    }
   });
 
   dom.toggleTruePos.addEventListener('change', (e) => {
@@ -1271,15 +1325,18 @@
   });
 
   dom.pauseBtn.addEventListener('click', () => {
-    state.paused = !state.paused;
-    dom.pauseBtn.textContent = state.paused ? 'Resume' : 'Pause';
+    togglePause();
   });
 
   dom.panSpeedSlider.addEventListener('input', (e) => {
+    syncRangeFill(dom.panSpeedSlider);
     const v = Number(e.target.value);
     state.panSpeed = v;
     dom.panSpeedLabel.textContent = `${v} px/s`;
   });
+
+  syncRangeFill(dom.loadSlider);
+  syncRangeFill(dom.panSpeedSlider);
 
   document.querySelectorAll('.tab').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1512,13 +1569,28 @@
     }
     ctx.stroke();
 
-    // Draw identical count of white NPCs (dots, rects, triangles)
-    ctx.fillStyle = 'rgba(241, 245, 249, 0.88)';
+    // Player position (Lissajous patrol) + proximity interaction radius
+    const px = (0.5 + 0.34 * Math.sin(tSec * 1.25)) * w;
+    const py = (0.5 + 0.30 * Math.sin(tSec * 1.85 + 0.6)) * h;
+    const proxRadius = 38;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(px, py, proxRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw identical count of white NPCs (dots, rects, triangles), highlighting those in player proximity
     for (let i = 0; i < npcCount; i++) {
       const n = simNpcs[i];
       const nx = pingPong(n.x0 + n.vx * tSec, 0.04, 0.96) * w;
       const ny = pingPong(n.y0 + n.vy * tSec, 0.06, 0.94) * h;
       const r = n.size;
+      const nearPlayer = Math.hypot(nx - px, ny - py) <= proxRadius;
+      ctx.fillStyle = nearPlayer ? '#fde047' : 'rgba(241, 245, 249, 0.88)';
 
       if (n.shape === 'dot') {
         ctx.beginPath();
@@ -1543,10 +1615,6 @@
         ctx.restore();
       }
     }
-
-    // Draw 1 yellow Player dot (Lissajous patrol)
-    const px = (0.5 + 0.34 * Math.sin(tSec * 1.25)) * w;
-    const py = (0.5 + 0.30 * Math.sin(tSec * 1.85 + 0.6)) * h;
 
     // Subtle interpolation artifact ghost when load is heavy
     if (mode === 'interp' && state.showArtifacts && state.simLevel >= 2.4) {
@@ -2038,10 +2106,37 @@
   pipeEls.pills.forEach((p) => {
     p.addEventListener('click', () => setPipelineStep(Number(p.dataset.pipeStep)));
   });
+  pipeEls.nodes.forEach((node) => {
+    node.addEventListener('click', () => setPipelineStep(Number(node.dataset.node)));
+  });
+  pipeEls.links.forEach((link) => {
+    link.style.cursor = 'pointer';
+    link.addEventListener('click', () => setPipelineStep(Number(link.dataset.link)));
+  });
+  [pipeEls.segCpu, pipeEls.segGpu, pipeEls.segVsync, pipeEls.segHdmi, pipeEls.segDisp].forEach((seg, idx) => {
+    if (seg) seg.addEventListener('click', () => setPipelineStep(idx));
+  });
   pipeEls.modeTabs.forEach((tab) => {
     tab.addEventListener('click', () => {
       pipeMode = tab.dataset.pipeMode;
       updatePipelineView();
+    });
+  });
+
+  // Cross-highlight Refresh Map rows when hovering View 05 explanation cards
+  document.querySelectorAll('.note-item[data-focus-mode]').forEach((card) => {
+    const focusMode = card.dataset.focusMode;
+    card.addEventListener('mouseenter', () => {
+      if (!dom.timelineBoard) return;
+      dom.timelineBoard.querySelectorAll('.tl-row').forEach((r) => {
+        r.classList.toggle('is-highlighted', r.dataset.rowMode === focusMode);
+      });
+    });
+    card.addEventListener('mouseleave', () => {
+      if (!dom.timelineBoard) return;
+      dom.timelineBoard.querySelectorAll('.tl-row.is-highlighted').forEach((r) => {
+        r.classList.remove('is-highlighted');
+      });
     });
   });
 

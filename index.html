@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FPS &amp; Refresh Rate Showcase</title>
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=14" />
 </head>
 <body>
   <!-- FLOATING ANCHORED TOP BAR -->
@@ -76,13 +76,22 @@
           <input type="range" id="loadSlider" min="1" max="5" step="0.1" value="1" />
           <span class="load-val mono" id="loadVal">1.0</span>
           <span class="load-ms mono" id="loadMs">14.0 ms</span>
-          <button class="btn-explode" id="explodeBtn" type="button" title="Trigger a sudden +17.5 ms transient workload spike">Explode</button>
         </div>
 
         <div class="dock-spacer" aria-hidden="true"></div>
 
-        <div class="dock-group">
-          <button class="btn-pause" id="pauseBtn" type="button">Pause</button>
+        <div class="dock-group dock-actions">
+          <button class="btn-explode" id="explodeBtn" type="button" title="Inject a sudden +17.5 ms transient load spike (Shortcut: S)">
+            <svg class="spike-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1.5 9.5h3l2-6 3 9 2-3h3" />
+            </svg>
+            <span class="spike-lbl">Load Spike</span>
+            <kbd class="spike-kbd">S</kbd>
+          </button>
+          <button class="btn-pause" id="pauseBtn" type="button" title="Pause or resume simulation (Shortcut: P)">
+            <span id="pauseLbl">Pause</span>
+            <kbd class="pause-kbd">P</kbd>
+          </button>
         </div>
       </aside>
     </div>
@@ -136,14 +145,16 @@
                   </div>
                   <canvas class="lane-canvas" id="canvas-30" width="900" height="128"></canvas>
                 </div>
-                <div class="ft-panel">
-                  <div class="lane-meta" id="metrics-30"></div>
-                  <div class="ft-chart-wrap">
+                <div class="lane-telemetry-split">
+                  <div class="ft-info-card">
+                    <div class="lane-meta" id="metrics-30"></div>
                     <div class="ft-top">
                       <span class="ft-note" id="ft-cap-30">Even 2-2-2 cadence</span>
                       <span class="mono" id="ft-val-30">33.3 ms</span>
                     </div>
-                    <canvas class="ft-canvas" id="ft-30" width="240" height="36"></canvas>
+                  </div>
+                  <div class="ft-chart-card">
+                    <canvas class="ft-canvas" id="ft-30" width="180" height="96"></canvas>
                   </div>
                 </div>
               </div>
@@ -158,14 +169,16 @@
                   </div>
                   <canvas class="lane-canvas" id="canvas-40" width="900" height="128"></canvas>
                 </div>
-                <div class="ft-panel">
-                  <div class="lane-meta" id="metrics-40"></div>
-                  <div class="ft-chart-wrap">
+                <div class="lane-telemetry-split">
+                  <div class="ft-info-card">
+                    <div class="lane-meta" id="metrics-40"></div>
                     <div class="ft-top">
                       <span class="ft-note" id="ft-cap-40">3:2 judder on 60 Hz</span>
                       <span class="mono" id="ft-val-40">16.7 / 33.3 ms</span>
                     </div>
-                    <canvas class="ft-canvas" id="ft-40" width="240" height="36"></canvas>
+                  </div>
+                  <div class="ft-chart-card">
+                    <canvas class="ft-canvas" id="ft-40" width="180" height="96"></canvas>
                   </div>
                 </div>
               </div>
@@ -180,14 +193,16 @@
                   </div>
                   <canvas class="lane-canvas" id="canvas-interp" width="900" height="128"></canvas>
                 </div>
-                <div class="ft-panel">
-                  <div class="lane-meta" id="metrics-interp"></div>
-                  <div class="ft-chart-wrap">
+                <div class="lane-telemetry-split">
+                  <div class="ft-info-card">
+                    <div class="lane-meta" id="metrics-interp"></div>
                     <div class="ft-top">
                       <span class="ft-note" id="ft-cap-interp">60 Hz output, trails true time</span>
                       <span class="mono" id="ft-val-interp">16.7 ms (+67 ms)</span>
                     </div>
-                    <canvas class="ft-canvas" id="ft-interp" width="240" height="36"></canvas>
+                  </div>
+                  <div class="ft-chart-card">
+                    <canvas class="ft-canvas" id="ft-interp" width="180" height="96"></canvas>
                   </div>
                 </div>
               </div>
@@ -202,14 +217,16 @@
                   </div>
                   <canvas class="lane-canvas" id="canvas-60" width="900" height="128"></canvas>
                 </div>
-                <div class="ft-panel">
-                  <div class="lane-meta" id="metrics-60"></div>
-                  <div class="ft-chart-wrap">
+                <div class="lane-telemetry-split">
+                  <div class="ft-info-card">
+                    <div class="lane-meta" id="metrics-60"></div>
                     <div class="ft-top">
                       <span class="ft-note" id="ft-cap-60">Even 1-1-1 cadence</span>
                       <span class="mono" id="ft-val-60">16.7 ms</span>
                     </div>
-                    <canvas class="ft-canvas" id="ft-60" width="240" height="36"></canvas>
+                  </div>
+                  <div class="ft-chart-card">
+                    <canvas class="ft-canvas" id="ft-60" width="180" height="96"></canvas>
                   </div>
                 </div>
               </div>
@@ -580,21 +597,21 @@
 
           <!-- 4 SEPARATED FLOATING COMMENT CARDS (MATCHING 50vh TOTAL HEIGHT) -->
           <div class="notes-strip">
-            <div class="note-item">
+            <div class="note-item" data-focus-mode="40">
               <span class="note-tag">40 FPS on 120 Hz</span>
               <p>At 25 ms per frame, 40 FPS divides evenly into 120 Hz (3 refreshes) but forces 3:2 judder on 60 Hz.</p>
             </div>
-            <div class="note-item">
+            <div class="note-item" data-focus-mode="interp">
               <span class="note-tag">Interpolation Buffer</span>
               <p>Synthesizing frames requires holding back real frames first, adding 67 ms+ of unavoidable pipeline lag.</p>
             </div>
-            <div class="note-item">
+            <div class="note-item" data-focus-mode="40">
               <span class="note-tag">Slow-Mo Inspector</span>
               <p>At 0.25× speed, 120 Hz refreshes slow to 30 ticks/s so even a 60 Hz screen shows exact cadence.</p>
             </div>
-            <div class="note-item">
+            <div class="note-item" data-focus-mode="30">
               <span class="note-tag">Budget &amp; Spikes</span>
-              <p>All modes pay the same scene cost, so 30 FPS absorbs 30 ms spikes that make 40 and 60 FPS hitch.</p>
+              <p>All modes pay the same scene cost, so 30 FPS absorbs 30 ms spikes (try Load Spike) that make 40 and 60 FPS hitch.</p>
             </div>
           </div>
         </div>
@@ -602,7 +619,26 @@
     </section>
   </main>
 
-  <script src="app.js?v=10"></script>
-  <script src="ui.js?v=10"></script>
+  <!-- FLOATING RIGHT-MARGIN PROGRESS RAIL (OUTSIDE 70vw STAGE) -->
+  <nav class="rail-nav" aria-label="Section progress">
+    <button class="rail-dot active" type="button" data-target="motionSection" aria-label="01 Motion">
+      <span class="rail-tooltip">01 · Motion</span>
+    </button>
+    <button class="rail-dot" type="button" data-target="simSection" aria-label="02 Simulation">
+      <span class="rail-tooltip">02 · Simulation</span>
+    </button>
+    <button class="rail-dot" type="button" data-target="inputSection" aria-label="03 Latency">
+      <span class="rail-tooltip">03 · Latency</span>
+    </button>
+    <button class="rail-dot" type="button" data-target="pipelineSection" aria-label="04 Pipeline">
+      <span class="rail-tooltip">04 · Pipeline</span>
+    </button>
+    <button class="rail-dot" type="button" data-target="timelineSection" aria-label="05 Refresh Map">
+      <span class="rail-tooltip">05 · Refresh Map</span>
+    </button>
+  </nav>
+
+  <script src="app.js?v=15"></script>
+  <script src="ui.js?v=13"></script>
 </body>
 </html>

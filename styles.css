@@ -25,8 +25,8 @@
   --radius-md: 10px;
   --radius-sm: 8px;
 
-  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 10px 30px rgba(15, 23, 42, 0.06);
-  --shadow-float: 0 12px 34px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.03), 0 6px 16px rgba(15, 23, 42, 0.04), 0 16px 36px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-float: 0 2px 6px rgba(15, 23, 42, 0.05), 0 16px 40px rgba(15, 23, 42, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -43,7 +43,9 @@ html, body {
   padding: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: radial-gradient(rgba(15, 23, 42, 0.065) 1px, transparent 1px);
+  background-size: 20px 20px;
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14.5px;
@@ -53,6 +55,7 @@ html, body {
 
 .mono {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .label {
@@ -146,6 +149,7 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -321,14 +325,14 @@ html, body {
 }
 
 .load-group input[type="range"] {
-  width: clamp(64px, 6.5vw, 110px);
+  width: clamp(54px, 5.4vw, 108px);
 }
 
 .load-val {
   font-size: clamp(13.5px, 1.5vh, 15.5px);
   line-height: var(--lbl-h);
   font-weight: 750;
-  min-width: 26px;
+  min-width: 24px;
   text-align: right;
   color: var(--text);
 }
@@ -340,7 +344,7 @@ html, body {
   font-size: clamp(12.5px, 1.4vh, 14.5px);
   line-height: var(--lbl-h);
   color: var(--text-muted);
-  min-width: 56px;
+  min-width: 52px;
 }
 
 .load-ms.spike {
@@ -348,30 +352,75 @@ html, body {
   font-weight: 750;
 }
 
+.dock-actions {
+  gap: 8px;
+}
+
+/* Tactile hardware-style Load Spike trigger button with live decay bar & keycap */
 .btn-explode {
+  position: relative;
+  overflow: hidden;
   appearance: none;
   background: #dc2626;
-  border: 1px solid #b91c1c;
+  border: 1px solid #991b1b;
   color: #ffffff;
   font-family: var(--font-sans);
-  font-size: clamp(13.5px, 1.45vh, 15px);
+  font-size: clamp(13px, 1.4vh, 14.5px);
   line-height: var(--lbl-h);
   font-weight: 700;
-  padding: 1px 13px;
+  padding: 0 9px 0 11px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.22);
-  transition: background 0.12s ease, transform 0.08s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 #991b1b, 0 4px 10px rgba(220, 38, 38, 0.24);
+  transform: translateY(-1px);
+  transition: background 0.12s ease, transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+/* Live spike decay fill bar inside the button */
+.btn-explode::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: var(--spike-pct, 0%);
+  background: rgba(255, 255, 255, 0.26);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.btn-explode > * {
+  position: relative;
+  z-index: 1;
+}
+
+.spike-icon {
+  flex-shrink: 0;
+}
+
+.spike-kbd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 16px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .btn-explode:hover {
-  background: #b91c1c;
+  background: #c81e1e;
 }
 
 .btn-explode:active,
 .btn-explode.active {
-  background: #991b1b;
-  transform: scale(0.97);
+  background: #b91c1c;
+  transform: translateY(1px);
+  box-shadow: 0 0 0 #991b1b, 0 0 0 3px rgba(220, 38, 38, 0.2);
 }
 
 .btn-pause {
@@ -380,14 +429,41 @@ html, body {
   border: 1px solid var(--border-strong);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: clamp(13.5px, 1.45vh, 15px);
+  font-size: clamp(13px, 1.4vh, 14.5px);
   line-height: var(--lbl-h);
   font-weight: 650;
-  padding: 1px 13px;
+  padding: 0 8px 0 11px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  min-width: 74px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
   transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.pause-kbd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 16px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+}
+
+.btn-pause.is-paused {
+  background: var(--text);
+  border-color: var(--text);
+  color: #ffffff;
+}
+
+.btn-pause.is-paused .pause-kbd {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
 }
 
 .btn-pause:hover {
@@ -403,7 +479,7 @@ input[type="range"] {
   appearance: none;
   height: 6px;
   border-radius: 999px;
-  background: #d0d7e2;
+  background: linear-gradient(90deg, var(--text) var(--range-pct, 0%), #d0d7e2 var(--range-pct, 0%));
   outline: none;
   cursor: pointer;
 }
@@ -697,13 +773,13 @@ h2 {
   min-height: 0;
 }
 
-/* Two separate floating rounded containers side-by-side */
+/* Three separate floating rounded containers side-by-side: Track | 60% Info | 40% Live Chart */
 .lane-track-unit {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(260px, 24vw, 320px);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) clamp(370px, 33vw, 490px);
+  gap: 10px;
 }
 
 .lane-canvas-wrap {
@@ -761,31 +837,40 @@ h2 {
   background: var(--viewport);
 }
 
-/* Floating right telemetry container: 60% 2×2 floating features on top, 40% frametime on bottom */
-.ft-panel {
+/* Right telemetry section split into 2 floating cards: 60% stacked info + 40% full-height live chart */
+.lane-telemetry-split {
   height: 100%;
-  background: var(--surface-alt);
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 4fr);
+  gap: 8px;
+}
+
+.ft-info-card {
+  height: 100%;
+  min-height: 0;
+  background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-  overflow: hidden;
-  display: grid;
-  grid-template-rows: minmax(0, 6fr) minmax(0, 4fr);
-  padding: clamp(4px, 0.55vh, 6px);
+  padding: clamp(5px, 0.65vh, 8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   gap: clamp(4px, 0.55vh, 6px);
-  min-height: 0;
+  overflow: hidden;
 }
 
-/* 2×2 floating feature cards above the frametime indicator */
+/* 2×2 floating feature cards stacked above the cadence/timing row */
 .lane-meta {
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: clamp(4px, 0.5vh, 6px);
   font-family: var(--font-mono);
-  font-size: clamp(10.5px, 1.3vh, 13.5px);
+  font-size: clamp(10px, 1.2vh, 13px);
   line-height: 1.2;
 }
 
@@ -793,11 +878,11 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
+  padding: 0 5px;
   border: 1px solid var(--border-strong);
   border-radius: 7px;
-  background: var(--surface);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  background: var(--surface-alt);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
   color: var(--text);
   font-weight: 650;
   white-space: nowrap;
@@ -819,48 +904,50 @@ h2 {
   font-weight: 700;
 }
 
-/* Frametime indicator at the bottom (40% height) */
-.ft-chart-wrap {
-  height: 100%;
-  min-height: 0;
-  padding: 3px 8px 3px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 1px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
 .ft-top {
   flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: clamp(10.5px, 1.25vh, 12px);
+  font-size: clamp(10px, 1.15vh, 11.5px);
   line-height: 15px;
   color: var(--text-dim);
   gap: 6px;
+  padding-top: 3px;
+  border-top: 1px solid var(--border);
 }
 
 .ft-top .mono {
   color: var(--text);
   font-weight: 700;
-  font-size: clamp(10.5px, 1.25vh, 12px);
+  font-size: clamp(10px, 1.15vh, 11.5px);
   flex-shrink: 0;
+}
+
+/* Separate floating 40% live frame-time bar chart container */
+.ft-chart-card {
+  height: 100%;
+  min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  padding: clamp(6px, 0.8vh, 10px) 8px clamp(4px, 0.6vh, 8px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .ft-canvas {
   width: 100%;
+  height: 100%;
   flex: 1 1 auto;
-  min-height: 14px;
+  min-height: 0;
   display: block;
 }
 
 .ft-note {
-  font-size: clamp(10.5px, 1.25vh, 12px);
+  font-size: clamp(10px, 1.15vh, 11.5px);
   line-height: 15px;
   color: var(--text-muted);
   white-space: nowrap;
@@ -1445,9 +1532,16 @@ h2 {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  opacity: 0.48;
+  opacity: 0.52;
   transform: translateY(2px);
-  transition: opacity 0.28s ease, transform 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+  cursor: pointer;
+  transition: opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1), transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.26s ease, box-shadow 0.26s ease;
+}
+
+.pipe-node:hover:not(.is-active) {
+  opacity: 0.85;
+  transform: translateY(-1px);
+  border-color: rgba(15, 23, 42, 0.35);
 }
 
 .pipe-node.is-done {
@@ -1807,8 +1901,13 @@ h2 {
   white-space: nowrap;
   overflow: hidden;
   padding: 0 6px;
-  opacity: 0.45;
-  transition: flex-grow 0.3s ease, opacity 0.22s ease, transform 0.22s ease;
+  opacity: 0.5;
+  cursor: pointer;
+  transition: flex-grow 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease, transform 0.22s ease;
+}
+
+.pipe-seg:hover:not(.is-active) {
+  opacity: 0.85;
 }
 
 .pipe-seg.is-done { opacity: 0.78; }
@@ -2019,6 +2118,13 @@ h2 {
   gap: 10px;
   align-items: stretch;
   min-height: 0;
+  border-radius: var(--radius-sm);
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.tl-row.is-highlighted {
+  background: rgba(15, 23, 42, 0.04);
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.04);
 }
 
 .tl-row-head {
@@ -2193,6 +2299,82 @@ h2 {
   justify-content: center;
   gap: 2px;
   overflow: hidden;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.note-item:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+/* ============================================================================
+   FLOATING RIGHT-MARGIN PROGRESS RAIL (OUTSIDE 70vw STAGE)
+   ============================================================================ */
+.rail-nav {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 65;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 10px 6px;
+  box-shadow: var(--shadow-card);
+}
+
+.rail-dot {
+  position: relative;
+  appearance: none;
+  border: none;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.22);
+  cursor: pointer;
+  transition: height 0.24s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease;
+}
+
+.rail-dot:hover {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.rail-dot.active {
+  height: 22px;
+  background: var(--text);
+}
+
+.rail-tooltip {
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) translateX(4px);
+  background: var(--text);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 20px;
+  font-weight: 650;
+  padding: 2px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+}
+
+.rail-dot:hover .rail-tooltip,
+.rail-dot:focus-visible .rail-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }
 
 .note-tag {
@@ -2221,6 +2403,9 @@ h2 {
 @media (max-width: 1180px) {
   :root {
     --stage-w: min(86vw, 1020px);
+  }
+  .rail-nav {
+    display: none;
   }
 }
 
@@ -2263,10 +2448,8 @@ h2 {
   .lane-canvas {
     height: 96px;
   }
-  .ft-panel {
-    height: 82px;
-    border-left: none;
-    border-top: 1px solid var(--border-strong);
+  .lane-telemetry-split {
+    height: 96px;
   }
   .arena-wrap {
     height: 340px;
