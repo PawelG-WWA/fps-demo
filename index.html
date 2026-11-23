@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FPS &amp; Refresh Rate Showcase</title>
+  <link rel="stylesheet" href="styles.css?v=6" />
+</head>
+<body>
+  <!-- FLOATING ANCHORED TOP BAR -->
+  <div class="top-chrome">
+    <div class="top-bar-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <h1>FPS Lab</h1>
+        </div>
+
+        <nav class="step-nav" aria-label="Views">
+          <button class="step-pill active" type="button" data-target="motionSection">
+            <span class="step-idx">01</span>
+            <span>Motion</span>
+          </button>
+          <button class="step-pill" type="button" data-target="simSection">
+            <span class="step-idx">02</span>
+            <span>Simulation</span>
+          </button>
+          <button class="step-pill" type="button" data-target="inputSection">
+            <span class="step-idx">03</span>
+            <span>Latency</span>
+          </button>
+          <button class="step-pill" type="button" data-target="timelineSection">
+            <span class="step-idx">04</span>
+            <span>Refresh Map</span>
+          </button>
+        </nav>
+
+        <div class="detector-pill" id="detectorCard" tabindex="0">
+          <span class="detector-dot" aria-hidden="true"></span>
+          <span class="hz-num" id="detectedHz">Measuring…</span>
+          <span class="hz-meta" id="detectedMeta"></span>
+          <button class="btn-remeasure" id="remeasureBtn" type="button" title="Re-measure your display's native refresh rate">Re-measure</button>
+          <div class="detector-popover" role="tooltip">
+            <p class="detector-note" id="detectorNote">Sampling display refresh cadence…</p>
+          </div>
+        </div>
+      </header>
+
+      <aside class="control-pane" aria-label="Persistent simulation controls">
+        <div class="dock-group">
+          <span class="dock-label">Display</span>
+          <div class="segmented" role="group" aria-label="Display refresh rate">
+            <button class="seg-btn active" data-display-hz="60" id="btn60Hz" type="button">60 Hz</button>
+            <button class="seg-btn" data-display-hz="120" id="btn120Hz" type="button">120 Hz</button>
+          </div>
+        </div>
+
+        <span class="dock-sep" aria-hidden="true"></span>
+
+        <div class="dock-group">
+          <span class="dock-label">Speed</span>
+          <div class="segmented" role="group" aria-label="Playback speed">
+            <button class="seg-btn active" data-speed="1" id="btnSpeed1x" type="button">1.0×</button>
+            <button class="seg-btn" data-speed="0.25" id="btnSpeedSlow" type="button" title="Slow down to inspect 120 Hz cadence on a 60 Hz display">0.25×</button>
+          </div>
+        </div>
+
+        <span class="dock-sep" aria-hidden="true"></span>
+
+        <div class="dock-group load-group" title="Simulate shared scene GPU/CPU render time from Load level 1.0 (14 ms) to 5.0 (44 ms)">
+          <label class="dock-label" for="loadSlider">Load level</label>
+          <input type="range" id="loadSlider" min="1" max="5" step="0.1" value="1" />
+          <span class="load-val mono" id="loadVal">1.0</span>
+          <span class="load-ms mono" id="loadMs">14.0 ms</span>
+          <button class="btn-explode" id="explodeBtn" type="button" title="Trigger a sudden +17.5 ms transient workload spike">Explode</button>
+        </div>
+
+        <div class="dock-spacer" aria-hidden="true"></div>
+
+        <div class="dock-group">
+          <button class="btn-pause" id="pauseBtn" type="button">Pause</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- FLOATING SIMULATION NOTICE -->
+  <div class="notice-host">
+    <div class="notice" id="simBanner" hidden></div>
+  </div>
+
+  <!-- FULL-VIEWPORT CENTERED STAGE -->
+  <main class="stage-scroller" id="stageScroller">
+    <!-- VIEW 1: MOTION & FRAME PACING -->
+    <section class="stage-slide is-active" id="motionSection" data-slide-index="0">
+      <div class="slide-inner motion-stack">
+        <div class="stage-card motion-card">
+          <div class="card-head">
+            <div class="card-title-group">
+              <span class="view-kicker">01</span>
+              <h2>Motion &amp; Frame Pacing</h2>
+            </div>
+
+            <div class="view-controls">
+              <div class="slider-pill">
+                <label for="panSpeedSlider">Velocity</label>
+                <input type="range" id="panSpeedSlider" min="160" max="760" step="20" value="420" />
+                <span class="mono slider-readout" id="panSpeedLabel">420 px/s</span>
+              </div>
+
+              <label class="switch-pill" title="Show a dashed line at the true real-time position">
+                <input type="checkbox" id="toggleTruePos" checked />
+                <span class="switch-track" aria-hidden="true"></span>
+                <span>True-time</span>
+              </label>
+
+              <label class="switch-pill" title="Show subtle ghosting where moving geometry crosses static overlays">
+                <input type="checkbox" id="toggleArtifacts" checked />
+                <span class="switch-track" aria-hidden="true"></span>
+                <span>Artifacts</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="lanes" id="lanesContainer">
+            <article class="lane" data-mode="30">
+              <div class="lane-track-unit">
+                <div class="lane-canvas-wrap">
+                  <div class="lane-badge">
+                    <span class="swatch swatch-30"></span>
+                    <h3>30 FPS</h3>
+                  </div>
+                  <canvas class="lane-canvas" id="canvas-30" width="900" height="128"></canvas>
+                </div>
+                <div class="ft-panel">
+                  <div class="lane-meta" id="metrics-30"></div>
+                  <div class="ft-chart-wrap">
+                    <div class="ft-top">
+                      <span class="ft-note" id="ft-cap-30">Even 2-2-2 cadence</span>
+                      <span class="mono" id="ft-val-30">33.3 ms</span>
+                    </div>
+                    <canvas class="ft-canvas" id="ft-30" width="240" height="36"></canvas>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="lane" data-mode="40">
+              <div class="lane-track-unit">
+                <div class="lane-canvas-wrap">
+                  <div class="lane-badge">
+                    <span class="swatch swatch-40"></span>
+                    <h3>40 FPS</h3>
+                  </div>
+                  <canvas class="lane-canvas" id="canvas-40" width="900" height="128"></canvas>
+                </div>
+                <div class="ft-panel">
+                  <div class="lane-meta" id="metrics-40"></div>
+                  <div class="ft-chart-wrap">
+                    <div class="ft-top">
+                      <span class="ft-note" id="ft-cap-40">3:2 judder on 60 Hz</span>
+                      <span class="mono" id="ft-val-40">16.7 / 33.3 ms</span>
+                    </div>
+                    <canvas class="ft-canvas" id="ft-40" width="240" height="36"></canvas>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="lane" data-mode="interp">
+              <div class="lane-track-unit">
+                <div class="lane-canvas-wrap">
+                  <div class="lane-badge">
+                    <span class="swatch swatch-interp"></span>
+                    <h3>30 FPS + Interpolation</h3>
+                  </div>
+                  <canvas class="lane-canvas" id="canvas-interp" width="900" height="128"></canvas>
+                </div>
+                <div class="ft-panel">
+                  <div class="lane-meta" id="metrics-interp"></div>
+                  <div class="ft-chart-wrap">
+                    <div class="ft-top">
+                      <span class="ft-note" id="ft-cap-interp">60 Hz output, trails true time</span>
+                      <span class="mono" id="ft-val-interp">16.7 ms (+67 ms)</span>
+                    </div>
+                    <canvas class="ft-canvas" id="ft-interp" width="240" height="36"></canvas>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="lane" data-mode="60">
+              <div class="lane-track-unit">
+                <div class="lane-canvas-wrap">
+                  <div class="lane-badge">
+                    <span class="swatch swatch-60"></span>
+                    <h3>60 FPS</h3>
+                  </div>
+                  <canvas class="lane-canvas" id="canvas-60" width="900" height="128"></canvas>
+                </div>
+                <div class="ft-panel">
+                  <div class="lane-meta" id="metrics-60"></div>
+                  <div class="ft-chart-wrap">
+                    <div class="ft-top">
+                      <span class="ft-note" id="ft-cap-60">Even 1-1-1 cadence</span>
+                      <span class="mono" id="ft-val-60">16.7 ms</span>
+                    </div>
+                    <canvas class="ft-canvas" id="ft-60" width="240" height="36"></canvas>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: EXPONENTIAL SIMULATION LOAD -->
+    <section class="stage-slide" id="simSection" data-slide-index="1">
+      <div class="slide-inner sim-stack">
+        <div class="sim-row">
+          <!-- 4 SIMULATION AREAS (2x2 GRID, SAME ENTITIES ON EACH) -->
+          <div class="sim-quad">
+            <article class="sim-area" data-sim-mode="30">
+              <div class="sim-area-head">
+                <div class="sim-area-title">
+                  <span class="swatch swatch-30"></span>
+                  <h3>30 FPS</h3>
+                </div>
+                <div class="sim-area-stat mono" id="sim-stat-30">30.0 FPS · 0% drop</div>
+              </div>
+              <div class="sim-canvas-wrap">
+                <canvas class="sim-canvas" id="sim-canvas-30" width="440" height="220"></canvas>
+              </div>
+            </article>
+
+            <article class="sim-area" data-sim-mode="40">
+              <div class="sim-area-head">
+                <div class="sim-area-title">
+                  <span class="swatch swatch-40"></span>
+                  <h3>40 FPS</h3>
+                </div>
+                <div class="sim-area-stat mono" id="sim-stat-40">40.0 FPS · 0% drop</div>
+              </div>
+              <div class="sim-canvas-wrap">
+                <canvas class="sim-canvas" id="sim-canvas-40" width="440" height="220"></canvas>
+              </div>
+            </article>
+
+            <article class="sim-area" data-sim-mode="interp">
+              <div class="sim-area-head">
+                <div class="sim-area-title">
+                  <span class="swatch swatch-interp"></span>
+                  <h3>30 FPS + Interp</h3>
+                </div>
+                <div class="sim-area-stat mono" id="sim-stat-interp">60 Hz · +67 ms</div>
+              </div>
+              <div class="sim-canvas-wrap">
+                <canvas class="sim-canvas" id="sim-canvas-interp" width="440" height="220"></canvas>
+              </div>
+            </article>
+
+            <article class="sim-area" data-sim-mode="60">
+              <div class="sim-area-head">
+                <div class="sim-area-title">
+                  <span class="swatch swatch-60"></span>
+                  <h3>60 FPS</h3>
+                </div>
+                <div class="sim-area-stat mono" id="sim-stat-60">60.0 FPS · 0% drop</div>
+              </div>
+              <div class="sim-canvas-wrap">
+                <canvas class="sim-canvas" id="sim-canvas-60" width="440" height="220"></canvas>
+              </div>
+            </article>
+          </div>
+
+          <!-- RIGHT INTERACTIVE EXPONENTIAL LOAD CURVE PANEL -->
+          <aside class="sim-curve-card" aria-label="Exponential simulation load control">
+            <div class="sim-curve-head">
+              <div class="card-title-group">
+                <span class="view-kicker">02</span>
+                <h2>Simulation Load</h2>
+              </div>
+              <p class="sim-curve-sub">Swipe along the exponential curve to scale entity count and workload across 5 levels.</p>
+            </div>
+
+            <div class="sim-kpis">
+              <div class="sim-kpi">
+                <span class="sim-kpi-lbl">Level</span>
+                <span class="sim-kpi-val mono" id="simLevelVal">1.0</span>
+              </div>
+              <div class="sim-kpi">
+                <span class="sim-kpi-lbl">NPCs</span>
+                <span class="sim-kpi-val mono" id="simEntityVal">8</span>
+              </div>
+              <div class="sim-kpi">
+                <span class="sim-kpi-lbl">Frame cost</span>
+                <span class="sim-kpi-val mono" id="simCostVal">12.0 ms</span>
+              </div>
+            </div>
+
+            <div class="exp-curve-wrap" id="expCurveWrap" role="slider" tabindex="0" aria-label="Exponential simulation load level" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
+              <canvas id="expCurveCanvas" width="280" height="220"></canvas>
+            </div>
+
+            <div class="sim-level-btns" role="group" aria-label="Simulation load presets">
+              <button class="sim-lvl-btn active" type="button" data-sim-level="1">1</button>
+              <button class="sim-lvl-btn" type="button" data-sim-level="2">2</button>
+              <button class="sim-lvl-btn" type="button" data-sim-level="3">3</button>
+              <button class="sim-lvl-btn" type="button" data-sim-level="4">4</button>
+              <button class="sim-lvl-btn" type="button" data-sim-level="5">5</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: INPUT LATENCY & TRACKING -->
+    <section class="stage-slide" id="inputSection" data-slide-index="2">
+      <div class="slide-inner latency-stack">
+        <!-- SEPARATED TOP INTERACTIVE BAR -->
+        <div class="latency-card latency-top-card">
+          <div class="card-head">
+            <div class="card-title-group">
+              <span class="view-kicker">03</span>
+              <h2>Input Latency &amp; Tracking</h2>
+            </div>
+
+            <div class="arena-checks">
+              <label class="switch-pill">
+                <input type="checkbox" id="toggleGhostCursor" checked />
+                <span class="switch-track" aria-hidden="true"></span>
+                <span>True pointer ghost</span>
+              </label>
+              <label class="switch-pill">
+                <input type="checkbox" id="toggleHideOSCursor" />
+                <span class="switch-track" aria-hidden="true"></span>
+                <span>Hide OS cursor</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="tabs-bar">
+            <div class="tabs" role="tablist" aria-label="Tracking mode">
+              <button class="tab" data-arena-mode="30" type="button">
+                <span class="tab-dot swatch-30"></span>30 FPS
+              </button>
+              <button class="tab" data-arena-mode="40" type="button">
+                <span class="tab-dot swatch-40"></span>40 FPS
+              </button>
+              <button class="tab active" data-arena-mode="interp" type="button">
+                <span class="tab-dot swatch-interp"></span>30 FPS + Interpolation
+              </button>
+              <button class="tab" data-arena-mode="60" type="button">
+                <span class="tab-dot swatch-60"></span>60 FPS
+              </button>
+            </div>
+            <p class="inline-tip">Move pointer and click to feel buffering delay vs. native response.</p>
+          </div>
+        </div>
+
+        <!-- SEPARATED 50vh INTERACTIVE SIGHT PANE -->
+        <div class="arena-wrap latency-sight-card">
+          <canvas id="arenaCanvas" width="900" height="420"></canvas>
+          <div class="arena-hint" id="arenaHint">Move pointer here and click to test response</div>
+        </div>
+
+        <!-- SEPARATED FOOTER TELEMETRY BAR -->
+        <div class="metrics-strip latency-footer-card">
+          <div class="metric-cell">
+            <span class="label">Mode</span>
+            <span class="metric-val" id="arenaStatMode">30 FPS + Interpolation</span>
+          </div>
+          <div class="metric-cell">
+            <span class="label">Latency</span>
+            <span class="metric-val" id="arenaStatLag">~118–135 ms</span>
+          </div>
+          <div class="metric-cell">
+            <span class="label">Visual output</span>
+            <span class="metric-val" id="arenaStatVisual">60 FPS (30 src, 0% drop)</span>
+          </div>
+          <div class="metric-cell">
+            <span class="label">Frame pacing</span>
+            <span class="metric-val" id="arenaStatPacing">Smooth visual, buffered</span>
+          </div>
+          <div class="metric-cell">
+            <span class="label">Hits / Clicks</span>
+            <span class="metric-val" id="arenaStatScore">0 / 0</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: REFRESH CYCLE MAPPING -->
+    <section class="stage-slide" id="timelineSection" data-slide-index="3">
+      <div class="slide-inner timeline-stack">
+        <div class="timeline-row">
+          <!-- SEPARATED FLOATING TIMELINE CARD (50vh) -->
+          <div class="timeline-main-card">
+            <div class="card-head">
+              <div class="card-title-group">
+                <span class="view-kicker">04</span>
+                <h2>Refresh Cycle Mapping (100 ms Window)</h2>
+              </div>
+              <span class="mono timeline-meta" id="timelineHzText">60 Hz = 16.67 ms</span>
+            </div>
+
+            <div class="timeline-wrap">
+              <div class="timeline-board" id="timelineBoard" role="region" aria-label="100 ms refresh cycle mapping"></div>
+            </div>
+          </div>
+
+          <!-- 4 SEPARATED FLOATING COMMENT CARDS (MATCHING 50vh TOTAL HEIGHT) -->
+          <div class="notes-strip">
+            <div class="note-item">
+              <span class="note-tag">40 FPS on 120 Hz</span>
+              <p>At 25 ms per frame, 40 FPS divides evenly into 120 Hz (3 refreshes) but forces 3:2 judder on 60 Hz.</p>
+            </div>
+            <div class="note-item">
+              <span class="note-tag">Interpolation Buffer</span>
+              <p>Synthesizing frames requires holding back real frames first, adding 67 ms+ of unavoidable pipeline lag.</p>
+            </div>
+            <div class="note-item">
+              <span class="note-tag">Slow-Mo Inspector</span>
+              <p>At 0.25× speed, 120 Hz refreshes slow to 30 ticks/s so even a 60 Hz screen shows exact cadence.</p>
+            </div>
+            <div class="note-item">
+              <span class="note-tag">Budget &amp; Spikes</span>
+              <p>All modes pay the same scene cost, so 30 FPS absorbs 30 ms spikes that make 40 and 60 FPS hitch.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js?v=8"></script>
+  <script src="ui.js?v=6"></script>
+</body>
+</html>
