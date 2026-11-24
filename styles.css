@@ -3344,6 +3344,132 @@ html.is-intro-revealed #motionSection .slide-inner {
   }
 }
 
+/* ============================================================================
+   TABLET / IPAD PRO ADJUSTMENTS (821px – 1180px, e.g. 1024x1366)
+   ============================================================================ */
+@media (min-width: 821px) and (max-width: 1180px) {
+  .topbar {
+    padding: 7px 10px;
+    gap: 8px;
+  }
+
+  .brand {
+    gap: 7px;
+  }
+
+  .brand h1 {
+    font-size: 14.5px;
+  }
+
+  .step-nav {
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .step-pill {
+    font-size: 12.5px;
+    padding: 1px 8px;
+    gap: 4px;
+  }
+
+  .step-idx {
+    font-size: 10.5px;
+  }
+
+  .detector-pill {
+    padding: 2px 4px 2px 8px;
+    gap: 6px;
+  }
+
+  .hz-num {
+    font-size: 12.5px;
+  }
+
+  .btn-remeasure {
+    font-size: 12px;
+    padding: 0 8px;
+  }
+
+  .control-pane {
+    padding: 7px 10px;
+    gap: 6px;
+  }
+
+  .dock-group {
+    gap: 5px;
+  }
+
+  .dock-label {
+    font-size: 12.5px;
+  }
+
+  .seg-btn {
+    font-size: 12.5px;
+    padding: 0 7px;
+  }
+
+  .load-pod {
+    gap: 5px;
+    padding: 2px 5px 2px 7px;
+  }
+
+  .load-pod-lbl {
+    font-size: 12px;
+  }
+
+  .load-slider-wrap {
+    width: 52px;
+  }
+
+  .load-val {
+    font-size: 12px;
+  }
+
+  .load-ms {
+    font-size: 11.5px;
+    min-width: 42px;
+  }
+
+  .dock-actions {
+    gap: 6px;
+  }
+
+  .btn-explode,
+  .btn-pause {
+    font-size: 12.5px;
+    padding: 0 7px 0 9px;
+    gap: 5px;
+  }
+
+  /* Latency footer: Option 3 asymmetric 2fr / 1fr 3-row grid (zero truncation) */
+  #inputSection .metrics-strip.latency-footer-card {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+
+  #inputSection .metrics-strip.latency-footer-card .metric-cell {
+    padding: 8px 14px;
+    gap: 3px;
+  }
+
+  #inputSection .metrics-strip.latency-footer-card .metric-cell .label {
+    font-size: 11px;
+    line-height: 15px;
+  }
+
+  #inputSection .metrics-strip.latency-footer-card .metric-val {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  #inputSection .metrics-strip.latency-footer-card .metric-cell:nth-child(3) {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+}
+
 .mob-console-toggle,
 .mob-spike-btn,
 .mob-pause-btn,
