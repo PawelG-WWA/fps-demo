@@ -103,6 +103,7 @@
   <!-- FLOATING ANCHORED TOP BAR -->
   <div class="top-chrome">
     <div class="top-bar-shell">
+      <input type="checkbox" id="mobileConsoleToggle" class="mob-console-toggle" aria-label="Toggle mobile console" />
       <header class="topbar">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
@@ -141,6 +142,29 @@
             <p class="detector-note" id="detectorNote">Sampling display refresh cadence…</p>
           </div>
         </div>
+
+        <button class="mob-spike-btn" id="mobSpikeBtn" type="button" onclick="document.getElementById('explodeBtn').click()" aria-label="Trigger Load Spike" title="Inject a sudden +17.5 ms transient load spike">
+          <svg class="spike-icon" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1.5 9.5h3l2-6 3 9 2-3h3" />
+          </svg>
+          <span>Spike</span>
+        </button>
+
+        <button class="mob-pause-btn" id="mobPauseBtn" type="button" onclick="document.getElementById('pauseBtn').click()" aria-label="Pause or resume simulation" title="Pause or resume simulation">
+          <svg class="icon-pause" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
+            <rect x="3.5" y="2.8" width="3.2" height="10.4" rx="0.9" />
+            <rect x="9.3" y="2.8" width="3.2" height="10.4" rx="0.9" />
+          </svg>
+          <svg class="icon-resume" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
+            <path d="M4.5 2.8l8.5 5.2-8.5 5.2V2.8z" />
+          </svg>
+        </button>
+
+        <label for="mobileConsoleToggle" class="mob-console-btn" role="button" aria-label="Toggle console controls" title="Expand or collapse controls">
+          <svg class="mob-console-chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 10l4-4 4 4" />
+          </svg>
+        </label>
       </header>
 
       <aside class="control-pane" aria-label="Persistent simulation controls">
