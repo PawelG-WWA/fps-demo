@@ -89,11 +89,19 @@
   <script>
     (function () {
       var resetIntro = /[?&](reset_intro|intro)=1(?:&|$)/.test(location.search);
+      var resetCookies = /[?&]reset_cookies=1(?:&|$)/.test(location.search);
       if (resetIntro) {
         document.cookie = 'fps_lab_pipeline_seen=; path=/; max-age=0';
       }
-      if (resetIntro || !document.cookie.split(';').some(function (c) { return c.trim().indexOf('fps_lab_pipeline_seen=1') === 0; })) {
+      if (resetCookies) {
+        document.cookie = 'fps_lab_cookie_ok=; path=/; max-age=0';
+      }
+      var cookies = document.cookie.split(';');
+      if (resetIntro || !cookies.some(function (c) { return c.trim().indexOf('fps_lab_pipeline_seen=1') === 0; })) {
         document.documentElement.classList.add('is-first-visit');
+      }
+      if (!resetCookies && cookies.some(function (c) { return c.trim().indexOf('fps_lab_cookie_ok=1') === 0; })) {
+        document.documentElement.classList.add('is-cookie-ok');
       }
     })();
   </script>
@@ -110,7 +118,7 @@
     .slide-inner{width:var(--stage-w);height:100%;min-height:0;display:flex;flex-direction:column}
     .stage-card{width:100%;height:100%;min-height:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);display:flex;flex-direction:column;overflow:hidden}
     .rail-nav{position:fixed;right:clamp(10px,2.2vw,30px);top:50%;transform:translateY(-50%);z-index:65;display:flex;flex-direction:column;gap:8px}
-    .notice[hidden],.pipe-intro-card,.mob-console-toggle,.mob-spike-btn,.mob-pause-btn,.mob-console-btn{display:none}
+    .notice[hidden],.pipe-intro-card,.mob-console-toggle,.mob-spike-btn,.mob-pause-btn,.mob-console-btn,html.is-cookie-ok .cookie-banner{display:none}
     html.is-first-visit .pipe-intro-card,html.is-intro-replay .pipe-intro-card{display:flex}
     html.is-first-visit .pipe-card,html.is-intro-replay .pipe-card,html.is-first-visit .notice-host,html.is-intro-replay .notice-host,html.is-first-visit .stage-slide:not(#pipelineSection),html.is-intro-replay .stage-slide:not(#pipelineSection){display:none}
     html.is-first-visit .top-chrome,html.is-intro-replay .top-chrome,html.is-first-visit .rail-nav,html.is-intro-replay .rail-nav{opacity:0;visibility:hidden;pointer-events:none}
@@ -940,6 +948,17 @@
       <span class="rail-tooltip">05 · Refresh Map</span>
     </button>
   </nav>
+
+  <!-- ZERO-TRACKING COOKIE NOTICE -->
+  <aside class="cookie-banner" id="cookieBanner" role="dialog" aria-label="Cookie information">
+    <div class="cookie-body">
+      <div class="cookie-title">🍪 Literally Two Tiny Cookies</div>
+      <p class="cookie-text">
+        We don't store your cookies on any server or run analytics — everything stays strictly in your browser. We only save two things: <strong>(1)</strong> that you hit OK on this box, and <strong>(2)</strong> that you already watched the Pipeline intro on your first visit. That's it. No spies, no ads.
+      </p>
+    </div>
+    <button class="cookie-ok-btn" id="cookieOkBtn" type="button">OK, cool</button>
+  </aside>
 
   <noscript>
     <div style="max-width:720px;margin:24px auto;padding:16px 20px;background:#fff;border:1px solid #cbd5e1;border-radius:12px;font-family:sans-serif;color:#0f172a;">

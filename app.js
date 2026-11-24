@@ -2762,6 +2762,18 @@
   // ============================================================================
   // INIT
   // ============================================================================
+  const cookieBanner = document.getElementById('cookieBanner');
+  const cookieOkBtn = document.getElementById('cookieOkBtn');
+  if (cookieBanner && cookieOkBtn) {
+    cookieOkBtn.addEventListener('click', () => {
+      document.cookie = 'fps_lab_cookie_ok=1; path=/; max-age=31536000; SameSite=Lax';
+      cookieBanner.classList.add('is-dismissing');
+      setTimeout(() => {
+        document.documentElement.classList.add('is-cookie-ok');
+      }, 220);
+    });
+  }
+
   syncVisibleSectionsNow();
   updateLoadDisplay();
   detectRefreshRate(true);
