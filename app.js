@@ -191,20 +191,55 @@
   });
 
   // ============================================================================
-  // HI-DPI CANVAS HELPER
+  // HI-DPI CANVAS HELPER (CACHED + RESIZE-OBSERVER DRIVEN, ZERO PER-FRAME LAYOUT)
   // ============================================================================
+  let rafId = null;
+  let needsPausedRedraw = true;
+  const canvasCache = new WeakMap();
+  const trackedCanvases = new Set();
+  const canvasResizeObserver = ('ResizeObserver' in window)
+    ? new ResizeObserver((entries) => {
+        for (let i = 0; i < entries.length; i++) {
+          const cached = canvasCache.get(entries[i].target);
+          if (cached) cached.dirty = true;
+        }
+        requestCanvasRedraw();
+      })
+    : null;
+
+  function invalidateAllCanvases() {
+    trackedCanvases.forEach((canvas) => {
+      const cached = canvasCache.get(canvas);
+      if (cached) cached.dirty = true;
+    });
+  }
+
   function setupCanvas(canvas) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const rect = canvas.getBoundingClientRect();
-    const w = Math.max(1, Math.round(rect.width));
-    const h = Math.max(1, Math.round(rect.height));
-    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
+    let cached = canvasCache.get(canvas);
+    if (!cached) {
+      cached = { ctx: canvas.getContext('2d'), w: 1, h: 1, dpr: 0, dirty: true };
+      canvasCache.set(canvas, cached);
+      trackedCanvases.add(canvas);
+      if (canvasResizeObserver) canvasResizeObserver.observe(canvas);
     }
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    return { ctx, w, h };
+    if (cached.dirty || cached.dpr !== dpr || !canvasResizeObserver) {
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(1, Math.round(rect.width));
+      const h = Math.max(1, Math.round(rect.height));
+      const pw = Math.round(w * dpr);
+      const ph = Math.round(h * dpr);
+      if (canvas.width !== pw || canvas.height !== ph) {
+        canvas.width = pw;
+        canvas.height = ph;
+      }
+      cached.w = w;
+      cached.h = h;
+      cached.dpr = dpr;
+      cached.dirty = false;
+    }
+    cached.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return cached;
   }
 
   // ============================================================================
@@ -300,6 +335,7 @@
     if (isSectionVisible('inputSection')) updateArenaStaticStats();
     if (isSectionVisible('timelineSection')) drawTimeline();
     if (isSectionVisible('pipelineSection')) updatePipelineView();
+    requestCanvasRedraw();
   }
 
   function setSpeed(spd) {
@@ -307,6 +343,7 @@
     dom.btnSpeed1x.classList.toggle('active', spd === 1);
     dom.btnSpeedSlow.classList.toggle('active', spd !== 1);
     updateSimBanner();
+    requestCanvasRedraw();
   }
 
   function updateLoadDisplay() {
@@ -334,6 +371,7 @@
     if (isSectionVisible('inputSection')) updateArenaStaticStats();
     if (isSectionVisible('timelineSection')) drawTimeline();
     if (isSectionVisible('pipelineSection')) updatePipelineView();
+    requestCanvasRedraw();
   }
 
   function triggerExplode() {
@@ -350,6 +388,7 @@
     if (isSectionVisible('inputSection')) updateArenaStaticStats();
     if (isSectionVisible('timelineSection')) drawTimeline();
     if (isSectionVisible('pipelineSection')) updatePipelineView();
+    requestCanvasRedraw();
   }
 
   function updateSimBanner() {
@@ -399,10 +438,44 @@
     return Math.min(MODE_META[mode].gameFps, 1000 / avg);
   }
 
-  function formatDropBadge(dropPct) {
-    const rounded = Math.round(dropPct);
-    if (rounded < 1) return `<span class="meta-item good">0% drop</span>`;
-    return `<span class="meta-item warn">-${rounded}% drop</span>`;
+  const laneBadgeNodes = {};
+
+  function setLaneBadges(mode, t0, c0, dropPct, t2, c2, t3, c3) {
+    let nodes = laneBadgeNodes[mode];
+    if (!nodes) {
+      const container = laneMetricsEl[mode];
+      container.textContent = '';
+      nodes = [0, 1, 2, 3].map(() => {
+        const span = document.createElement('span');
+        span.className = 'meta-item';
+        container.appendChild(span);
+        return span;
+      });
+      laneBadgeNodes[mode] = nodes;
+    }
+    const roundedDrop = Math.round(dropPct);
+    const dropText = roundedDrop < 1 ? '0% drop' : `-${roundedDrop}% drop`;
+    const dropCls = roundedDrop < 1 ? 'meta-item good' : 'meta-item warn';
+    const cls0 = c0 ? `meta-item ${c0}` : 'meta-item';
+    const cls2 = c2 ? `meta-item ${c2}` : 'meta-item';
+    const cls3 = c3 ? `meta-item ${c3}` : 'meta-item';
+
+    if (nodes[0].textContent !== t0) nodes[0].textContent = t0;
+    if (nodes[0].className !== cls0) nodes[0].className = cls0;
+    if (nodes[1].textContent !== dropText) nodes[1].textContent = dropText;
+    if (nodes[1].className !== dropCls) nodes[1].className = dropCls;
+    if (nodes[2].textContent !== t2) nodes[2].textContent = t2;
+    if (nodes[2].className !== cls2) nodes[2].className = cls2;
+    if (nodes[3].textContent !== t3) nodes[3].textContent = t3;
+    if (nodes[3].className !== cls3) nodes[3].className = cls3;
+  }
+
+  function setLaneCaption(mode, valText, capText, capCls) {
+    const valEl = ftValEl[mode];
+    const capEl = ftCapEl[mode];
+    if (valEl.textContent !== valText) valEl.textContent = valText;
+    if (capEl.textContent !== capText) capEl.textContent = capText;
+    if (capEl.className !== capCls) capEl.className = capCls;
   }
 
   function updateLaneReadouts() {
@@ -410,7 +483,6 @@
     const is120 = hz === 120;
     const load = state.load;
     const spikeMs = state.simSpikeMs;
-    const sceneMs = getMeanSceneRenderMs(load, spikeMs);
     const underLoad = load > 1.05 || spikeMs > 0.5;
 
     // 30 FPS (33.3 ms budget)
@@ -418,17 +490,21 @@
     const avg30 = 1000 / Math.max(1, fps30);
     const dropPct30 = getEfficiencyDropPct(fps30, 30);
     const drop30 = dropPct30 >= 3;
-    laneMetricsEl['30'].innerHTML = `
-      <span class="meta-item ${drop30 ? 'warn' : ''}">${fps30.toFixed(1)} FPS</span>
-      ${formatDropBadge(dropPct30)}
-      <span class="meta-item ${drop30 ? 'warn' : ''}">${avg30.toFixed(1)} ms</span>
-      <span class="meta-item">~${Math.round(avg30 * 1.8)} ms lag</span>
-    `;
-    ftValEl['30'].textContent = `${avg30.toFixed(1)} ms`;
-    ftCapEl['30'].textContent = drop30
-      ? `-${Math.round(dropPct30)}% eff · missed 33.3 ms`
-      : (is120 ? 'Locked · even 4-4-4' : 'Locked · even 2-2-2');
-    ftCapEl['30'].className = drop30 ? 'ft-note judder' : 'ft-note';
+    setLaneBadges(
+      '30',
+      `${fps30.toFixed(1)} FPS`, drop30 ? 'warn' : '',
+      dropPct30,
+      `${avg30.toFixed(1)} ms`, drop30 ? 'warn' : '',
+      `~${Math.round(avg30 * 1.8)} ms lag`, ''
+    );
+    setLaneCaption(
+      '30',
+      `${avg30.toFixed(1)} ms`,
+      drop30
+        ? `-${Math.round(dropPct30)}% eff · missed 33.3 ms`
+        : (is120 ? 'Locked · even 4-4-4' : 'Locked · even 2-2-2'),
+      drop30 ? 'ft-note judder' : 'ft-note'
+    );
 
     // 40 FPS (25.0 ms budget)
     const fps40 = underLoad ? getEffectiveFpsFromHistory('40') : 40.0;
@@ -436,35 +512,20 @@
     const dropPct40 = getEfficiencyDropPct(fps40, 40);
     const drop40 = dropPct40 >= 3;
     if (!drop40 && is120) {
-      laneMetricsEl['40'].innerHTML = `
-        <span class="meta-item good">40.0 FPS</span>
-        ${formatDropBadge(0)}
-        <span class="meta-item good">25.0 ms</span>
-        <span class="meta-item">~45 ms lag</span>
-      `;
-      ftValEl['40'].textContent = '25.0 ms';
-      ftCapEl['40'].textContent = 'Locked · exact 3 ticks';
-      ftCapEl['40'].className = 'ft-note';
+      setLaneBadges('40', '40.0 FPS', 'good', 0, '25.0 ms', 'good', '~45 ms lag', '');
+      setLaneCaption('40', '25.0 ms', 'Locked · exact 3 ticks', 'ft-note');
     } else if (!drop40 && !is120) {
-      laneMetricsEl['40'].innerHTML = `
-        <span class="meta-item warn">40.0 FPS (judder)</span>
-        ${formatDropBadge(0)}
-        <span class="meta-item warn">16.7 / 33.3 ms</span>
-        <span class="meta-item">~50 ms lag</span>
-      `;
-      ftValEl['40'].textContent = '16.7 / 33.3 ms';
-      ftCapEl['40'].textContent = '3:2 pulldown judder';
-      ftCapEl['40'].className = 'ft-note judder';
+      setLaneBadges('40', '40.0 FPS (judder)', 'warn', 0, '16.7 / 33.3 ms', 'warn', '~50 ms lag', '');
+      setLaneCaption('40', '16.7 / 33.3 ms', '3:2 pulldown judder', 'ft-note judder');
     } else {
-      laneMetricsEl['40'].innerHTML = `
-        <span class="meta-item warn">${fps40.toFixed(1)} FPS</span>
-        ${formatDropBadge(dropPct40)}
-        <span class="meta-item warn">${avg40.toFixed(1)} ms</span>
-        <span class="meta-item">~${Math.round(avg40 * 1.85)} ms lag</span>
-      `;
-      ftValEl['40'].textContent = `${avg40.toFixed(1)} ms`;
-      ftCapEl['40'].textContent = `-${Math.round(dropPct40)}% eff · missed 25 ms`;
-      ftCapEl['40'].className = 'ft-note judder';
+      setLaneBadges(
+        '40',
+        `${fps40.toFixed(1)} FPS`, 'warn',
+        dropPct40,
+        `${avg40.toFixed(1)} ms`, 'warn',
+        `~${Math.round(avg40 * 1.85)} ms lag`, ''
+      );
+      setLaneCaption('40', `${avg40.toFixed(1)} ms`, `-${Math.round(dropPct40)}% eff · missed 25 ms`, 'ft-note judder');
     }
 
     // 30 FPS + Interp (33.3 ms source budget)
@@ -473,34 +534,43 @@
     const srcFps = Math.min(30, 1000 / Math.max(33.33, laneState['interp'].avgSrcMs || getMeanFrameDurMs('interp', load)));
     const dropPctInterp = getEfficiencyDropPct(srcFps, 30);
     const totalInterpLag = Math.round(bufLag + (1000 / srcFps) + 18);
-    laneMetricsEl['interp'].innerHTML = `
-      <span class="meta-item">${hz} Hz (${srcFps.toFixed(0)} src)</span>
-      ${formatDropBadge(dropPctInterp)}
-      <span class="meta-item warn">+${bufLag} ms buf</span>
-      <span class="meta-item warn">~${totalInterpLag} ms lag</span>
-    `;
-    ftValEl['interp'].textContent = `${interpOutMs} ms (+${bufLag} ms)`;
-    ftCapEl['interp'].textContent = dropPctInterp >= 3
-      ? `Src -${Math.round(dropPctInterp)}% · heavy lag`
-      : `${hz} Hz visual · trails true time`;
-    ftCapEl['interp'].className = dropPctInterp >= 3 ? 'ft-note judder' : 'ft-note';
+    setLaneBadges(
+      'interp',
+      `${hz} Hz (${srcFps.toFixed(0)} src)`, '',
+      dropPctInterp,
+      `+${bufLag} ms buf`, 'warn',
+      `~${totalInterpLag} ms lag`, 'warn'
+    );
+    setLaneCaption(
+      'interp',
+      `${interpOutMs} ms (+${bufLag} ms)`,
+      dropPctInterp >= 3
+        ? `Src -${Math.round(dropPctInterp)}% · heavy lag`
+        : `${hz} Hz visual · trails true time`,
+      dropPctInterp >= 3 ? 'ft-note judder' : 'ft-note'
+    );
 
     // 60 FPS (16.7 ms budget)
     const fps60 = underLoad ? getEffectiveFpsFromHistory('60') : 60.0;
     const avg60 = 1000 / Math.max(1, fps60);
     const dropPct60 = getEfficiencyDropPct(fps60, 60);
     const drop60 = dropPct60 >= 3;
-    laneMetricsEl['60'].innerHTML = `
-      <span class="meta-item ${drop60 ? 'warn' : 'good'}">${fps60.toFixed(1)} FPS</span>
-      ${formatDropBadge(dropPct60)}
-      <span class="meta-item ${drop60 ? 'warn' : 'good'}">${avg60.toFixed(1)} ms</span>
-      <span class="meta-item ${drop60 ? 'warn' : 'good'}">~${Math.round(avg60 * 1.8)} ms lag</span>
-    `;
-    ftValEl['60'].textContent = `${avg60.toFixed(1)} ms`;
-    ftCapEl['60'].textContent = drop60
-      ? `-${Math.round(dropPct60)}% eff · missed 16.7 ms`
-      : (is120 ? 'Locked · even 2-2-2' : 'Locked · even 1-1-1');
-    ftCapEl['60'].className = drop60 ? 'ft-note judder' : 'ft-note';
+    const cls60 = drop60 ? 'warn' : 'good';
+    setLaneBadges(
+      '60',
+      `${fps60.toFixed(1)} FPS`, cls60,
+      dropPct60,
+      `${avg60.toFixed(1)} ms`, cls60,
+      `~${Math.round(avg60 * 1.8)} ms lag`, cls60
+    );
+    setLaneCaption(
+      '60',
+      `${avg60.toFixed(1)} ms`,
+      drop60
+        ? `-${Math.round(dropPct60)}% eff · missed 16.7 ms`
+        : (is120 ? 'Locked · even 2-2-2' : 'Locked · even 1-1-1'),
+      drop60 ? 'ft-note judder' : 'ft-note'
+    );
   }
 
   // ============================================================================
@@ -1351,6 +1421,7 @@
       dom.pauseBtn.textContent = state.paused ? 'Resume' : 'Pause';
     }
     dom.pauseBtn.classList.toggle('is-paused', state.paused);
+    requestCanvasRedraw();
   }
 
   dom.explodeBtn.addEventListener('click', () => {
@@ -1373,10 +1444,12 @@
 
   dom.toggleTruePos.addEventListener('change', (e) => {
     state.showTruePos = e.target.checked;
+    requestCanvasRedraw();
   });
 
   dom.toggleArtifacts.addEventListener('change', (e) => {
     state.showArtifacts = e.target.checked;
+    requestCanvasRedraw();
   });
 
   dom.pauseBtn.addEventListener('click', () => {
@@ -1388,6 +1461,7 @@
     const v = Number(e.target.value);
     state.panSpeed = v;
     dom.panSpeedLabel.textContent = `${v} px/s`;
+    requestCanvasRedraw();
   });
 
   syncRangeFill(dom.loadSlider);
@@ -1971,6 +2045,7 @@
     state.simLevel = Math.max(1, Math.min(5, val));
     updateSimReadouts();
     drawExpCurve();
+    requestCanvasRedraw();
   }
 
   // Interactive swipe/drag along the exponential curve
@@ -2510,17 +2585,21 @@
   }
 
   function onSectionWake(id) {
+    invalidateAllCanvases();
     if (id === 'motionSection') {
       resyncLaneSimulators();
       updateLaneReadouts();
+      requestCanvasRedraw();
     } else if (id === 'simSection') {
       resyncSimArenas();
       updateSimReadouts();
       drawExpCurve();
+      requestCanvasRedraw();
     } else if (id === 'inputSection') {
       arena.lastDispTick = -1;
       arena.nextFrameReadyTime = 0;
       updateArenaStaticStats();
+      requestCanvasRedraw();
     } else if (id === 'pipelineSection') {
       updatePipelineView();
     } else if (id === 'timelineSection') {
@@ -2554,19 +2633,51 @@
   }
 
   window.addEventListener('resize', () => {
+    invalidateAllCanvases();
     syncVisibleSectionsNow();
     if (isSectionVisible('timelineSection')) drawTimeline();
     if (isSectionVisible('simSection')) drawExpCurve();
+    requestCanvasRedraw();
   });
 
   // ============================================================================
-  // MAIN ANIMATION LOOP
+  // MAIN ANIMATION LOOP (ON-DEMAND rAF + PAUSED-STATE GATING)
   // ============================================================================
   let lastRafTime = null;
   let lastReadoutTime = 0;
   let wasSpiking = false;
 
+  function ensureLoopRunning() {
+    if (rafId === null && !document.hidden) {
+      lastRafTime = null;
+      rafId = requestAnimationFrame(loop);
+    }
+  }
+
+  function requestCanvasRedraw() {
+    needsPausedRedraw = true;
+    ensureLoopRunning();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      lastRafTime = null;
+    } else {
+      requestCanvasRedraw();
+    }
+  });
+
   function loop(now) {
+    rafId = null;
+    if (document.hidden) {
+      lastRafTime = null;
+      return;
+    }
+
     if (lastRafTime === null) lastRafTime = now;
     const dtReal = Math.min(now - lastRafTime, 50);
     lastRafTime = now;
@@ -2604,22 +2715,27 @@
       if (timelineVisible) drawTimeline();
       if (pipelineVisible) updatePipelineView();
       wasSpiking = isSpiking;
+      needsPausedRedraw = true;
     }
 
-    if (motionVisible) {
+    const shouldDrawSimCanvases = !state.paused || needsPausedRedraw;
+
+    if (motionVisible && shouldDrawSimCanvases) {
       MODES.forEach((m) => {
         drawLane(m);
         drawFrametimeGraph(m);
       });
     }
 
-    if (simVisible) {
+    if (simVisible && shouldDrawSimCanvases) {
       MODES.forEach((m) => {
         drawSimArena(m);
       });
     }
 
-    if (now - lastReadoutTime > (isSpiking ? 90 : 260)) {
+    needsPausedRedraw = false;
+
+    if ((!state.paused || isSpiking) && now - lastReadoutTime > (isSpiking ? 90 : 260)) {
       lastReadoutTime = now;
       if (motionVisible) updateLaneReadouts();
       if (simVisible) updateSimReadouts();
@@ -2629,7 +2745,18 @@
       updateAndDrawArena(now);
     }
 
-    requestAnimationFrame(loop);
+    // Keep rAF running only when an animated canvas section or active spike needs frames
+    const keepRunning =
+      inputVisible ||
+      isSpiking ||
+      wasSpiking ||
+      (!state.paused && (motionVisible || simVisible));
+
+    if (keepRunning) {
+      rafId = requestAnimationFrame(loop);
+    } else {
+      lastRafTime = null;
+    }
   }
 
   // ============================================================================
@@ -2638,5 +2765,5 @@
   syncVisibleSectionsNow();
   updateLoadDisplay();
   detectRefreshRate(true);
-  requestAnimationFrame(loop);
+  ensureLoopRunning();
 })();
