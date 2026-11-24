@@ -97,7 +97,7 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=21" />
+  <link rel="stylesheet" href="styles.css?v=24" />
 </head>
 <body>
   <!-- FLOATING ANCHORED TOP BAR -->
@@ -545,6 +545,134 @@
     <!-- VIEW 4: ANIMATED FRAME PIPELINE PRESENTATION -->
     <section class="stage-slide" id="pipelineSection" data-slide-index="3">
       <div class="slide-inner pipe-stack">
+        <!-- FIRST-VISIT / REPLAY PROGRESSIVE 5-SLIDE PRESENTATION (50vh x 70vw) -->
+        <div class="pipe-intro-card" id="pipeIntroCard" data-stage="0" aria-label="Frame Pipeline Introduction">
+          <div class="intro-head">
+            <div class="card-title-group">
+              <span class="view-kicker mono">PIPELINE</span>
+              <h2>From Input to Pixel</h2>
+            </div>
+
+            <div class="intro-head-right">
+              <div class="intro-dots" aria-hidden="true">
+                <span class="intro-dot is-active" data-intro-dot="0"></span>
+                <span class="intro-dot" data-intro-dot="1"></span>
+                <span class="intro-dot" data-intro-dot="2"></span>
+                <span class="intro-dot" data-intro-dot="3"></span>
+                <span class="intro-dot" data-intro-dot="4"></span>
+              </div>
+              <span class="pipe-step-counter mono" id="introStepCounter">1 / 5</span>
+              <div class="pipe-nav-btns">
+                <button class="pipe-btn" id="introPrevBtn" type="button" aria-label="Previous slide">← Prev</button>
+                <button class="pipe-btn" id="introNextBtn" type="button" aria-label="Next slide">Next →</button>
+              </div>
+              <button class="pipe-btn intro-exit-btn" id="introExitBtn" type="button" title="Return to Pipeline view">✕ Close</button>
+            </div>
+          </div>
+
+          <div class="intro-stage">
+            <!-- LEFT: PROGRESSIVELY GROWING / MINIMIZING HARDWARE TILES -->
+            <div class="intro-tiles-track" id="introTilesTrack">
+              <!-- TILE 0: CPU -->
+              <div class="intro-tile is-active" data-intro-step="0" role="button" tabindex="0" aria-label="Stage 1: CPU">
+                <div class="pipe-node-top">
+                  <span class="pipe-node-badge">CPU</span>
+                  <span class="pipe-node-ms mono" id="introMsCpu">4.2 ms</span>
+                </div>
+                <div class="pipe-visual pipe-vis-cpu" aria-hidden="true">
+                  <span class="cpu-bar b1"></span>
+                  <span class="cpu-bar b2"></span>
+                  <span class="cpu-bar b3"></span>
+                  <span class="cpu-bar b4"></span>
+                </div>
+                <div class="pipe-node-lbl">State &amp; Physics</div>
+              </div>
+
+              <!-- TILE 1: GPU -->
+              <div class="intro-tile is-upcoming" data-intro-step="1" role="button" tabindex="0" aria-label="Stage 2: GPU">
+                <div class="pipe-node-top">
+                  <span class="pipe-node-badge">GPU</span>
+                  <span class="pipe-node-ms mono" id="introMsGpu">9.8 ms</span>
+                </div>
+                <div class="pipe-visual pipe-vis-gpu" aria-hidden="true">
+                  <div class="gpu-frame">
+                    <span class="gpu-sweep"></span>
+                    <span class="gpu-tile t1"></span>
+                    <span class="gpu-tile t2"></span>
+                    <span class="gpu-tile t3"></span>
+                    <span class="gpu-tile t4"></span>
+                  </div>
+                </div>
+                <div class="pipe-node-lbl">Render Frame</div>
+              </div>
+
+              <!-- TILE 2: V-SYNC -->
+              <div class="intro-tile is-upcoming" data-intro-step="2" role="button" tabindex="0" aria-label="Stage 3: V-Sync">
+                <div class="pipe-node-top">
+                  <span class="pipe-node-badge">V-SYNC</span>
+                  <span class="pipe-node-ms mono" id="introMsVsync">+2.7 ms</span>
+                </div>
+                <div class="pipe-visual pipe-vis-vsync" aria-hidden="true">
+                  <div class="pipe-wire intro-vsync-wire">
+                    <span class="pipe-gate"></span>
+                    <span class="pipe-packet p1"></span>
+                    <span class="pipe-packet p2"></span>
+                  </div>
+                </div>
+                <div class="pipe-node-lbl">Pacer &amp; Gate</div>
+              </div>
+
+              <!-- TILE 3: HDMI -->
+              <div class="intro-tile is-upcoming" data-intro-step="3" role="button" tabindex="0" aria-label="Stage 4: HDMI">
+                <div class="pipe-node-top">
+                  <span class="pipe-node-badge">HDMI</span>
+                  <span class="pipe-node-ms mono" id="introMsHdmi">16.7 ms</span>
+                </div>
+                <div class="pipe-visual pipe-vis-hdmi" aria-hidden="true">
+                  <span class="hdmi-pulse h1"></span>
+                  <span class="hdmi-pulse h2"></span>
+                  <span class="hdmi-pulse h3"></span>
+                </div>
+                <div class="pipe-node-lbl">Signal Stream</div>
+              </div>
+
+              <!-- TILE 4: DISPLAY -->
+              <div class="intro-tile is-upcoming" data-intro-step="4" role="button" tabindex="0" aria-label="Stage 5: Display">
+                <div class="pipe-node-top">
+                  <span class="pipe-node-badge">DISPLAY</span>
+                  <span class="pipe-node-ms mono" id="introMsDisp">2.5 ms</span>
+                </div>
+                <div class="pipe-visual pipe-vis-disp" aria-hidden="true">
+                  <div class="disp-screen">
+                    <span class="disp-scanbeam"></span>
+                    <span class="disp-lit"></span>
+                  </div>
+                </div>
+                <div class="pipe-node-lbl">Panel Scanout</div>
+              </div>
+            </div>
+
+            <!-- RIGHT: ACTIVE STEP DESCRIPTION -->
+            <div class="intro-copy-pane" id="introCopyPane">
+              <div class="intro-stage-meta">
+                <span class="intro-stage-kicker mono" id="introStageKicker">STAGE 1 OF 5</span>
+                <span class="intro-stage-ms mono" id="introStageMs">4.2 ms</span>
+              </div>
+              <h3 class="intro-stage-title" id="introStageTitle">1. CPU Simulation &amp; Game State</h3>
+              <p class="intro-stage-desc" id="introStageDesc">
+                The CPU reads input, runs physics and NPC logic, and prepares draw commands for the GPU.
+              </p>
+              <div class="intro-copy-foot">
+                <span class="pipe-scroll-hint" id="introScrollHint">Scroll ↓ to continue</span>
+                <div class="intro-mob-nav">
+                  <button class="pipe-btn" id="introMobPrevBtn" type="button" aria-label="Previous slide">←</button>
+                  <button class="pipe-btn" id="introMobNextBtn" type="button" aria-label="Next slide">Next →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="pipe-card" id="pipeCard" data-stage="0">
           <!-- Presentation Header -->
           <div class="card-head pipe-head">
@@ -571,6 +699,7 @@
             <div class="pipe-head-right">
               <span class="pipe-status mono" id="pipeTargetStatus">60.0 FPS · 0% drop</span>
               <span class="pipe-total mono" id="pipeTotalMs">Latency: ~35.8 ms</span>
+              <button class="pipe-btn pipe-replay-btn" id="pipeReplayBtn" type="button" title="Run the full step-by-step Pipeline presentation again">▶ Replay Intro</button>
               <div class="pipe-nav-btns">
                 <button class="pipe-btn" id="pipePrevBtn" type="button" aria-label="Previous step">← Prev</button>
                 <span class="pipe-step-counter mono" id="pipeStepCounter">1 / 5</span>
@@ -775,7 +904,7 @@
     </div>
   </noscript>
 
-  <script src="app.js?v=21"></script>
-  <script src="ui.js?v=21"></script>
+  <script src="app.js?v=24"></script>
+  <script src="ui.js?v=24"></script>
 </body>
 </html>

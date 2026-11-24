@@ -11,7 +11,8 @@
   const pipelineIdx = slides.findIndex((s) => s.id === 'pipelineSection');
 
   function isFirstVisitLocked() {
-    return document.documentElement.classList.contains('is-first-visit');
+    const root = document.documentElement;
+    return root.classList.contains('is-first-visit') || root.classList.contains('is-intro-replay');
   }
 
   let activeIndex = (isFirstVisitLocked() && pipelineIdx >= 0) ? pipelineIdx : 0;
@@ -205,7 +206,7 @@
   }
 
   function onWheel(e) {
-    if (isStackedLayout()) return;
+    if (isStackedLayout() && !isFirstVisitLocked()) return;
     // Allow pinch-zoom or horizontal scrolling (e.g. narrow timeline overflow)
     if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
     if (e.deltaY === 0) return;
@@ -277,25 +278,34 @@
     }, 140);
   }, { passive: true });
 
-  // Touch swipe support (ignoring drags inside inputs or the aiming arena)
+  // Touch swipe support (enabled for desktop slides AND mobile Pipeline intro)
   let touchStartY = null;
+  let touchStartX = null;
   let touchIgnored = false;
   scroller.addEventListener('touchstart', (e) => {
-    if (isStackedLayout() || e.touches.length !== 1) return;
+    if (e.touches.length !== 1) return;
+    if (isStackedLayout() && !isFirstVisitLocked()) return;
     const t = e.target;
-    touchIgnored = !!(t && (t.id === 'arenaCanvas' || t.tagName === 'INPUT'));
+    touchIgnored = !!(t && (t.id === 'arenaCanvas' || t.tagName === 'INPUT' || (t.closest && t.closest('button'))));
     touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
   }, { passive: true });
 
   scroller.addEventListener('touchend', (e) => {
-    if (isStackedLayout() || touchIgnored || touchStartY === null) return;
+    if (touchIgnored || touchStartY === null) return;
+    if (isStackedLayout() && !isFirstVisitLocked()) return;
     const endY = e.changedTouches[0].clientY;
-    const diff = touchStartY - endY;
+    const endX = e.changedTouches[0].clientX;
+    const diffY = touchStartY - endY;
+    const diffX = Math.abs((touchStartX || 0) - endX);
     touchStartY = null;
-    if (diff > 45) {
-      handleDirectionalNavigation(1);
-    } else if (diff < -45) {
-      handleDirectionalNavigation(-1);
+    touchStartX = null;
+    if (Math.abs(diffY) > 36 && Math.abs(diffY) > diffX) {
+      if (diffY > 0) {
+        handleDirectionalNavigation(1);
+      } else {
+        handleDirectionalNavigation(-1);
+      }
     }
   }, { passive: true });
 
@@ -307,15 +317,29 @@
     scheduleUpdate();
   }, { passive: true });
 
-  // When first-visit Pipeline intro finishes vanishing, redirect directly to 01 Motion
-  window.addEventListener('fpslab:intro-unlocked', () => {
-    if (!slides[0]) return;
-    if (isStackedLayout()) {
-      slides[0].scrollIntoView({ behavior: 'instant', block: 'start' });
-    } else {
-      scroller.scrollTop = slides[0].offsetTop;
+  // When manual replay starts from 04 Pipeline, lock viewport onto the intro slide
+  window.addEventListener('fpslab:intro-replay-started', () => {
+    if (pipelineIdx < 0 || !slides[pipelineIdx]) return;
+    activeIndex = pipelineIdx;
+    if (!isStackedLayout()) {
+      scroller.scrollTop = 0;
     }
-    setActiveIndicators(0);
+    updateScrollPresentation();
+  });
+
+  // When Pipeline intro finishes vanishing, redirect to 01 Motion (first visit) or 04 Pipeline (replay)
+  window.addEventListener('fpslab:intro-unlocked', (e) => {
+    const target = e && e.detail && e.detail.target === 'pipeline' && pipelineIdx >= 0
+      ? pipelineIdx
+      : 0;
+    const slide = slides[target];
+    if (!slide) return;
+    if (isStackedLayout()) {
+      slide.scrollIntoView({ behavior: 'instant', block: 'start' });
+    } else {
+      scroller.scrollTop = slide.offsetTop;
+    }
+    setActiveIndicators(target);
     updateScrollPresentation();
   });
 
@@ -329,7 +353,7 @@
 
   // Keyboard navigation
   window.addEventListener('keydown', (e) => {
-    if (isStackedLayout()) return;
+    if (isStackedLayout() && !isFirstVisitLocked()) return;
     const tag = document.activeElement && document.activeElement.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 

@@ -2050,37 +2050,83 @@
     modeTabs: Array.from(document.querySelectorAll('.pipe-mode-tab'))
   };
 
+  const introEls = {
+    card: document.getElementById('pipeIntroCard'),
+    stepCounter: document.getElementById('introStepCounter'),
+    prevBtn: document.getElementById('introPrevBtn'),
+    nextBtn: document.getElementById('introNextBtn'),
+    mobPrevBtn: document.getElementById('introMobPrevBtn'),
+    mobNextBtn: document.getElementById('introMobNextBtn'),
+    exitBtn: document.getElementById('introExitBtn'),
+    replayBtn: document.getElementById('pipeReplayBtn'),
+    copyPane: document.getElementById('introCopyPane'),
+    kicker: document.getElementById('introStageKicker'),
+    stageMs: document.getElementById('introStageMs'),
+    title: document.getElementById('introStageTitle'),
+    desc: document.getElementById('introStageDesc'),
+    scrollHint: document.getElementById('introScrollHint'),
+    msCpu: document.getElementById('introMsCpu'),
+    msGpu: document.getElementById('introMsGpu'),
+    msVsync: document.getElementById('introMsVsync'),
+    msHdmi: document.getElementById('introMsHdmi'),
+    msDisp: document.getElementById('introMsDisp'),
+    tiles: Array.from(document.querySelectorAll('.intro-tile')),
+    dots: Array.from(document.querySelectorAll('.intro-dot'))
+  };
+
   let pipeStage = 0;
   let pipeMode = '60';
   const INTRO_COOKIE_NAME = 'fps_lab_pipeline_seen';
   let introCompleting = false;
+  let lastIntroRenderedStage = -1;
+  let introLastDir = 'up';
+
+  function isIntroModeActive() {
+    const root = document.documentElement;
+    return root.classList.contains('is-first-visit') || root.classList.contains('is-intro-replay');
+  }
 
   function setIntroCookie() {
     document.cookie = `${INTRO_COOKIE_NAME}=1; path=/; max-age=31536000; SameSite=Lax`;
   }
 
-  function completeFirstVisitIntro() {
+  function startPipelineIntroReplay() {
+    if (introCompleting || isIntroModeActive()) return;
     const root = document.documentElement;
-    if (introCompleting || !root.classList.contains('is-first-visit')) return;
-    introCompleting = true;
-    setIntroCookie();
+    pipeStage = 0;
+    lastIntroRenderedStage = -1;
+    root.classList.add('is-intro-replay');
+    updatePipelineView();
+    window.dispatchEvent(new CustomEvent('fpslab:intro-replay-started'));
+    syncVisibleSectionsNow();
+  }
 
-    // Gently vanish the Pipeline intro before revealing the Motion section
+  function completeIntroPresentation() {
+    const root = document.documentElement;
+    if (introCompleting || !isIntroModeActive()) return;
+    const wasReplay = root.classList.contains('is-intro-replay');
+    introCompleting = true;
+    if (!wasReplay) {
+      setIntroCookie();
+    }
+
+    // Gently vanish the Pipeline intro before revealing the target section
     root.classList.add('is-intro-vanishing');
 
     setTimeout(() => {
-      root.classList.remove('is-first-visit', 'is-intro-vanishing');
+      root.classList.remove('is-first-visit', 'is-intro-replay', 'is-intro-vanishing');
       root.classList.add('is-intro-revealed');
 
-      // Reset Pipeline to step 1 for when the user visits section 04 later
       pipeStage = 0;
+      lastIntroRenderedStage = -1;
       updatePipelineView();
 
-      window.dispatchEvent(new CustomEvent('fpslab:intro-unlocked'));
+      window.dispatchEvent(new CustomEvent('fpslab:intro-unlocked', {
+        detail: { target: wasReplay ? 'pipeline' : 'motion' }
+      }));
       syncVisibleSectionsNow();
       introCompleting = false;
 
-      // Remove one-shot entrance class after reveal transitions finish
       setTimeout(() => {
         root.classList.remove('is-intro-revealed');
       }, 650);
@@ -2198,15 +2244,12 @@
       }
     }
 
-    const isFirstVisit = document.documentElement.classList.contains('is-first-visit');
-    const isFinishStep = isFirstVisit && pipeStage >= 4;
-
     pipeEls.totalMs.textContent = `Input→Photon: ~${totalMs.toFixed(1)} ms`;
     pipeEls.stepCounter.textContent = `${pipeStage + 1} / 5`;
     pipeEls.prevBtn.disabled = pipeStage <= 0;
-    pipeEls.nextBtn.disabled = !isFirstVisit && pipeStage >= 4;
-    pipeEls.nextBtn.textContent = isFinishStep ? 'Enter Lab →' : 'Next →';
-    pipeEls.nextBtn.classList.toggle('is-finish', isFinishStep);
+    pipeEls.nextBtn.disabled = pipeStage >= 4;
+    pipeEls.nextBtn.textContent = 'Next →';
+    pipeEls.nextBtn.classList.remove('is-finish');
 
     pipeEls.msCpu.textContent = `${cpuMs.toFixed(1)} ms`;
     pipeEls.msGpu.textContent = `${gpuMs.toFixed(1)} ms`;
@@ -2278,21 +2321,92 @@
     pipeEls.desc.textContent = info.desc;
 
     if (pipeEls.scrollHint) {
-      if (isFirstVisit) {
-        pipeEls.scrollHint.textContent = pipeStage >= 4
-          ? 'Scroll ↓ to enter FPS Lab'
-          : 'Scroll ↓ or click Next to continue';
-      } else if (pipeStage >= 4) {
-        pipeEls.scrollHint.textContent = 'Scroll ↓ for Refresh Map';
-      } else {
-        pipeEls.scrollHint.textContent = 'Scroll ↓ to advance';
+      pipeEls.scrollHint.textContent = pipeStage >= 4
+        ? 'Scroll ↓ for Refresh Map'
+        : 'Scroll ↓ to advance';
+    }
+
+    // Update progressive 5-slide Pipeline Intro view (first-visit & replay mode)
+    if (introEls.card) {
+      const isReplay = document.documentElement.classList.contains('is-intro-replay');
+      const isFinishStep = pipeStage >= 4;
+      const stageMsLabels = [
+        `${cpuMs.toFixed(1)} ms`,
+        `${gpuMs.toFixed(1)} ms`,
+        `+${gateTotalMs.toFixed(1)} ms`,
+        `${hdmiMs.toFixed(1)} ms`,
+        `${dispMs.toFixed(1)} ms GtG`
+      ];
+
+      introEls.card.dataset.stage = String(pipeStage);
+      introEls.card.dataset.dir = introLastDir;
+      if (introEls.stepCounter) introEls.stepCounter.textContent = `${pipeStage + 1} / 5`;
+      if (introEls.prevBtn) introEls.prevBtn.disabled = pipeStage <= 0;
+      const nextLabel = isFinishStep
+        ? (isReplay ? 'Back to Pipeline →' : 'Enter Lab →')
+        : 'Next →';
+      if (introEls.nextBtn) {
+        introEls.nextBtn.disabled = false;
+        introEls.nextBtn.textContent = nextLabel;
+        introEls.nextBtn.classList.toggle('is-finish', isFinishStep);
+      }
+      if (introEls.mobPrevBtn) introEls.mobPrevBtn.disabled = pipeStage <= 0;
+      if (introEls.mobNextBtn) {
+        introEls.mobNextBtn.disabled = false;
+        introEls.mobNextBtn.textContent = nextLabel;
+        introEls.mobNextBtn.classList.toggle('is-finish', isFinishStep);
+      }
+
+      if (introEls.msCpu) introEls.msCpu.textContent = `${cpuMs.toFixed(1)} ms`;
+      if (introEls.msGpu) introEls.msGpu.textContent = `${gpuMs.toFixed(1)} ms`;
+      if (introEls.msVsync) introEls.msVsync.textContent = `+${gateTotalMs.toFixed(1)} ms`;
+      if (introEls.msHdmi) introEls.msHdmi.textContent = `${hdmiMs.toFixed(1)} ms`;
+      if (introEls.msDisp) introEls.msDisp.textContent = `${dispMs.toFixed(1)} ms`;
+
+      introEls.tiles.forEach((tile) => {
+        const idx = Number(tile.dataset.introStep);
+        tile.classList.toggle('is-active', idx === pipeStage);
+        tile.classList.toggle('is-done', idx < pipeStage);
+        tile.classList.toggle('is-upcoming', idx > pipeStage);
+      });
+
+      introEls.dots.forEach((dot) => {
+        const idx = Number(dot.dataset.introDot);
+        dot.classList.toggle('is-active', idx === pipeStage);
+        dot.classList.toggle('is-done', idx < pipeStage);
+      });
+
+      if (introEls.kicker) introEls.kicker.textContent = `STAGE ${pipeStage + 1} OF 5`;
+      if (introEls.stageMs) introEls.stageMs.textContent = stageMsLabels[pipeStage];
+      if (introEls.title) introEls.title.textContent = info.title;
+      if (introEls.desc) introEls.desc.textContent = info.desc;
+      if (introEls.scrollHint) {
+        const isMobile = window.innerWidth <= 820;
+        if (isFinishStep) {
+          introEls.scrollHint.textContent = isMobile
+            ? (isReplay ? 'Swipe ↑ to return' : 'Swipe ↑ to enter Lab')
+            : (isReplay ? 'Scroll ↓ to return to Pipeline' : 'Scroll ↓ to enter FPS Lab');
+        } else {
+          introEls.scrollHint.textContent = isMobile
+            ? 'Swipe ↑↓ to navigate'
+            : 'Scroll ↓ or click Next to continue';
+        }
+      }
+
+      if (introEls.copyPane && pipeStage !== lastIntroRenderedStage) {
+        lastIntroRenderedStage = pipeStage;
+        introEls.copyPane.classList.remove('is-swapping');
+        void introEls.copyPane.offsetWidth;
+        introEls.copyPane.classList.add('is-swapping');
       }
     }
   }
 
   function setPipelineStep(idx) {
     if (introCompleting) return;
-    pipeStage = Math.max(0, Math.min(4, idx));
+    const clamped = Math.max(0, Math.min(4, idx));
+    introLastDir = clamped < pipeStage ? 'down' : 'up';
+    pipeStage = clamped;
     updatePipelineView();
   }
 
@@ -2301,16 +2415,30 @@
     const next = pipeStage + dir;
     if (next < 0) return false;
     if (next >= 5) {
-      if (document.documentElement.classList.contains('is-first-visit')) {
-        completeFirstVisitIntro();
+      if (isIntroModeActive()) {
+        completeIntroPresentation();
         return true;
       }
       return false;
     }
+    introLastDir = dir < 0 ? 'down' : 'up';
     pipeStage = next;
     updatePipelineView();
     return true;
   }
+
+  if (introEls.prevBtn) introEls.prevBtn.addEventListener('click', () => stepPipeline(-1));
+  if (introEls.nextBtn) introEls.nextBtn.addEventListener('click', () => stepPipeline(1));
+  if (introEls.mobPrevBtn) introEls.mobPrevBtn.addEventListener('click', () => stepPipeline(-1));
+  if (introEls.mobNextBtn) introEls.mobNextBtn.addEventListener('click', () => stepPipeline(1));
+  if (introEls.exitBtn) introEls.exitBtn.addEventListener('click', () => completeIntroPresentation());
+  if (introEls.replayBtn) introEls.replayBtn.addEventListener('click', () => startPipelineIntroReplay());
+  introEls.tiles.forEach((tile) => {
+    tile.addEventListener('click', () => {
+      const idx = Number(tile.dataset.introStep);
+      if (idx < pipeStage) setPipelineStep(idx);
+    });
+  });
 
   if (pipeEls.prevBtn) pipeEls.prevBtn.addEventListener('click', () => stepPipeline(-1));
   if (pipeEls.nextBtn) pipeEls.nextBtn.addEventListener('click', () => stepPipeline(1));
