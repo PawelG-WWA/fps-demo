@@ -3711,7 +3711,8 @@ html.is-intro-revealed #motionSection .slide-inner {
 
   /* Mobile Motion card controls bar */
   #motionSection {
-    min-height: 100dvh;
+    height: 100dvh;
+    min-height: 750px;
     padding: 10px 0 calc(65px + env(safe-area-inset-bottom));
   }
 
@@ -3774,98 +3775,103 @@ html.is-intro-revealed #motionSection .slide-inner {
     font-size: 13px;
   }
 
-  /* Mobile Motion lanes: stretch animation canvases to fill remaining smartphone viewport */
+  /* Mobile Motion lanes: slim header above unobstructed canvas + 4 feature squares + compact chart */
   .lanes {
     flex: 1 1 auto;
     height: auto;
     grid-template-rows: repeat(4, minmax(0, 1fr));
-    padding: 8px 10px;
-    gap: 8px;
+    padding: 7px 10px 8px;
+    gap: 7px;
   }
 
   .lane-track-unit {
     position: relative;
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(66px, 1fr) auto auto;
-    gap: 4px;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(62px, 1fr) auto auto;
+    gap: 3px 8px;
   }
 
-  .lane-canvas-wrap {
-    grid-row: 1;
-    grid-column: 1;
-    height: 100%;
-    min-height: 66px;
-    border-radius: 10px;
-  }
-
-  .lane-canvas {
-    height: 100%;
-  }
-
-  .lane-badge {
-    top: 5px;
-    left: 6px;
-    padding: 1px 7px;
-    gap: 5px;
-    border-radius: 6px;
-  }
-
-  .lane-badge h3 {
-    font-size: 11.5px;
-    line-height: 18px;
-  }
-
-  .lane-badge .swatch {
-    width: 7px;
-    height: 7px;
-  }
-
-  /* Extract feature squares, cadence description, and frame-time chart out of split box */
+  /* Unwrap canvas container and telemetry containers so grid places header, canvas, chips, and chart cleanly */
+  .lane-canvas-wrap,
   .lane-telemetry-split,
   .ft-info-card {
     display: contents;
   }
 
-  /* Cadence description extracted to bottom-left corner of each animation canvas */
-  .ft-top {
-    position: relative;
+  .lane-badge {
+    position: static;
     grid-row: 1;
     grid-column: 1;
-    align-self: end;
     justify-self: start;
-    margin: 0 0 5px 6px;
-    z-index: 3;
-    max-width: calc(100% - 12px);
-    padding: 1px 7px;
-    border-top: none;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 6px;
-    background: rgba(17, 20, 28, 0.84);
-    gap: 6px;
-    align-items: center;
-    pointer-events: none;
+    align-self: center;
+    padding: 0;
+    gap: 5px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    pointer-events: auto;
+  }
+
+  .lane-badge h3 {
+    font-size: 11.5px;
+    line-height: 18px;
+    color: var(--text);
+  }
+
+  .lane-badge .swatch {
+    width: 8px;
+    height: 8px;
+  }
+
+  /* Cadence description right-aligned on the slim header row above the canvas */
+  .ft-top {
+    position: static;
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: end;
+    align-self: center;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    gap: 0;
   }
 
   .ft-top .ft-note {
-    font-size: 10px;
-    line-height: 16px;
-    color: #cbd5e1;
+    font-size: 10.5px;
+    line-height: 18px;
+    color: var(--text-muted);
   }
 
   .ft-top .ft-note.judder {
-    color: #fca5a5;
+    color: #b91c1c;
   }
 
   .ft-top .mono {
-    font-size: 10px;
-    line-height: 16px;
-    color: #f8fafc;
+    display: none;
+  }
+
+  /* 100% unobstructed full-width animation canvas */
+  .lane-canvas {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    contain: size;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 62px;
+    border-radius: 9px;
+    border: 1px solid rgba(15, 23, 42, 0.22);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.1);
   }
 
   /* 4 separate feature squares in one horizontal row above the chart */
   .lane-meta {
-    grid-row: 2;
-    grid-column: 1;
+    grid-row: 3;
+    grid-column: 1 / -1;
     display: grid;
     grid-template-columns: 1.22fr 0.76fr 1.08fr 0.94fr;
     grid-template-rows: 1fr;
@@ -3876,7 +3882,7 @@ html.is-intro-revealed #motionSection .slide-inner {
   }
 
   .lane-meta .meta-item {
-    min-height: 24px;
+    min-height: 23px;
     padding: 2px 3px;
     background: var(--surface);
     border-radius: 7px;
@@ -3891,14 +3897,419 @@ html.is-intro-revealed #motionSection .slide-inner {
     background: #ecfdf5;
   }
 
-  /* Frame-time chart: 50% vertical height (48px), stretched 100% horizontally */
+  /* Compact full-width frame-time chart */
   .ft-chart-card {
-    grid-row: 3;
-    grid-column: 1;
+    grid-row: 4;
+    grid-column: 1 / -1;
     width: 100%;
-    height: 48px;
+    height: 34px;
+    padding: 3px 6px;
+    border-radius: 8px;
+  }
+
+  /* Mobile Simulation section: 50% 2x2 canvases / 40% interactive curve / 10% 2-row description */
+  #simSection {
+    height: 100dvh;
+    min-height: 750px;
+    padding: 10px 0 calc(65px + env(safe-area-inset-bottom));
+  }
+
+  #simSection .sim-stack {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 50fr) minmax(0, 40fr) minmax(78px, 10fr);
+    gap: 8px;
+  }
+
+  #simSection .sim-row {
+    display: contents;
+  }
+
+  #simSection .sim-quad {
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #simSection .sim-area {
+    height: 100%;
+    min-height: 0;
+    border-radius: 10px;
+  }
+
+  #simSection .sim-area-head {
+    padding: 3px 5px;
+    gap: 3px;
+  }
+
+  #simSection .sim-area-title {
+    gap: 4px;
+  }
+
+  #simSection .sim-area-title .swatch {
+    width: 6px;
+    height: 6px;
+  }
+
+  #simSection .sim-area-title h3 {
+    font-size: 9px;
+    line-height: 16px;
+    letter-spacing: -0.02em;
+  }
+
+  #simSection .sim-area-stat {
+    font-size: 8px;
+    line-height: 14px;
+    padding: 1px 3.5px;
+    letter-spacing: -0.02em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #simSection .sim-canvas-wrap {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #simSection .sim-canvas {
+    contain: size;
+    width: 100%;
+    height: 100%;
+  }
+
+  #simSection .sim-curve-card {
+    height: 100%;
+    min-height: 0;
+    padding: 8px 10px;
+    gap: 6px;
+    border-radius: 14px;
+  }
+
+  #simSection .sim-curve-head {
+    gap: 2px;
+  }
+
+  #simSection .sim-curve-head .card-title-group {
+    gap: 7px;
+  }
+
+  #simSection .sim-curve-head .view-kicker {
+    font-size: 10.5px;
+    line-height: 20px;
+    padding: 0 7px;
+  }
+
+  #simSection .sim-curve-head h2 {
+    font-size: 15px;
+    line-height: 20px;
+  }
+
+  #simSection .sim-curve-sub {
+    display: none;
+  }
+
+  #simSection .sim-kpis {
+    grid-template-columns: 0.85fr 0.80fr 1.35fr;
+    gap: 5px;
+  }
+
+  #simSection .sim-kpi {
     padding: 4px 6px;
-    border-radius: 9px;
+    flex-direction: row;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  #simSection .sim-kpi-lbl {
+    font-size: 9px;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  #simSection .sim-kpi-val {
+    font-size: 11px;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  #simSection .exp-curve-wrap {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    border-radius: 10px;
+  }
+
+  #simSection #expCurveCanvas {
+    contain: size;
+    width: 100%;
+    height: 100%;
+  }
+
+  #simSection .sim-lvl-btn {
+    font-size: 12px;
+    line-height: 26px;
+  }
+
+  /* 2-row description container: Row 1 = LEVEL badge + title (+ impact pill), Row 2 = full-width description */
+  #simSection .sim-footer-card {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 3px 8px;
+    padding: 6px 10px 6px 13px;
+    border-radius: 12px;
+  }
+
+  #simSection .sim-footer-left {
+    grid-row: 1;
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding-right: 0;
+    border-right: none;
+    min-width: 0;
+  }
+
+  #simSection .sim-footer-badge {
+    font-size: 9.5px;
+    line-height: 16px;
+    padding: 1px 7px;
+    gap: 4px;
+  }
+
+  #simSection .sim-pulse-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  #simSection .sim-footer-title-wrap {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  #simSection .sim-footer-title {
+    font-size: 12px;
+    line-height: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #simSection .sim-meter {
+    display: none;
+  }
+
+  #simSection .sim-impact-pill {
+    grid-row: 1;
+    grid-column: 2;
+    font-size: 9.5px;
+    line-height: 16px;
+    padding: 1px 6px;
+    border-radius: 5px;
+  }
+
+  #simSection .sim-footer-desc {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    font-size: 10.5px;
+    line-height: 1.28;
+    align-self: start;
+    overflow-y: auto;
+    max-height: 100%;
+  }
+
+  /* Mobile Latency section top interactive bar */
+  #inputSection {
+    height: 100dvh;
+    min-height: 680px;
+    padding: 10px 0 calc(65px + env(safe-area-inset-bottom));
+  }
+
+  #inputSection .latency-stack {
+    height: 100%;
+    min-height: 0;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  #inputSection .latency-top-card {
+    border-radius: 14px;
+  }
+
+  #inputSection .latency-top-card .card-head {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  #inputSection .latency-top-card .card-title-group {
+    gap: 8px;
+  }
+
+  #inputSection .latency-top-card .view-kicker {
+    font-size: 11px;
+    line-height: 22px;
+    padding: 0 8px;
+  }
+
+  #inputSection .latency-top-card h2 {
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  #inputSection .arena-checks {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #inputSection .arena-checks .switch-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 32px;
+    padding: 2px 8px;
+    gap: 6px;
+    font-size: 11.5px;
+    line-height: 24px;
+    white-space: nowrap;
+  }
+
+  #inputSection .tabs-bar {
+    padding: 8px 10px;
+  }
+
+  #inputSection .tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  #inputSection .tab {
+    width: 100%;
+    justify-content: center;
+    min-height: 32px;
+    line-height: 30px;
+    padding: 0 6px;
+    gap: 5px;
+    font-size: 11.5px;
+    white-space: nowrap;
+    border-radius: 7px;
+  }
+
+  #inputSection .tab-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  #inputSection .arena-wrap.latency-sight-card {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    border-radius: 14px;
+  }
+
+  #inputSection #arenaCanvas {
+    contain: size;
+    width: 100%;
+    height: 100%;
+  }
+
+  #inputSection .arena-hint {
+    bottom: 10px;
+    padding: 4px 12px;
+    font-size: 11.5px;
+    line-height: 1.3;
+    text-align: center;
+    max-width: calc(100% - 24px);
+  }
+
+  /* Mobile Latency footer: asymmetric 2fr / 1fr 3-row grid (all 5 fields, zero truncation) */
+  #inputSection .metrics-strip.latency-footer-card {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    border-radius: 14px;
+  }
+
+  #inputSection .metrics-strip.latency-footer-card .metric-cell {
+    padding: 6px 9px;
+    gap: 2px;
+  }
+
+  #inputSection .metrics-strip.latency-footer-card .metric-cell .label {
+    font-size: 9.5px;
+    line-height: 12px;
+  }
+
+  #inputSection .metrics-strip.latency-footer-card .metric-val {
+    font-size: 11.5px;
+    line-height: 15px;
+  }
+
+  #inputSection .metrics-strip.latency-footer-card .metric-cell:nth-child(3) {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  /* Mobile Pipeline: always show the progressive intro presentation card */
+  #pipelineSection {
+    height: 100dvh;
+    min-height: 680px;
+    padding: 10px 0 calc(65px + env(safe-area-inset-bottom));
+    align-items: center;
+  }
+
+  #pipelineSection .slide-inner {
+    width: min(var(--stage-w), 520px);
+    height: 100%;
+    justify-content: center;
+  }
+
+  .pipe-intro-card {
+    display: flex;
+    height: 100%;
+    max-height: 100%;
+    touch-action: pan-y;
+  }
+
+  .pipe-card {
+    display: none;
+  }
+
+  html:not(.is-first-visit):not(.is-intro-replay) #introScrollHint {
+    display: none;
+  }
+
+  html:not(.is-first-visit):not(.is-intro-replay) .intro-mob-nav {
+    margin-left: auto;
+  }
+
+  html:not(.is-first-visit):not(.is-intro-replay) #pipeIntroCard[data-stage="4"] #introMobNextBtn {
+    opacity: 0.4;
+    pointer-events: none;
+    font-size: 0;
+  }
+
+  html:not(.is-first-visit):not(.is-intro-replay) #pipeIntroCard[data-stage="4"] #introMobNextBtn::after {
+    content: "Next →";
+    font-size: 12.5px;
   }
 
   html.is-first-visit,
@@ -3931,8 +4342,8 @@ html.is-intro-revealed #motionSection .slide-inner {
     justify-content: center;
   }
 
-  .pipe-intro-card {
-    height: 100%;
+  html.is-first-visit .pipe-intro-card,
+  html.is-intro-replay .pipe-intro-card {
     max-height: calc(100dvh - 32px);
     touch-action: none;
   }
@@ -3991,7 +4402,7 @@ html.is-intro-revealed #motionSection .slide-inner {
 
   .intro-stage {
     grid-template-columns: 1fr;
-    grid-template-rows: 45dvh minmax(0, 1fr);
+    grid-template-rows: minmax(0, 50%) minmax(0, 50%);
     padding: 12px;
     gap: 12px;
     align-items: stretch;
@@ -3999,7 +4410,7 @@ html.is-intro-revealed #motionSection .slide-inner {
 
   .intro-tiles-track {
     width: 100%;
-    height: 45dvh;
+    height: 100%;
     justify-content: center;
     align-items: stretch;
   }
