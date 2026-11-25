@@ -4225,35 +4225,197 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
 }
 
 /* ============================================================================
+   VIEW 6: FURTHER READING & DEMO DISCLAIMER
+   ============================================================================ */
+.reading-stack {
+  justify-content: center;
+}
+
+.reading-shell {
+  height: auto;
+}
+
+.reading-meta {
+  font-size: clamp(11px, 1.2vh, 12.5px);
+  color: var(--text-dim);
+  font-weight: 650;
+}
+
+.reading-note {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(10px, 1.2vh, 14px) 18px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+}
+
+.reading-note-badge {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  line-height: 20px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: #e2e8f0;
+  color: var(--text);
+}
+
+.reading-note p {
+  margin: 0;
+  font-size: clamp(12px, 1.35vh, 13.5px);
+  line-height: 1.48;
+  color: var(--text-muted);
+}
+
+.reading-grid {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 1.4vw, 18px);
+  padding: clamp(14px, 1.8vh, 20px) 18px clamp(16px, 2vh, 22px);
+  background: var(--surface-alt);
+}
+
+/* Tile with exact 50% vertical top heading image & 50% bottom title + description */
+.reading-card {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  height: clamp(320px, 44vh, 420px);
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.16s ease,
+              border-color 0.16s ease;
+}
+
+.reading-card:hover,
+.reading-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(15, 23, 42, 0.3);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.11), 0 2px 6px rgba(15, 23, 42, 0.06);
+  outline: none;
+}
+
+.reading-card-media {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--viewport);
+  border-bottom: 1px solid var(--border);
+}
+
+.reading-art {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reading-card:hover .reading-art {
+  transform: scale(1.03);
+}
+
+.reading-source-pill {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 9.5px;
+  line-height: 18px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f8fafc;
+}
+
+.reading-card-body {
+  min-height: 0;
+  padding: clamp(12px, 1.5vh, 16px) 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.reading-card-body h3 {
+  margin: 0;
+  font-size: clamp(14px, 1.55vh, 16px);
+  line-height: 1.28;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+.reading-card-body p {
+  margin: 0;
+  font-size: clamp(11.5px, 1.25vh, 13px);
+  line-height: 1.45;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.reading-link-cta {
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reading-card:hover .reading-link-cta {
+  text-decoration: underline;
+}
+
+/* ============================================================================
    TABLET / IPAD PRO ADJUSTMENTS (821px – 1180px, e.g. 1024x1366)
    ============================================================================ */
 @media (min-width: 821px) and (max-width: 1180px) {
   .topbar {
     padding: 7px 10px;
-    gap: 8px;
+    gap: 6px;
   }
 
   .brand {
-    gap: 7px;
+    gap: 6px;
   }
 
   .brand h1 {
-    font-size: 14.5px;
+    font-size: 14px;
   }
 
   .step-nav {
-    gap: 2px;
+    gap: 1px;
     padding: 2px;
   }
 
   .step-pill {
-    font-size: 12.5px;
-    padding: 1px 8px;
-    gap: 4px;
+    font-size: 11.5px;
+    padding: 1px 6px;
+    gap: 3px;
   }
 
   .step-idx {
-    font-size: 10.5px;
+    font-size: 10px;
   }
 
   .detector-pill {
@@ -6113,5 +6275,71 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
   html.is-blind-test.is-blind-revealed .lane.is-blind-picked:not(.is-blind-correct) .lane-canvas {
     border: 2px solid #f59e0b;
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+  }
+
+  /* Mobile Section 06: Articles stacked as a vertical list (each card 50% image / 50% text) */
+  #readingSection {
+    height: auto;
+    min-height: 100dvh;
+    padding: 12px 0 calc(84px + env(safe-area-inset-bottom));
+  }
+
+  #readingSection .reading-stack {
+    justify-content: flex-start;
+    height: auto;
+  }
+
+  #readingSection .reading-shell .card-head {
+    padding: 9px 12px;
+  }
+
+  #readingSection .reading-shell .card-head h2 {
+    font-size: 15px;
+    line-height: 22px;
+  }
+
+  #readingSection .reading-note {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  #readingSection .reading-note p {
+    font-size: 11.5px;
+    line-height: 1.42;
+  }
+
+  #readingSection .reading-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px 12px 12px;
+  }
+
+  #readingSection .reading-card {
+    height: 224px;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    border-radius: 12px;
+  }
+
+  #readingSection .reading-card-body {
+    padding: 9px 12px;
+    gap: 4px;
+  }
+
+  #readingSection .reading-card-body h3 {
+    font-size: 13.5px;
+    line-height: 1.24;
+  }
+
+  #readingSection .reading-card-body p {
+    font-size: 11px;
+    line-height: 1.36;
+    -webkit-line-clamp: 2;
+  }
+
+  #readingSection .reading-link-cta {
+    font-size: 11px;
+    padding-top: 2px;
   }
 }
