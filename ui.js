@@ -11,7 +11,8 @@
   const pipelineIdx = slides.findIndex((s) => s.id === 'pipelineSection');
 
   function isFirstVisitLocked() {
-    return document.documentElement.classList.contains('is-intro-replay');
+    const root = document.documentElement;
+    return root.classList.contains('is-blind-test') || root.classList.contains('is-intro-replay');
   }
 
   let activeIndex = (isFirstVisitLocked() && pipelineIdx >= 0) ? pipelineIdx : 0;
@@ -180,26 +181,11 @@
   }
 
   function handleDirectionalNavigation(dir) {
-    const currentSlide = slides[activeIndex];
-    const pres = window.pipelinePresentation;
-
-    // While on the Pipeline presentation screen, scroll moves the presentation forward/backward first
-    if (currentSlide && currentSlide.id === 'pipelineSection' && pres) {
-      if (pres.step(dir)) {
-        return;
-      }
-    }
-
-    // During first-visit intro, stay locked on Pipeline until the final step unlocks the site
+    // During Pipeline intro replay modal, keep section locked until closed/finished
     if (isFirstVisitLocked()) return;
 
     const nextIdx = activeIndex + dir;
     if (nextIdx < 0 || nextIdx >= slides.length) return;
-
-    // When entering Pipeline from above, start at Step 1; from below, start at final step
-    if (slides[nextIdx] && slides[nextIdx].id === 'pipelineSection' && pres) {
-      pres.setStep(dir > 0 ? 0 : pres.count - 1);
-    }
 
     goToSlide(nextIdx);
   }
@@ -316,6 +302,34 @@
     scheduleUpdate();
   }, { passive: true });
 
+  // When Blind Test starts (from console), lock viewport onto 01 Motion
+  window.addEventListener('fpslab:blind-entered', () => {
+    const slide = slides[0];
+    if (!slide) return;
+    activeIndex = 0;
+    if (isStackedLayout()) {
+      scroller.scrollTop = 0;
+    } else {
+      scroller.scrollTop = slide.offsetTop;
+    }
+    setActiveIndicators(0);
+    updateScrollPresentation();
+  });
+
+  // When Blind Test exits (completed or skipped), unlock full lab at 01 Motion
+  window.addEventListener('fpslab:blind-exited', () => {
+    const slide = slides[0];
+    if (!slide) return;
+    activeIndex = 0;
+    if (isStackedLayout()) {
+      scroller.scrollTop = 0;
+    } else {
+      scroller.scrollTop = slide.offsetTop;
+    }
+    setActiveIndicators(0);
+    updateScrollPresentation();
+  });
+
   // When manual replay starts from 04 Pipeline, lock viewport onto the intro slide
   window.addEventListener('fpslab:intro-replay-started', () => {
     if (pipelineIdx < 0 || !slides[pipelineIdx]) return;
@@ -352,9 +366,20 @@
 
   // Keyboard navigation
   window.addEventListener('keydown', (e) => {
-    if (isStackedLayout() && !isFirstVisitLocked()) return;
     const tag = document.activeElement && document.activeElement.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      const currentSlide = slides[activeIndex];
+      const pres = window.pipelinePresentation;
+      if (currentSlide && currentSlide.id === 'pipelineSection' && pres) {
+        e.preventDefault();
+        pres.step(e.key === 'ArrowRight' ? 1 : -1);
+      }
+      return;
+    }
+
+    if (isStackedLayout() && !isFirstVisitLocked()) return;
 
     if (e.key === 'PageDown' || e.key === 'ArrowDown') {
       e.preventDefault();

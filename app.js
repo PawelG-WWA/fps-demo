@@ -92,6 +92,7 @@
     showArtifacts: true,
     panSpeed: 420,
     tSim: 0,
+    tRealSynced: 0,
     arenaMode: 'interp',
     showGhostCursor: true,
     hideOSCursor: false
@@ -375,6 +376,7 @@
   }
 
   function triggerExplode() {
+    if (typeof markSpikeInteracted === 'function') markSpikeInteracted();
     state.spikeStartSim = state.tSim;
     state.spikeStartReal = performance.now();
     state.simSpikeMs = SPIKE_PEAK_MS;
@@ -578,7 +580,7 @@
   // ============================================================================
   function resyncLaneSimulators() {
     const dispPeriod = 1000 / state.displayHz;
-    const targetTick = Math.floor(state.tSim / dispPeriod);
+    const targetTick = Math.floor((state.tSim + 0.001) / dispPeriod);
     const tNowSim = targetTick * dispPeriod;
     MODES.forEach((mode) => {
       const ls = laneState[mode];
@@ -599,7 +601,7 @@
 
   function stepLaneSimulators() {
     const dispPeriod = 1000 / state.displayHz;
-    const targetTick = Math.floor(state.tSim / dispPeriod);
+    const targetTick = Math.floor((state.tSim + 0.001) / dispPeriod);
 
     MODES.forEach((mode) => {
       const ls = laneState[mode];
@@ -716,7 +718,8 @@
     const canvas = laneCanvases[mode];
     const { ctx, w, h } = setupCanvas(canvas);
     const ls = laneState[mode];
-    const color = TRACK_COLORS[mode];
+    const blindMask = isBlindGuessing();
+    const color = blindMask ? '#cbd5e1' : TRACK_COLORS[mode];
 
     const tSec = ls.presentedTime / 1000;
     const trueSec = state.tSim / 1000;
@@ -766,7 +769,7 @@
     const hudX = Math.round(w * 0.5 - hudW / 2);
     const hudY = 9;
     const nearHud = Math.abs(blockX - w * 0.5) < 95;
-    const showArt = mode === 'interp' && state.showArtifacts;
+    const showArt = !blindMask && mode === 'interp' && state.showArtifacts;
 
     // Artifacts intensify as base 30 FPS drops under heavy load
     const loadSeverity = Math.max(0, (state.load - 1.5) / 3.5);
@@ -795,7 +798,7 @@
     ctx.fillText(showArt ? 'OVERLAY · HALO' : 'STATIC OVERLAY', hudX + hudW / 2, hudY + hudH / 2 + 0.5);
     ctx.restore();
 
-    if (state.showTruePos) {
+    if (!blindMask && state.showTruePos) {
       const trueX = ((trueSec * pxPerSec) % span) - 50;
       const leadX = trueX + 32;
       ctx.save();
@@ -1005,7 +1008,7 @@
     const { ctx, w, h } = setupCanvas(dom.arenaCanvas);
     const mode = state.arenaMode;
     const dispPeriod = 1000 / state.displayHz;
-    const tick = Math.floor(tNow / dispPeriod);
+    const tick = Math.floor((state.tRealSynced + 0.001) / dispPeriod);
 
     while (arena.history.length > 2 && tNow - arena.history[0].t > 800) {
       arena.history.shift();
@@ -1019,7 +1022,7 @@
 
       if (mode === 'interp') {
         const srcPeriod = getMeanFrameDurMs('interp', state.load);
-        const delayedT = tTick - cfg.pipelineDelayMs;
+        const delayedT = tNow - cfg.pipelineDelayMs;
         const kIdx = Math.floor(delayedT / srcPeriod);
         const tK0 = kIdx * srcPeriod;
         const tK1 = (kIdx + 1) * srcPeriod;
@@ -1030,21 +1033,21 @@
         arena.renderedX = p0.x + (p1.x - p0.x) * alpha;
         arena.renderedY = p0.y + (p1.y - p0.y) * alpha;
 
-        const tp = getTargetPos(tTick - cfg.pipelineDelayMs, w, h);
+        const tp = getTargetPos(tNow - cfg.pipelineDelayMs, w, h);
         arena.targetX = tp.x;
         arena.targetY = tp.y;
       } else {
         const gamePeriod = MODE_META[mode].periodMs;
-        if (arena.nextFrameReadyTime === 0 || tTick - arena.nextFrameReadyTime > 500) {
+        if (arena.nextFrameReadyTime === 0 || Math.abs(tTick - arena.nextFrameReadyTime) > 500) {
           arena.nextFrameReadyTime = tTick;
         }
         if (tTick + 0.001 >= arena.nextFrameReadyTime) {
           arena.frameSeq++;
-          const sampled = samplePointerAt(arena.nextFrameReadyTime - cfg.pipelineDelayMs);
+          const sampled = samplePointerAt(tNow - cfg.pipelineDelayMs);
           arena.renderedX = sampled.x;
           arena.renderedY = sampled.y;
 
-          const tp = getTargetPos(arena.nextFrameReadyTime, w, h);
+          const tp = getTargetPos(tNow, w, h);
           arena.targetX = tp.x;
           arena.targetY = tp.y;
 
@@ -1241,10 +1244,10 @@
       const ms = i * dispPeriod;
       if (ms > totalMs + 0.5) break;
       const pct = Math.min(100, (ms / totalMs) * 100);
-      gridlinesHtml += `<span class="tl-gridline" style="left:${pct.toFixed(3)}%"></span>`;
+      gridlinesHtml += `<span class="tl-gridline" style="--p:${pct.toFixed(3)}%;left:${pct.toFixed(3)}%"></span>`;
       if (hz === 60 || i % 2 === 0) {
         const edgeCls = i === 0 ? ' is-start' : (pct >= 99.5 ? ' is-end' : '');
-        tickLabelsHtml += `<span class="tl-tick-lbl${edgeCls}" style="left:${pct.toFixed(3)}%">${ms.toFixed(0)} ms</span>`;
+        tickLabelsHtml += `<span class="tl-tick-lbl${edgeCls}" style="--p:${pct.toFixed(3)}%;left:${pct.toFixed(3)}%">${ms.toFixed(0)} ms</span>`;
       }
     }
 
@@ -1291,7 +1294,7 @@
           ? `BUFFER DELAY (~${Math.round(bufLagMs)} ms) — exceeds 100 ms window`
           : `BUFFER DELAY (~${Math.round(bufLagMs)} ms) — waiting for Frame B`;
         const bufShort = `BUFFER (~${Math.round(bufLagMs)} ms)`;
-        blocksHtml += `<div class="tl-block interp-buf" style="left:0%;width:calc(${bufPct.toFixed(3)}% - 3px)" title="${bufFull}"><span class="tl-txt"><span class="tl-full">${bufFull}</span><span class="tl-short">${bufShort}</span></span></div>`;
+        blocksHtml += `<div class="tl-block interp-buf" style="--p:0%;--s:${bufPct.toFixed(3)}%;left:0%;width:calc(${bufPct.toFixed(3)}% - 3px)" title="${bufFull}"><span class="tl-txt"><span class="tl-full">${bufFull}</span><span class="tl-short">${bufShort}</span></span></div>`;
 
         let t = bufLagMs;
         let k = 0;
@@ -1303,7 +1306,7 @@
           const cls = isReal ? 'interp-real' : 'interp-fake';
           const lbl = widthPct >= 7 ? (isReal ? 'REAL' : 'INT') : '';
           const tip = isReal ? 'Real rendered source frame' : 'Synthesized interpolated frame';
-          blocksHtml += `<div class="tl-block ${cls}" style="left:calc(${startPct.toFixed(3)}% + 1.5px);width:calc(${widthPct.toFixed(3)}% - 3px)" title="${tip}">${lbl}</div>`;
+          blocksHtml += `<div class="tl-block ${cls}" style="--p:${startPct.toFixed(3)}%;--s:${widthPct.toFixed(3)}%;left:calc(${startPct.toFixed(3)}% + 1.5px);width:calc(${widthPct.toFixed(3)}% - 3px)" title="${tip}">${lbl}</div>`;
           t += dispPeriod;
           k++;
         }
@@ -1355,7 +1358,7 @@
             ? `<span class="tl-txt">F${seg.frameNum}<span class="tl-dur"> (${durMs.toFixed(1)} ms)</span></span>`
             : (widthPct >= 7 ? `<span class="tl-txt">F${seg.frameNum}</span>` : '');
           const tip = `Frame F${seg.frameNum} · ${durMs.toFixed(1)} ms (${seg.ticks} refresh${seg.ticks === 1 ? '' : 'es'})`;
-          blocksHtml += `<div class="tl-block ${cls}${isNarrow ? ' is-narrow' : ''}" style="left:calc(${startPct.toFixed(3)}% + 2px);width:calc(${widthPct.toFixed(3)}% - 4px)" title="${tip}">${innerHtml}</div>`;
+          blocksHtml += `<div class="tl-block ${cls}${isNarrow ? ' is-narrow' : ''}" style="--p:${startPct.toFixed(3)}%;--s:${widthPct.toFixed(3)}%;left:calc(${startPct.toFixed(3)}% + 2px);width:calc(${widthPct.toFixed(3)}% - 4px)" title="${tip}">${innerHtml}</div>`;
         });
       }
 
@@ -1394,12 +1397,18 @@
     input.style.setProperty('--range-pct', `${pct.toFixed(1)}%`);
   }
 
+  dom.loadSlider.addEventListener('pointerdown', () => {
+    if (typeof markLoadInteracted === 'function') markLoadInteracted();
+  });
+
   dom.loadSlider.addEventListener('input', (e) => {
+    if (typeof markLoadInteracted === 'function') markLoadInteracted();
     syncRangeFill(dom.loadSlider);
     setLoad(parseFloat(e.target.value));
   });
 
   dom.loadSlider.addEventListener('dblclick', () => {
+    if (typeof markLoadInteracted === 'function') markLoadInteracted();
     dom.loadSlider.value = '1';
     syncRangeFill(dom.loadSlider);
     setLoad(1.0);
@@ -1407,6 +1416,7 @@
 
   if (dom.loadResetBtn) {
     dom.loadResetBtn.addEventListener('click', () => {
+      if (typeof markLoadInteracted === 'function') markLoadInteracted();
       dom.loadSlider.value = '1';
       syncRangeFill(dom.loadSlider);
       setLoad(1.0);
@@ -1431,6 +1441,7 @@
   // Keyboard shortcuts: 'S' for Load Spike, 'P' for Pause / Resume
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (isBlindGuessing()) return;
     const tag = document.activeElement && document.activeElement.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (e.key === 's' || e.key === 'S') {
@@ -1598,7 +1609,7 @@
 
   function resyncSimArenas() {
     const dispPeriod = 1000 / state.displayHz;
-    const targetTick = Math.floor(state.tSim / dispPeriod);
+    const targetTick = Math.floor((state.tSim + 0.001) / dispPeriod);
     const tNowSim = targetTick * dispPeriod;
     MODES.forEach((mode) => {
       const ss = simState[mode];
@@ -1620,7 +1631,7 @@
   function stepSimArenas() {
     if (!dom.expCurveCanvas) return;
     const dispPeriod = 1000 / state.displayHz;
-    const targetTick = Math.floor(state.tSim / dispPeriod);
+    const targetTick = Math.floor((state.tSim + 0.001) / dispPeriod);
 
     MODES.forEach((mode) => {
       const ss = simState[mode];
@@ -2387,8 +2398,8 @@
 
     if (pipeEls.scrollHint) {
       pipeEls.scrollHint.textContent = pipeStage >= 4
-        ? 'Scroll ↓ for Refresh Map'
-        : 'Scroll ↓ to advance';
+        ? 'Use ← Prev or scroll ↓ for Refresh Map'
+        : 'Use ← → or Next to advance';
     }
 
     // Update progressive 5-slide Pipeline Intro view (first-visit & replay mode)
@@ -2449,12 +2460,12 @@
         const isMobile = window.innerWidth <= 820;
         if (isFinishStep) {
           introEls.scrollHint.textContent = isMobile
-            ? (isReplay ? 'Swipe ↑ to return' : 'Swipe ↑ to enter Lab')
-            : (isReplay ? 'Scroll ↓ to return to Pipeline' : 'Scroll ↓ to enter FPS Lab');
+            ? 'Tap Back to return'
+            : 'Press → or click Back to Pipeline';
         } else {
           introEls.scrollHint.textContent = isMobile
-            ? 'Swipe ↑↓ to navigate'
-            : 'Scroll ↓ or click Next to continue';
+            ? 'Tap Next to navigate'
+            : 'Use ← → or Next to continue';
         }
       }
 
@@ -2661,6 +2672,23 @@
     }
   });
 
+  // Lock simulation clock to the host display's V-Sync cadence when running near a
+  // 60/120 Hz harmonic (e.g. 59.94 Hz TVs or ±0.5 ms rAF jitter) so locked 60 FPS
+  // never suffers beat-frequency duplicate/skipped ticks.
+  function getQuantizedVsyncDt(dtReal) {
+    if (dtReal <= 0) return 0;
+    const hostHz = state.detectedHz || 60;
+    if (hostHz === 60 || hostHz === 120) {
+      const hostPeriod = 1000 / hostHz;
+      const ratio = dtReal / hostPeriod;
+      const nearest = Math.round(ratio);
+      if (nearest >= 1 && nearest <= 3 && Math.abs(ratio - nearest) < 0.35) {
+        return nearest * hostPeriod;
+      }
+    }
+    return dtReal;
+  }
+
   function loop(now) {
     rafId = null;
     if (document.hidden) {
@@ -2672,8 +2700,11 @@
     const dtReal = Math.min(now - lastRafTime, 50);
     lastRafTime = now;
 
+    const vsyncDt = getQuantizedVsyncDt(dtReal);
+    state.tRealSynced += vsyncDt;
+
     if (!state.paused) {
-      state.tSim += dtReal * state.speed;
+      state.tSim += vsyncDt * state.speed;
     }
 
     state.simSpikeMs = state.spikeStartSim >= 0
@@ -2750,6 +2781,401 @@
   }
 
   // ============================================================================
+  // BLIND TEST CHALLENGE (FIRST-VISIT & ON-DEMAND FROM CONSOLE)
+  // ============================================================================
+  const BLIND_COOKIE_NAME = 'fps_lab_blind_seen';
+  const BLIND_TRACK_LABELS = ['Track A', 'Track B', 'Track C', 'Track D'];
+  const lanesContainer = document.getElementById('lanesContainer');
+  const laneElsByMode = {};
+  MODES.forEach((m) => {
+    laneElsByMode[m] = lanesContainer ? lanesContainer.querySelector(`.lane[data-mode="${m}"]`) : null;
+  });
+  const blindEls = {
+    head: document.getElementById('blindHead'),
+    title: document.getElementById('blindTitle'),
+    sub: document.getElementById('blindSub'),
+    retryBtn: document.getElementById('blindRetryBtn'),
+    skipBtn: document.getElementById('blindSkipBtn'),
+    triggerBtn: document.getElementById('blindTestBtn'),
+    mobToggle: document.getElementById('mobileConsoleToggle')
+  };
+
+  let blindActive = document.documentElement.classList.contains('is-blind-test');
+  let blindRevealed = false;
+  let blindSavedState = null;
+
+  function isBlindGuessing() {
+    return blindActive && !blindRevealed;
+  }
+
+  function setBlindSeenCookie() {
+    document.cookie = `${BLIND_COOKIE_NAME}=1; path=/; max-age=31536000; SameSite=Lax`;
+  }
+
+  function shuffleLanesForBlindTest() {
+    if (!lanesContainer) return;
+    const order = MODES.slice();
+    // Fisher-Yates shuffle, ensuring it doesn't stay identical to canonical order
+    for (let attempt = 0; attempt < 6; attempt++) {
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = order[i];
+        order[i] = order[j];
+        order[j] = tmp;
+      }
+      if (order.some((m, idx) => m !== MODES[idx])) break;
+    }
+    order.forEach((m, idx) => {
+      const el = laneElsByMode[m];
+      if (!el) return;
+      const lbl = BLIND_TRACK_LABELS[idx];
+      el.dataset.blindLabel = lbl;
+      const h3 = el.querySelector('.lane-badge h3');
+      if (h3) h3.dataset.blindLabel = lbl;
+      el.classList.remove('is-blind-picked', 'is-blind-correct');
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', `Pick ${lbl} as 60 FPS`);
+      lanesContainer.appendChild(el);
+    });
+  }
+
+  function restoreCanonicalLaneOrder() {
+    if (!lanesContainer) return;
+    MODES.forEach((m) => {
+      const el = laneElsByMode[m];
+      if (!el) return;
+      delete el.dataset.blindLabel;
+      const h3 = el.querySelector('.lane-badge h3');
+      if (h3) delete h3.dataset.blindLabel;
+      el.classList.remove('is-blind-picked', 'is-blind-correct');
+      el.removeAttribute('role');
+      el.removeAttribute('tabindex');
+      el.removeAttribute('aria-label');
+      lanesContainer.appendChild(el);
+    });
+  }
+
+  function enterBlindTest(fromConsole = false) {
+    const root = document.documentElement;
+    if (fromConsole && !blindSavedState) {
+      blindSavedState = {
+        load: state.load,
+        speed: state.speed,
+        paused: state.paused
+      };
+    }
+    if (blindEls.mobToggle) blindEls.mobToggle.checked = false;
+
+    // Ensure clean, fair baseline conditions for the blind eye test
+    state.spikeStartSim = -1;
+    state.spikeStartReal = -1;
+    state.simSpikeMs = 0;
+    state.realSpikeMs = 0;
+    if (state.paused) togglePause();
+    if (state.speed !== 1) setSpeed(1);
+    if (Math.abs(state.load - 1.0) > 0.01) {
+      state.load = 1.0;
+      if (dom.loadSlider) {
+        dom.loadSlider.value = '1';
+        syncRangeFill(dom.loadSlider);
+      }
+      updateLoadDisplay();
+    }
+
+    blindActive = true;
+    blindRevealed = false;
+    root.classList.add('is-blind-test');
+    root.classList.remove('is-blind-revealed');
+
+    if (blindEls.head) blindEls.head.dataset.outcome = '';
+    if (blindEls.title) blindEls.title.textContent = 'Spot the True 60 FPS Track';
+    if (blindEls.sub) {
+      blindEls.sub.textContent =
+        'The 4 tracks below are shuffled and unlabeled. Watch the motion closely, then pick the track you think is native 60 FPS.';
+    }
+    if (blindEls.retryBtn) blindEls.retryBtn.hidden = true;
+    if (blindEls.skipBtn) {
+      blindEls.skipBtn.textContent = 'Skip →';
+      blindEls.skipBtn.classList.remove('is-primary');
+    }
+
+    shuffleLanesForBlindTest();
+    resetLaneSimulators();
+    window.dispatchEvent(new CustomEvent('fpslab:blind-entered'));
+    invalidateAllCanvases();
+    syncVisibleSectionsNow();
+    requestCanvasRedraw();
+  }
+
+  function handleBlindPick(mode) {
+    if (!isBlindGuessing()) return;
+    setBlindSeenCookie();
+    blindRevealed = true;
+
+    const root = document.documentElement;
+    root.classList.add('is-blind-revealed');
+
+    const pickedEl = laneElsByMode[mode];
+    const correctEl = laneElsByMode['60'];
+    if (pickedEl) pickedEl.classList.add('is-blind-picked');
+    if (correctEl) correctEl.classList.add('is-blind-correct');
+
+    let outcome = 'wrong';
+    let title = 'Tricky — that was 30 FPS';
+    let sub = 'Compare its 33.3 ms steps side-by-side with the highlighted native 60 FPS track below.';
+
+    if (mode === '60') {
+      outcome = 'correct';
+      title = 'Spot on — you found native 60 FPS!';
+      sub = 'Even 16.7 ms frame pacing gives the sharpest motion clarity and lowest input latency.';
+    } else if (mode === 'interp') {
+      outcome = 'interp';
+      title = 'Fooled by TV Motion Smoothing!';
+      sub = 'You picked 30 FPS + Interpolation. It fakes smooth motion by buffering frames — adding +67 ms of lag and halo artifacts.';
+    } else if (mode === '40') {
+      outcome = 'wrong';
+      title = 'Close — that was 40 FPS';
+      sub = state.displayHz === 120
+        ? 'At 120 Hz, 40 FPS hits an even 25.0 ms cadence — halfway between 30 and 60 FPS.'
+        : 'At 60 Hz, 40 FPS alternates 16.7 / 33.3 ms holds (3:2 pulldown judder). Compare it against native 60 FPS below.';
+    }
+
+    if (blindEls.head) blindEls.head.dataset.outcome = outcome;
+    if (blindEls.title) blindEls.title.textContent = title;
+    if (blindEls.sub) blindEls.sub.textContent = sub;
+    if (blindEls.retryBtn) blindEls.retryBtn.hidden = false;
+    if (blindEls.skipBtn) {
+      blindEls.skipBtn.textContent = 'Enter Full Lab →';
+      blindEls.skipBtn.classList.add('is-primary');
+    }
+
+    MODES.forEach((m) => {
+      const el = laneElsByMode[m];
+      if (!el) return;
+      el.removeAttribute('role');
+      el.removeAttribute('tabindex');
+      el.removeAttribute('aria-label');
+    });
+
+    invalidateAllCanvases();
+    updateLaneReadouts();
+    requestCanvasRedraw();
+  }
+
+  function exitBlindTest() {
+    setBlindSeenCookie();
+    blindActive = false;
+    blindRevealed = false;
+
+    const root = document.documentElement;
+    root.classList.remove('is-blind-test', 'is-blind-revealed');
+    root.classList.add('is-intro-revealed');
+
+    restoreCanonicalLaneOrder();
+
+    if (blindSavedState) {
+      const prev = blindSavedState;
+      blindSavedState = null;
+      if (Math.abs(prev.load - state.load) > 0.01) {
+        state.load = prev.load;
+        if (dom.loadSlider) {
+          dom.loadSlider.value = String(prev.load);
+          syncRangeFill(dom.loadSlider);
+        }
+        updateLoadDisplay();
+      }
+      if (prev.speed !== state.speed) setSpeed(prev.speed);
+      if (prev.paused && !state.paused) togglePause();
+    }
+
+    window.dispatchEvent(new CustomEvent('fpslab:blind-exited'));
+    invalidateAllCanvases();
+    syncVisibleSectionsNow();
+    updateLaneReadouts();
+    requestCanvasRedraw();
+
+    setTimeout(() => {
+      root.classList.remove('is-intro-revealed');
+    }, 650);
+  }
+
+  MODES.forEach((m) => {
+    const el = laneElsByMode[m];
+    if (!el) return;
+    el.addEventListener('click', () => {
+      if (isBlindGuessing()) handleBlindPick(m);
+    });
+    el.addEventListener('keydown', (e) => {
+      if (!isBlindGuessing()) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleBlindPick(m);
+      }
+    });
+  });
+
+  if (blindEls.skipBtn) {
+    blindEls.skipBtn.addEventListener('click', () => exitBlindTest());
+  }
+  if (blindEls.retryBtn) {
+    blindEls.retryBtn.addEventListener('click', () => enterBlindTest(false));
+  }
+  if (blindEls.triggerBtn) {
+    blindEls.triggerBtn.addEventListener('click', () => enterBlindTest(true));
+  }
+
+  // ============================================================================
+  // DISCOVERY HEARTBEAT NUDGES (LOAD SPIKE BUTTON + LOAD SLIDER)
+  // ============================================================================
+  const SPIKE_USED_COOKIE = 'fps_lab_used_spike';
+  const LOAD_USED_COOKIE = 'fps_lab_used_load';
+  const HEARTBEAT_FIRST_MS = 7200;
+  const HEARTBEAT_MIN_MS = 7000;
+  const HEARTBEAT_MAX_MS = 10000;
+
+  function hasCookieFlag(name) {
+    return new RegExp(`(?:^|;\\s*)${name}=1(?:;|$)`).test(document.cookie);
+  }
+
+  function setCookieFlag(name) {
+    document.cookie = `${name}=1; path=/; max-age=31536000; SameSite=Lax`;
+  }
+
+  if (/[?&]reset_hints=1(?:&|$)/.test(window.location.search)) {
+    document.cookie = `${SPIKE_USED_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+    document.cookie = `${LOAD_USED_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+  }
+
+  let spikeHintDone = hasCookieFlag(SPIKE_USED_COOKIE);
+  let loadHintDone = spikeHintDone || hasCookieFlag(LOAD_USED_COOKIE);
+  let heartbeatTimerId = null;
+  let heartbeatClearSpikeId = null;
+  let heartbeatClearLoadId = null;
+  let heartbeatFirstFired = false;
+  const mobSpikeBtnEl = document.getElementById('mobSpikeBtn');
+
+  function clearHeartbeatVisuals(includeSpike = true, includeLoad = true) {
+    if (includeSpike) {
+      if (heartbeatClearSpikeId) {
+        clearTimeout(heartbeatClearSpikeId);
+        heartbeatClearSpikeId = null;
+      }
+      if (dom.explodeBtn) dom.explodeBtn.classList.remove('is-heartbeat');
+      if (mobSpikeBtnEl) mobSpikeBtnEl.classList.remove('is-heartbeat');
+    }
+    if (includeLoad) {
+      if (heartbeatClearLoadId) {
+        clearTimeout(heartbeatClearLoadId);
+        heartbeatClearLoadId = null;
+      }
+      if (dom.loadPod) dom.loadPod.classList.remove('is-heartbeat');
+    }
+  }
+
+  function stopHeartbeatTimer() {
+    if (heartbeatTimerId) {
+      clearTimeout(heartbeatTimerId);
+      heartbeatTimerId = null;
+    }
+  }
+
+  function canRunHeartbeats() {
+    if (spikeHintDone) return false;
+    if (blindActive) return false;
+    const root = document.documentElement;
+    if (root.classList.contains('is-blind-test') || root.classList.contains('is-intro-replay')) {
+      return false;
+    }
+    if (document.visibilityState === 'hidden') return false;
+    return true;
+  }
+
+  function triggerHeartbeatPulse() {
+    heartbeatTimerId = null;
+    if (!canRunHeartbeats()) return;
+
+    // Pulse Load Spike button (desktop + mobile mini bar)
+    const spikeTargets = [dom.explodeBtn, mobSpikeBtnEl].filter(Boolean);
+    spikeTargets.forEach((el) => {
+      el.classList.remove('is-heartbeat');
+      void el.offsetWidth;
+      el.classList.add('is-heartbeat');
+    });
+    if (heartbeatClearSpikeId) clearTimeout(heartbeatClearSpikeId);
+    heartbeatClearSpikeId = setTimeout(() => {
+      spikeTargets.forEach((el) => el.classList.remove('is-heartbeat'));
+      heartbeatClearSpikeId = null;
+    }, 1150);
+
+    // Pulse Load slider pod with left-to-right glossy sheen (unless slider already interacted with)
+    if (!loadHintDone && dom.loadPod) {
+      dom.loadPod.classList.remove('is-heartbeat');
+      void dom.loadPod.offsetWidth;
+      dom.loadPod.classList.add('is-heartbeat');
+      if (heartbeatClearLoadId) clearTimeout(heartbeatClearLoadId);
+      heartbeatClearLoadId = setTimeout(() => {
+        if (dom.loadPod) dom.loadPod.classList.remove('is-heartbeat');
+        heartbeatClearLoadId = null;
+      }, 1050);
+    }
+
+    heartbeatFirstFired = true;
+    scheduleNextHeartbeat();
+  }
+
+  function scheduleNextHeartbeat() {
+    stopHeartbeatTimer();
+    if (!canRunHeartbeats()) return;
+    const delayMs = heartbeatFirstFired
+      ? Math.round(HEARTBEAT_MIN_MS + Math.random() * (HEARTBEAT_MAX_MS - HEARTBEAT_MIN_MS))
+      : HEARTBEAT_FIRST_MS;
+    heartbeatTimerId = setTimeout(triggerHeartbeatPulse, delayMs);
+  }
+
+  function markSpikeInteracted() {
+    spikeHintDone = true;
+    loadHintDone = true;
+    setCookieFlag(SPIKE_USED_COOKIE);
+    stopHeartbeatTimer();
+    clearHeartbeatVisuals(true, true);
+  }
+
+  function markLoadInteracted() {
+    if (loadHintDone) return;
+    loadHintDone = true;
+    setCookieFlag(LOAD_USED_COOKIE);
+    clearHeartbeatVisuals(false, true);
+  }
+
+  window.addEventListener('fpslab:blind-entered', () => {
+    stopHeartbeatTimer();
+    clearHeartbeatVisuals(true, true);
+  });
+
+  window.addEventListener('fpslab:blind-exited', () => {
+    scheduleNextHeartbeat();
+  });
+
+  window.addEventListener('fpslab:intro-replay-started', () => {
+    stopHeartbeatTimer();
+    clearHeartbeatVisuals(true, true);
+  });
+
+  window.addEventListener('fpslab:intro-unlocked', () => {
+    scheduleNextHeartbeat();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      stopHeartbeatTimer();
+      clearHeartbeatVisuals(true, true);
+    } else {
+      scheduleNextHeartbeat();
+    }
+  });
+
+  // ============================================================================
   // INIT
   // ============================================================================
   const cookieBanner = document.getElementById('cookieBanner');
@@ -2767,5 +3193,10 @@
   syncVisibleSectionsNow();
   updateLoadDisplay();
   detectRefreshRate(true);
-  ensureLoopRunning();
+  if (blindActive) {
+    enterBlindTest(false);
+  } else {
+    ensureLoopRunning();
+    scheduleNextHeartbeat();
+  }
 })();
