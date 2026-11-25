@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FPS &amp; Refresh Rate Lab — Compare 30, 40, 60 FPS &amp; Motion Interpolation (60Hz vs 120Hz)</title>
-  <meta name="description" content="Interactive showcase comparing 30 FPS, 40 FPS, 60 FPS, and motion interpolation across 60Hz and 120Hz displays. Test 3:2 pulldown judder, input lag, load spikes, and the full CPU-to-display frame pipeline." />
-  <meta name="keywords" content="30 fps vs 60 fps, 40 fps 120hz, 40 fps 60hz judder, motion interpolation input lag, TruMotion, frame pacing, frametime, refresh rate test, input latency simulator, frame pipeline" />
+  <meta name="description"
+    content="Interactive showcase comparing 30 FPS, 40 FPS, 60 FPS, and motion interpolation across 60Hz and 120Hz displays. Test 3:2 pulldown judder, input lag, load spikes, and the full CPU-to-display frame pipeline." />
+  <meta name="keywords"
+    content="30 fps vs 60 fps, 40 fps 120hz, 40 fps 60hz judder, motion interpolation input lag, TruMotion, frame pacing, frametime, refresh rate test, input latency simulator, frame pipeline" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#eef0f4" />
 
@@ -17,14 +20,16 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="FPS &amp; Refresh Rate Lab" />
   <meta property="og:title" content="FPS &amp; Refresh Rate Lab — 30 vs 40 vs 60 FPS &amp; Motion Interpolation" />
-  <meta property="og:description" content="See and feel the difference between 30 FPS, 40 FPS, 60 FPS, and motion smoothing on 60Hz vs 120Hz displays, including input lag, load spikes, and the full frame pipeline." />
+  <meta property="og:description"
+    content="See and feel the difference between 30 FPS, 40 FPS, 60 FPS, and motion smoothing on 60Hz vs 120Hz displays, including input lag, load spikes, and the full frame pipeline." />
   <meta property="og:url" content="https://example.com/" />
   <meta property="og:locale" content="en_US" />
 
   <!-- Twitter / X Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="FPS &amp; Refresh Rate Lab — 30 vs 40 vs 60 FPS &amp; Motion Interpolation" />
-  <meta name="twitter:description" content="Interactive demo of 30, 40, and 60 FPS frame pacing, 60Hz vs 120Hz refresh cadence, motion interpolation lag, workload spikes, and the CPU-to-display pipeline." />
+  <meta name="twitter:description"
+    content="Interactive demo of 30, 40, and 60 FPS frame pacing, 60Hz vs 120Hz refresh cadence, motion interpolation lag, workload spikes, and the CPU-to-display pipeline." />
 
   <!-- Structured Data (JSON-LD) -->
   <script type="application/ld+json">
@@ -106,30 +111,226 @@
     })();
   </script>
   <style>
-    :root{--bg:#eef0f4;--surface:#fff;--surface-alt:#f6f7fa;--surface-subtle:#ebedf2;--viewport:#11141c;--border:rgba(15,23,42,.08);--border-strong:rgba(15,23,42,.14);--text:#0f172a;--text-muted:#475569;--text-dim:#64748b;--stage-w:70vw;--top-offset:12px;--lbl-h:clamp(26px,3.34vh,36px);--top-clearance:clamp(134px,14.8vh,158px);--radius-xl:18px;--radius-lg:12px;--radius-md:10px;--radius-sm:8px;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;--font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
-    *,*::before,*::after{box-sizing:border-box}
-    html,body{margin:0;padding:0;height:100%;overflow:hidden;background-color:var(--bg);background-image:radial-gradient(rgba(15,23,42,.065) 1px,transparent 1px);background-size:20px 20px;color:var(--text);font-family:var(--font-sans);font-size:14.5px;line-height:22px;-webkit-font-smoothing:antialiased}
-    .top-chrome{position:fixed;top:var(--top-offset);left:0;right:0;z-index:70;display:flex;justify-content:center;pointer-events:none}
-    .top-bar-shell{pointer-events:auto;width:var(--stage-w);background:rgba(255,255,255,.92);border:1px solid rgba(15,23,42,.11);border-radius:var(--radius-xl)}
-    .topbar{padding:7px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .control-pane{padding:7px 12px;display:flex;align-items:center;gap:9px;flex-wrap:nowrap}
-    .stage-scroller{height:100dvh;overflow-y:auto}
-    .stage-slide{height:100dvh;width:100%;padding:var(--top-clearance) 0 18px;display:flex;justify-content:center;position:relative;content-visibility:auto;contain-intrinsic-size:auto 100dvh}
-    .slide-inner{width:var(--stage-w);height:100%;min-height:0;display:flex;flex-direction:column}
-    .stage-card{width:100%;height:100%;min-height:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);display:flex;flex-direction:column;overflow:hidden}
-    .rail-nav{position:fixed;right:clamp(10px,2.2vw,30px);top:50%;transform:translateY(-50%);z-index:65;display:flex;flex-direction:column;gap:8px}
-    .notice[hidden],.pipe-intro-card,.blind-head,.mob-console-toggle,.mob-spike-btn,.mob-pause-btn,.mob-console-btn,html.is-cookie-ok .cookie-banner{display:none}
-    html.is-intro-replay .pipe-intro-card{display:flex}
-    html.is-intro-replay .pipe-card,html.is-intro-replay .notice-host,html.is-intro-replay .stage-slide:not(#pipelineSection){display:none}
-    html.is-intro-replay .top-chrome,html.is-intro-replay .rail-nav{opacity:0;visibility:hidden;pointer-events:none}
-    html.is-blind-test .blind-head{display:flex}
-    html.is-blind-test .motion-card .card-head,html.is-blind-test .motion-scenarios-pane,html.is-blind-test .motion-mob-scenarios,html.is-blind-test .motion-footer-card,html.is-blind-test .lane-sim-tag,html.is-blind-test .notice-host,html.is-blind-test .cookie-banner,html.is-blind-test .stage-slide:not(#motionSection),html.is-blind-test:not(.is-blind-revealed) .lane-telemetry-split{display:none}
-    html.is-blind-test .top-chrome,html.is-blind-test .rail-nav{opacity:0;visibility:hidden;pointer-events:none}
-    @media (max-width:820px){:root{--stage-w:calc(100vw - 32px)}.top-chrome{top:auto;bottom:max(10px,env(safe-area-inset-bottom))}.step-nav,.rail-nav,.pipe-card,.lane-meta,.motion-scenarios-pane{display:none}.pipe-intro-card{display:flex}.control-pane{max-height:0;padding:0 10px;opacity:0;overflow:hidden;pointer-events:none}.stage-slide{padding:16px 0 24px}}
+    :root {
+      --bg: #eef0f4;
+      --surface: #fff;
+      --surface-alt: #f6f7fa;
+      --surface-subtle: #ebedf2;
+      --viewport: #11141c;
+      --border: rgba(15, 23, 42, .08);
+      --border-strong: rgba(15, 23, 42, .14);
+      --text: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #64748b;
+      --stage-w: 70vw;
+      --top-offset: 12px;
+      --lbl-h: clamp(26px, 3.34vh, 36px);
+      --top-clearance: clamp(134px, 14.8vh, 158px);
+      --radius-xl: 18px;
+      --radius-lg: 12px;
+      --radius-md: 10px;
+      --radius-sm: 8px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      background-image: radial-gradient(rgba(15, 23, 42, .065) 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14.5px;
+      line-height: 22px;
+      -webkit-font-smoothing: antialiased
+    }
+
+    .top-chrome {
+      position: fixed;
+      top: var(--top-offset);
+      left: 0;
+      right: 0;
+      z-index: 70;
+      display: flex;
+      justify-content: center;
+      pointer-events: none
+    }
+
+    .top-bar-shell {
+      pointer-events: auto;
+      width: var(--stage-w);
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid rgba(15, 23, 42, .11);
+      border-radius: var(--radius-xl)
+    }
+
+    .topbar {
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px
+    }
+
+    .control-pane {
+      padding: 7px 12px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: nowrap
+    }
+
+    .stage-scroller {
+      height: 100dvh;
+      overflow-y: auto
+    }
+
+    .stage-slide {
+      height: 100dvh;
+      width: 100%;
+      padding: var(--top-clearance) 0 18px;
+      display: flex;
+      justify-content: center;
+      position: relative;
+      content-visibility: auto;
+      contain-intrinsic-size: auto 100dvh
+    }
+
+    .slide-inner {
+      width: var(--stage-w);
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column
+    }
+
+    .stage-card {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .rail-nav {
+      position: fixed;
+      right: clamp(10px, 2.2vw, 30px);
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 65;
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .notice[hidden],
+    .pipe-intro-card,
+    .blind-head,
+    .mob-console-toggle,
+    .mob-spike-btn,
+    .mob-pause-btn,
+    .mob-console-btn,
+    html.is-cookie-ok .cookie-banner {
+      display: none
+    }
+
+    html.is-intro-replay .pipe-intro-card {
+      display: flex
+    }
+
+    html.is-intro-replay .pipe-card,
+    html.is-intro-replay .notice-host,
+    html.is-intro-replay .stage-slide:not(#pipelineSection) {
+      display: none
+    }
+
+    html.is-intro-replay .top-chrome,
+    html.is-intro-replay .rail-nav {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none
+    }
+
+    html.is-blind-test .blind-head {
+      display: flex
+    }
+
+    html.is-blind-test .motion-card .card-head,
+    html.is-blind-test .motion-scenarios-pane,
+    html.is-blind-test .motion-mob-scenarios,
+    html.is-blind-test .motion-footer-card,
+    html.is-blind-test .lane-sim-tag,
+    html.is-blind-test .notice-host,
+    html.is-blind-test .cookie-banner,
+    html.is-blind-test .stage-slide:not(#motionSection),
+    html.is-blind-test:not(.is-blind-revealed) .lane-telemetry-split {
+      display: none
+    }
+
+    html.is-blind-test .top-chrome,
+    html.is-blind-test .rail-nav {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none
+    }
+
+    @media (max-width:820px) {
+      :root {
+        --stage-w: calc(100vw - 32px)
+      }
+
+      .top-chrome {
+        top: auto;
+        bottom: max(10px, env(safe-area-inset-bottom))
+      }
+
+      .step-nav,
+      .rail-nav,
+      .pipe-card,
+      .lane-meta,
+      .motion-scenarios-pane {
+        display: none
+      }
+
+      .pipe-intro-card {
+        display: flex
+      }
+
+      .control-pane {
+        max-height: 0;
+        padding: 0 10px;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none
+      }
+
+      .stage-slide {
+        padding: 16px 0 24px
+      }
+    }
   </style>
-  <link rel="preload" href="styles.css?v=35" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="styles.css?v=35" /></noscript>
+  <link rel="preload" href="styles.css?v=40" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript>
+    <link rel="stylesheet" href="styles.css?v=40">
+  </noscript>
 </head>
+
 <body>
   <!-- FLOATING ANCHORED TOP BAR -->
   <div class="top-chrome">
@@ -168,24 +369,40 @@
           </button>
         </nav>
 
-        <div class="detector-pill" id="detectorCard" tabindex="0">
-          <span class="detector-dot" aria-hidden="true"></span>
-          <span class="hz-num" id="detectedHz">Measuring…</span>
-          <span class="hz-meta" id="detectedMeta"></span>
-          <button class="btn-remeasure" id="remeasureBtn" type="button" title="Re-measure your display's native refresh rate">Re-measure</button>
-          <div class="detector-popover" role="tooltip">
-            <p class="detector-note" id="detectorNote">Sampling display refresh cadence…</p>
+        <div class="topbar-right-tools">
+          <button class="btn-model-guide" id="modelGuideBtn" type="button"
+            title="How this model works: assumptions, formulas, and scope">
+            <span class="model-q-dot" aria-hidden="true">?</span>
+            <span class="model-btn-lbl">Model</span>
+          </button>
+
+          <div class="detector-pill" id="detectorCard" tabindex="0">
+            <span class="detector-dot" aria-hidden="true"></span>
+            <span class="hz-num" id="detectedHz">~60 Hz</span>
+            <span class="hz-meta" id="detectedMeta"></span>
+            <button class="btn-remeasure" id="remeasureBtn" type="button"
+              title="Recheck browser animation callback cadence">Recheck</button>
+            <div class="detector-popover" role="tooltip">
+              <p class="detector-note" id="detectorNote">Sampling browser animation cadence…</p>
+              <p class="detector-subnote">This estimate reflects browser animation timing during the check. It does not
+                change your monitor's refresh rate. The simulated refresh setting controls the model.</p>
+            </div>
           </div>
         </div>
 
-        <button class="mob-spike-btn" id="mobSpikeBtn" type="button" onclick="document.getElementById('explodeBtn').click()" aria-label="Trigger Load Spike" title="Inject a sudden +17.5 ms transient load spike">
-          <svg class="spike-icon" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <button class="mob-spike-btn" id="mobSpikeBtn" type="button"
+          onclick="document.getElementById('explodeBtn').click()" aria-label="Trigger Load Spike"
+          title="Inject a sudden +17.5 ms transient load spike">
+          <svg class="spike-icon" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M1.5 9.5h3l2-6 3 9 2-3h3" />
           </svg>
           <span>Spike</span>
         </button>
 
-        <button class="mob-pause-btn" id="mobPauseBtn" type="button" onclick="document.getElementById('pauseBtn').click()" aria-label="Pause or resume simulation" title="Pause or resume simulation">
+        <button class="mob-pause-btn" id="mobPauseBtn" type="button"
+          onclick="document.getElementById('pauseBtn').click()" aria-label="Pause or resume simulation"
+          title="Pause or resume simulation">
           <svg class="icon-pause" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
             <rect x="3.5" y="2.8" width="3.2" height="10.4" rx="0.9" />
             <rect x="9.3" y="2.8" width="3.2" height="10.4" rx="0.9" />
@@ -195,8 +412,10 @@
           </svg>
         </button>
 
-        <label for="mobileConsoleToggle" class="mob-console-btn" role="button" aria-label="Toggle console controls" title="Expand or collapse controls">
-          <svg class="mob-console-chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <label for="mobileConsoleToggle" class="mob-console-btn" role="button" aria-label="Toggle console controls"
+          title="Expand or collapse controls">
+          <svg class="mob-console-chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 10l4-4 4 4" />
           </svg>
         </label>
@@ -204,8 +423,8 @@
 
       <aside class="control-pane" aria-label="Persistent simulation controls">
         <div class="dock-group">
-          <span class="dock-label">Display</span>
-          <div class="segmented" role="group" aria-label="Display refresh rate">
+          <span class="dock-label" title="Simulated fixed-refresh display rate used by the model">Sim. Refresh</span>
+          <div class="segmented" role="group" aria-label="Simulated refresh rate">
             <button class="seg-btn active" data-display-hz="60" id="btn60Hz" type="button">60 Hz</button>
             <button class="seg-btn" data-display-hz="120" id="btn120Hz" type="button">120 Hz</button>
           </div>
@@ -217,15 +436,18 @@
           <span class="dock-label">Speed</span>
           <div class="segmented" role="group" aria-label="Playback speed">
             <button class="seg-btn active" data-speed="1" id="btnSpeed1x" type="button">1.0×</button>
-            <button class="seg-btn" data-speed="0.25" id="btnSpeedSlow" type="button" title="Slow down to inspect 120 Hz cadence on a 60 Hz display">0.25×</button>
+            <button class="seg-btn" data-speed="0.25" id="btnSpeedSlow" type="button"
+              title="Quarter-speed playback stretches the simulated timing pattern for inspection">0.25×</button>
           </div>
         </div>
 
         <span class="dock-sep" aria-hidden="true"></span>
 
-        <div class="dock-group load-pod" id="loadPod" data-tier="low" title="Drag to scale GPU/CPU workload from Load level 1.0 (14 ms) to 5.0 (44 ms). Double-click slider to reset.">
+        <div class="dock-group load-pod" id="loadPod" data-tier="low"
+          title="Drag to scale GPU/CPU workload from Load level 1.0 (14 ms) to 5.0 (44 ms). Double-click slider to reset.">
           <label class="load-pod-head" for="loadSlider">
-            <svg class="load-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="load-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M2.5 12a6 6 0 1 1 11 0" />
               <path d="M8 10l2.8-3.6" />
               <circle cx="8" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
@@ -243,21 +465,26 @@
             <span class="load-dot" aria-hidden="true">·</span>
             <span class="load-ms mono" id="loadMs">14.0 ms</span>
           </div>
-          <button class="load-reset-btn" id="loadResetBtn" type="button" title="Reset Load level to 1.0" hidden aria-label="Reset Load level to 1.0">↺</button>
+          <button class="load-reset-btn" id="loadResetBtn" type="button" title="Reset Load level to 1.0" hidden
+            aria-label="Reset Load level to 1.0">↺</button>
         </div>
 
         <div class="dock-spacer" aria-hidden="true"></div>
 
         <div class="dock-group dock-actions">
-          <button class="btn-blind" id="blindTestBtn" type="button" title="Start Blind Test Challenge: spot native 60 FPS with labels hidden">
-            <svg class="blind-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <button class="btn-blind" id="blindTestBtn" type="button"
+            title="Start Blind Test Challenge: spot native 60 FPS with labels hidden">
+            <svg class="blind-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M1.5 8s2.4-4.2 6.5-4.2S14.5 8 14.5 8s-2.4 4.2-6.5 4.2S1.5 8 1.5 8z" />
               <circle cx="8" cy="8" r="2" />
             </svg>
             <span>Blind Test</span>
           </button>
-          <button class="btn-explode" id="explodeBtn" type="button" title="Inject a sudden +17.5 ms transient load spike (Shortcut: S)">
-            <svg class="spike-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <button class="btn-explode" id="explodeBtn" type="button"
+            title="Inject a sudden +17.5 ms transient load spike (Shortcut: S)">
+            <svg class="spike-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M1.5 9.5h3l2-6 3 9 2-3h3" />
             </svg>
             <span class="spike-lbl">Load Spike</span>
@@ -288,13 +515,20 @@
             <div class="blind-head-copy">
               <div class="blind-title-row">
                 <span class="view-kicker mono blind-kicker">BLIND TEST</span>
-                <h2 id="blindTitle">Spot the True 60 FPS Track</h2>
+                <h2 id="blindTitle">Spot the 60 FPS Track</h2>
               </div>
+              <p class="blind-scope" id="blindScope">
+                Explore frame rate, frame pacing, and response delay using a simplified interactive model. Timing values
+                describe the model unless marked as browser observations. This demo does not measure your system's
+                end-to-end input latency.
+              </p>
               <p class="blind-sub" id="blindSub">
-                The 4 tracks below are shuffled and unlabeled. Watch the motion closely, then click the track you think is native 60 FPS.
+                Choose the track that looks like native 60 FPS in this simulation. Browser timing and your display can
+                affect the comparison.
               </p>
             </div>
             <div class="blind-head-actions">
+              <button class="pipe-btn blind-model-btn" id="blindModelBtn" type="button">How this model works</button>
               <button class="pipe-btn blind-retry-btn" id="blindRetryBtn" type="button" hidden>↻ Try Again</button>
               <button class="pipe-btn blind-skip-btn" id="blindSkipBtn" type="button">Skip →</button>
             </div>
@@ -308,8 +542,10 @@
               </div>
 
               <div class="segmented motion-view-switch" role="group" aria-label="Motion view detail level">
-                <button class="seg-btn active" type="button" data-motion-view-btn="simplified" id="btnMotionSimple">Simplified</button>
-                <button class="seg-btn" type="button" data-motion-view-btn="detailed" id="btnMotionDetailed">Detailed</button>
+                <button class="seg-btn active" type="button" data-motion-view-btn="simplified"
+                  id="btnMotionSimple">Simplified</button>
+                <button class="seg-btn" type="button" data-motion-view-btn="detailed"
+                  id="btnMotionDetailed">Detailed</button>
               </div>
             </div>
 
@@ -326,7 +562,8 @@
                 <span>True-time</span>
               </label>
 
-              <label class="switch-pill" title="Show subtle ghosting where moving geometry crosses static overlays">
+              <label class="switch-pill"
+                title="Illustrative interpolation artifacts; appearance varies by algorithm and scene">
                 <input type="checkbox" id="toggleArtifacts" checked />
                 <span class="switch-track" aria-hidden="true"></span>
                 <span>Artifacts</span>
@@ -343,7 +580,7 @@
                       <span class="swatch swatch-30"></span>
                       <h3>30 FPS</h3>
                     </div>
-                    <span class="lane-sim-tag mono good" id="lane-tag-30">Stable</span>
+                    <span class="lane-sim-tag mono good" id="lane-tag-30">Within budget</span>
                     <canvas class="lane-canvas" id="canvas-30" width="900" height="128"></canvas>
                   </div>
                   <div class="lane-telemetry-split">
@@ -368,14 +605,14 @@
                       <span class="swatch swatch-40"></span>
                       <h3>40 FPS</h3>
                     </div>
-                    <span class="lane-sim-tag mono warn" id="lane-tag-40">3:2 Judder</span>
+                    <span class="lane-sim-tag mono warn" id="lane-tag-40">Uneven 2–1</span>
                     <canvas class="lane-canvas" id="canvas-40" width="900" height="128"></canvas>
                   </div>
                   <div class="lane-telemetry-split">
                     <div class="ft-info-card">
                       <div class="lane-meta" id="metrics-40"></div>
                       <div class="ft-top">
-                        <span class="ft-note" id="ft-cap-40">3:2 judder on 60 Hz</span>
+                        <span class="ft-note" id="ft-cap-40">Uneven 2–1 cadence (60 Hz)</span>
                         <span class="mono" id="ft-val-40">16.7 / 33.3 ms</span>
                       </div>
                     </div>
@@ -391,9 +628,9 @@
                   <div class="lane-canvas-wrap">
                     <div class="lane-badge">
                       <span class="swatch swatch-interp"></span>
-                      <h3>30 FPS + Interpolation</h3>
+                      <h3>30 FPS + simulated interpolation</h3>
                     </div>
-                    <span class="lane-sim-tag mono interp" id="lane-tag-interp">+67 ms Lag</span>
+                    <span class="lane-sim-tag mono interp" id="lane-tag-interp">Model buffer: +67 ms</span>
                     <canvas class="lane-canvas" id="canvas-interp" width="900" height="128"></canvas>
                   </div>
                   <div class="lane-telemetry-split">
@@ -418,7 +655,7 @@
                       <span class="swatch swatch-60"></span>
                       <h3>60 FPS</h3>
                     </div>
-                    <span class="lane-sim-tag mono good" id="lane-tag-60">Stable</span>
+                    <span class="lane-sim-tag mono good" id="lane-tag-60">Within budget</span>
                     <canvas class="lane-canvas" id="canvas-60" width="900" height="128"></canvas>
                   </div>
                   <div class="lane-telemetry-split">
@@ -474,7 +711,7 @@
                     <span class="ms-title">Only 30 Absorbs Load</span>
                     <span class="ms-load mono">29.0 ms</span>
                   </div>
-                  <span class="ms-summary">30 locked · 40 &amp; 60 overwhelmed</span>
+                  <span class="ms-summary">30 within budget · 40 &amp; 60 miss</span>
                 </button>
                 <button class="motion-scenario-btn" type="button" data-motion-scenario="5" data-tier="high">
                   <div class="ms-row-top">
@@ -482,7 +719,7 @@
                     <span class="ms-title">All Overloaded</span>
                     <span class="ms-load mono">38.8 ms</span>
                   </div>
-                  <span class="ms-summary">Exceeds 33.3 ms · all drop</span>
+                  <span class="ms-summary">Exceeds 33.3 ms · all below target</span>
                 </button>
               </div>
             </aside>
@@ -491,9 +728,9 @@
 
         <!-- COMPACT MOBILE SCENARIO BAR (<= 820px SIMPLIFIED VIEW) -->
         <div class="motion-mob-scenarios" role="group" aria-label="Mobile load scenarios">
-          <button class="mob-scen-btn active" type="button" data-motion-scenario="1">1 Stable</button>
+          <button class="mob-scen-btn active" type="button" data-motion-scenario="1">1 Budget OK</button>
           <button class="mob-scen-btn" type="button" data-motion-scenario="2">2 Spikes</button>
-          <button class="mob-scen-btn" type="button" data-motion-scenario="3">3 60 Drops</button>
+          <button class="mob-scen-btn" type="button" data-motion-scenario="3">3 60 Misses</button>
           <button class="mob-scen-btn" type="button" data-motion-scenario="4">4 Only 30</button>
           <button class="mob-scen-btn" type="button" data-motion-scenario="5">5 Overload</button>
         </div>
@@ -514,17 +751,23 @@
             </div>
           </div>
           <p class="sim-footer-desc" id="motionScenarioDesc">
-            At 14.0 ms per frame, workload sits safely inside the 16.7 ms (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30 FPS) budgets—so every configuration holds 0% frame drops and higher frame rates win purely on clarity and lower lag.
+            At a modeled 14.0 ms per frame, workload sits inside the 16.7 ms (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30
+            FPS) budgets—so every target meets its rate and higher FPS wins on motion clarity and lower model latency.
           </p>
           <div class="motion-footer-right">
             <div class="motion-footer-btns" role="group" aria-label="Quick scenario selector">
-              <button class="mf-btn active" type="button" data-motion-scenario="1" title="Scenario 1: All Stable">1</button>
-              <button class="mf-btn" type="button" data-motion-scenario="2" title="Scenario 2: 60 Hitches on Spikes">2</button>
-              <button class="mf-btn" type="button" data-motion-scenario="3" title="Scenario 3: 60 FPS Unstable">3</button>
-              <button class="mf-btn" type="button" data-motion-scenario="4" title="Scenario 4: Only 30 Absorbs Load">4</button>
-              <button class="mf-btn" type="button" data-motion-scenario="5" title="Scenario 5: All Overloaded">5</button>
+              <button class="mf-btn active" type="button" data-motion-scenario="1"
+                title="Scenario 1: All Stable">1</button>
+              <button class="mf-btn" type="button" data-motion-scenario="2"
+                title="Scenario 2: 60 Hitches on Spikes">2</button>
+              <button class="mf-btn" type="button" data-motion-scenario="3"
+                title="Scenario 3: 60 FPS Unstable">3</button>
+              <button class="mf-btn" type="button" data-motion-scenario="4"
+                title="Scenario 4: Only 30 Absorbs Load">4</button>
+              <button class="mf-btn" type="button" data-motion-scenario="5"
+                title="Scenario 5: All Overloaded">5</button>
             </div>
-            <span class="sim-impact-pill mono" id="motionImpactTag">All Targets Locked</span>
+            <span class="sim-impact-pill mono" id="motionImpactTag">All targets within budget</span>
           </div>
         </div>
       </div>
@@ -542,7 +785,7 @@
                   <span class="swatch swatch-30"></span>
                   <h3>30 FPS</h3>
                 </div>
-                <div class="sim-area-stat mono" id="sim-stat-30">30.0 FPS · 0% drop</div>
+                <div class="sim-area-stat mono" id="sim-stat-30">30.0 FPS · Target met</div>
               </div>
               <div class="sim-canvas-wrap">
                 <canvas class="sim-canvas" id="sim-canvas-30" width="440" height="220"></canvas>
@@ -555,7 +798,7 @@
                   <span class="swatch swatch-40"></span>
                   <h3>40 FPS</h3>
                 </div>
-                <div class="sim-area-stat mono" id="sim-stat-40">40.0 FPS · 0% drop</div>
+                <div class="sim-area-stat mono" id="sim-stat-40">40.0 FPS · Target met</div>
               </div>
               <div class="sim-canvas-wrap">
                 <canvas class="sim-canvas" id="sim-canvas-40" width="440" height="220"></canvas>
@@ -566,9 +809,9 @@
               <div class="sim-area-head">
                 <div class="sim-area-title">
                   <span class="swatch swatch-interp"></span>
-                  <h3>30 FPS + Interp</h3>
+                  <h3>30 FPS + Sim. Interp</h3>
                 </div>
-                <div class="sim-area-stat mono" id="sim-stat-interp">60 Hz · +67 ms</div>
+                <div class="sim-area-stat mono" id="sim-stat-interp">30 src → 60 visual · +67 ms</div>
               </div>
               <div class="sim-canvas-wrap">
                 <canvas class="sim-canvas" id="sim-canvas-interp" width="440" height="220"></canvas>
@@ -581,7 +824,7 @@
                   <span class="swatch swatch-60"></span>
                   <h3>60 FPS</h3>
                 </div>
-                <div class="sim-area-stat mono" id="sim-stat-60">60.0 FPS · 0% drop</div>
+                <div class="sim-area-stat mono" id="sim-stat-60">60.0 FPS · Target met</div>
               </div>
               <div class="sim-canvas-wrap">
                 <canvas class="sim-canvas" id="sim-canvas-60" width="440" height="220"></canvas>
@@ -596,7 +839,8 @@
                 <span class="view-kicker">02</span>
                 <h2>Simulation Level</h2>
               </div>
-              <p class="sim-curve-sub">Swipe along the exponential curve to scale entity count and workload across 5 levels.</p>
+              <p class="sim-curve-sub">Swipe along the exponential curve to scale entity count and workload across 5
+                levels.</p>
             </div>
 
             <div class="sim-kpis">
@@ -614,7 +858,8 @@
               </div>
             </div>
 
-            <div class="exp-curve-wrap" id="expCurveWrap" role="slider" tabindex="0" aria-label="Exponential simulation load level" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
+            <div class="exp-curve-wrap" id="expCurveWrap" role="slider" tabindex="0"
+              aria-label="Exponential simulation load level" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
               <canvas id="expCurveCanvas" width="280" height="220"></canvas>
             </div>
 
@@ -644,9 +889,10 @@
             </div>
           </div>
           <p class="sim-footer-desc" id="simScenarioDesc">
-            The player stands still or cruises through light traffic—minimal AI checks, simple patrol paths, and plenty of headroom for 60, 40, and 30 FPS.
+            The player stands still or cruises through light traffic—minimal AI checks, simple patrol paths, and plenty
+            of headroom for 60, 40, and 30 FPS.
           </p>
-          <span class="sim-impact-pill mono" id="simImpactTag">All FPS Locked</span>
+          <span class="sim-impact-pill mono" id="simImpactTag">All targets within budget</span>
         </div>
       </div>
     </section>
@@ -685,35 +931,36 @@
                 <span class="tab-dot swatch-40"></span>40 FPS
               </button>
               <button class="tab active" data-arena-mode="interp" type="button">
-                <span class="tab-dot swatch-interp"></span>30 FPS + Interpolation
+                <span class="tab-dot swatch-interp"></span>30 FPS + Sim. Interp
               </button>
               <button class="tab" data-arena-mode="60" type="button">
                 <span class="tab-dot swatch-60"></span>60 FPS
               </button>
             </div>
-            <p class="inline-tip">Move pointer and click to feel buffering delay vs. native response.</p>
+            <p class="inline-tip">The pointer demonstrates the model's added response delay—not a measurement of your
+              mouse, browser, GPU, or display.</p>
           </div>
         </div>
 
         <!-- SEPARATED 50vh INTERACTIVE SIGHT PANE -->
         <div class="arena-wrap latency-sight-card">
           <canvas id="arenaCanvas" width="900" height="420"></canvas>
-          <div class="arena-hint" id="arenaHint">Move pointer here and click to test response</div>
+          <div class="arena-hint" id="arenaHint">Move pointer here and click to test modeled response delay</div>
         </div>
 
         <!-- SEPARATED FOOTER TELEMETRY BAR -->
         <div class="metrics-strip latency-footer-card">
           <div class="metric-cell">
             <span class="label">Mode</span>
-            <span class="metric-val" id="arenaStatMode">30 FPS + Interpolation</span>
+            <span class="metric-val" id="arenaStatMode">30 FPS + simulated interpolation</span>
           </div>
           <div class="metric-cell">
-            <span class="label">Latency</span>
-            <span class="metric-val" id="arenaStatLag">~118–135 ms</span>
+            <span class="label">Model latency</span>
+            <span class="metric-val" id="arenaStatLag">~118–136 ms</span>
           </div>
           <div class="metric-cell">
             <span class="label">Visual output</span>
-            <span class="metric-val" id="arenaStatVisual">60 FPS (30 src, 0% drop)</span>
+            <span class="metric-val" id="arenaStatVisual">30 source FPS → 60 visual FPS</span>
           </div>
           <div class="metric-cell">
             <span class="label">Frame pacing</span>
@@ -751,7 +998,8 @@
                 <button class="pipe-btn" id="introPrevBtn" type="button" aria-label="Previous slide">← Prev</button>
                 <button class="pipe-btn" id="introNextBtn" type="button" aria-label="Next slide">Next →</button>
               </div>
-              <button class="pipe-btn intro-exit-btn" id="introExitBtn" type="button" title="Return to Pipeline view">✕ Close</button>
+              <button class="pipe-btn intro-exit-btn" id="introExitBtn" type="button" title="Return to Pipeline view">✕
+                Close</button>
             </div>
           </div>
 
@@ -759,7 +1007,8 @@
             <!-- LEFT: PROGRESSIVELY GROWING / MINIMIZING HARDWARE TILES -->
             <div class="intro-tiles-track" id="introTilesTrack">
               <!-- TILE 0: CPU -->
-              <div class="intro-tile is-active" data-intro-step="0" role="button" tabindex="0" aria-label="Stage 1: CPU">
+              <div class="intro-tile is-active" data-intro-step="0" role="button" tabindex="0"
+                aria-label="Stage 1: CPU">
                 <div class="pipe-node-top">
                   <span class="pipe-node-badge">CPU</span>
                   <span class="pipe-node-ms mono" id="introMsCpu">4.2 ms</span>
@@ -774,7 +1023,8 @@
               </div>
 
               <!-- TILE 1: GPU -->
-              <div class="intro-tile is-upcoming" data-intro-step="1" role="button" tabindex="0" aria-label="Stage 2: GPU">
+              <div class="intro-tile is-upcoming" data-intro-step="1" role="button" tabindex="0"
+                aria-label="Stage 2: GPU">
                 <div class="pipe-node-top">
                   <span class="pipe-node-badge">GPU</span>
                   <span class="pipe-node-ms mono" id="introMsGpu">9.8 ms</span>
@@ -792,7 +1042,8 @@
               </div>
 
               <!-- TILE 2: V-SYNC -->
-              <div class="intro-tile is-upcoming" data-intro-step="2" role="button" tabindex="0" aria-label="Stage 3: V-Sync">
+              <div class="intro-tile is-upcoming" data-intro-step="2" role="button" tabindex="0"
+                aria-label="Stage 3: V-Sync">
                 <div class="pipe-node-top">
                   <span class="pipe-node-badge">V-SYNC</span>
                   <span class="pipe-node-ms mono" id="introMsVsync">+2.7 ms</span>
@@ -808,7 +1059,8 @@
               </div>
 
               <!-- TILE 3: HDMI -->
-              <div class="intro-tile is-upcoming" data-intro-step="3" role="button" tabindex="0" aria-label="Stage 4: HDMI">
+              <div class="intro-tile is-upcoming" data-intro-step="3" role="button" tabindex="0"
+                aria-label="Stage 4: HDMI">
                 <div class="pipe-node-top">
                   <span class="pipe-node-badge">HDMI</span>
                   <span class="pipe-node-ms mono" id="introMsHdmi">16.7 ms</span>
@@ -822,7 +1074,8 @@
               </div>
 
               <!-- TILE 4: DISPLAY -->
-              <div class="intro-tile is-upcoming" data-intro-step="4" role="button" tabindex="0" aria-label="Stage 5: Display">
+              <div class="intro-tile is-upcoming" data-intro-step="4" role="button" tabindex="0"
+                aria-label="Stage 5: Display">
                 <div class="pipe-node-top">
                   <span class="pipe-node-badge">DISPLAY</span>
                   <span class="pipe-node-ms mono" id="introMsDisp">2.5 ms</span>
@@ -863,7 +1116,7 @@
           <div class="card-head pipe-head">
             <div class="card-title-group">
               <span class="view-kicker">04</span>
-              <h2>From Input to Pixel — Frame Pipeline</h2>
+              <h2>A Simplified Input-to-Pixel Pipeline</h2>
             </div>
 
             <div class="pipe-mode-tabs" role="tablist" aria-label="Pipeline FPS target">
@@ -882,9 +1135,10 @@
             </div>
 
             <div class="pipe-head-right">
-              <span class="pipe-status mono" id="pipeTargetStatus">60.0 FPS · 0% drop</span>
-              <span class="pipe-total mono" id="pipeTotalMs">Latency: ~35.8 ms</span>
-              <button class="pipe-btn pipe-replay-btn" id="pipeReplayBtn" type="button" title="Run the full step-by-step Pipeline presentation again">▶ Replay Intro</button>
+              <span class="pipe-status mono" id="pipeTargetStatus">60.0 FPS · Target met</span>
+              <span class="pipe-total mono" id="pipeTotalMs">Model latency: ~35.8 ms</span>
+              <button class="pipe-btn pipe-replay-btn" id="pipeReplayBtn" type="button"
+                title="Run the full step-by-step Pipeline presentation again">▶ Replay Intro</button>
               <div class="pipe-nav-btns">
                 <button class="pipe-btn" id="pipePrevBtn" type="button" aria-label="Previous step">← Prev</button>
                 <span class="pipe-step-counter mono" id="pipeStepCounter">1 / 5</span>
@@ -984,7 +1238,7 @@
                     <span class="disp-lit"></span>
                   </div>
                 </div>
-                <div class="pipe-node-lbl">Simultaneous Scanout</div>
+                <div class="pipe-node-lbl">Panel scanout &amp; pixel transition</div>
               </div>
             </div>
 
@@ -1035,27 +1289,33 @@
             </div>
 
             <div class="timeline-wrap">
-              <div class="timeline-board" id="timelineBoard" role="region" aria-label="100 ms refresh cycle mapping"></div>
+              <div class="timeline-board" id="timelineBoard" role="region" aria-label="100 ms refresh cycle mapping">
+              </div>
             </div>
           </div>
 
           <!-- 4 SEPARATED FLOATING COMMENT CARDS (MATCHING 50vh TOTAL HEIGHT) -->
           <div class="notes-strip">
             <div class="note-item" data-focus-mode="40">
-              <span class="note-tag">40 FPS on 120 Hz</span>
-              <p>At 25 ms per frame, 40 FPS divides evenly into 120 Hz (3 refreshes) but forces 3:2 judder on 60 Hz.</p>
+              <span class="note-tag">40 FPS on Fixed 60 vs. 120 Hz</span>
+              <p>At a fixed 120 Hz, each 40 FPS frame occupies three refreshes (25.0 ms). At a fixed 60 Hz, the model
+                alternates 2-refresh and 1-refresh holds—33.3 ms and 16.7 ms—producing uneven 2–1 cadence.</p>
             </div>
             <div class="note-item" data-focus-mode="interp">
               <span class="note-tag">Interpolation Buffer</span>
-              <p>Synthesizing frames requires holding back real frames first, adding 67 ms+ of unavoidable pipeline lag.</p>
+              <p>This interpolation example uses about 67 ms of buffering delay (two 30 FPS source intervals).
+                Interpolation can smooth motion while delaying the state being shown; actual delay depends on
+                implementation.</p>
             </div>
             <div class="note-item" data-focus-mode="40">
               <span class="note-tag">Slow-Mo Inspector</span>
-              <p>At 0.25× speed, 120 Hz refreshes slow to 30 ticks/s so even a 60 Hz screen shows exact cadence.</p>
+              <p>Quarter-speed playback stretches the simulated timing pattern so individual refresh steps are easier to
+                inspect. It illustrates cadence rather than reproducing normal-speed perception.</p>
             </div>
             <div class="note-item" data-focus-mode="30">
               <span class="note-tag">Budget &amp; Spikes</span>
-              <p>All modes pay the same scene cost, so 30 FPS absorbs 30 ms spikes (try Load Spike) that make 40 and 60 FPS hitch.</p>
+              <p>In this model, all targets use the same scene-cost assumption. A 30 ms total frame cost fits inside a
+                30 FPS budget (33.3 ms), but exceeds the 25.0 ms and 16.7 ms budgets for 40 and 60 FPS.</p>
             </div>
           </div>
         </div>
@@ -1077,13 +1337,16 @@
           <div class="reading-note" role="note">
             <span class="reading-note-badge mono">DEMO NOTE</span>
             <p>
-              This interactive lab is only a simplified demonstration. If you want a true deep dive into frames per second, you need to study the underlying math—frame-time budgets, refresh-rate synchronization, queuing latency—and evaluate the real-world engineering trade-offs behind each target.
+              This interactive lab is only a simplified demonstration. If you want a true deep dive into frames per
+              second, you need to study the underlying math—frame-time budgets, refresh-rate synchronization, queuing
+              latency—and evaluate the real-world engineering trade-offs behind each target.
             </p>
           </div>
 
           <div class="reading-grid">
             <!-- CARD 1: UNITY BLOG -->
-            <a class="reading-card" href="https://unity.com/blog/frame-rate-in-video-games-explained" target="_blank" rel="noopener noreferrer">
+            <a class="reading-card" href="https://unity.com/blog/frame-rate-in-video-games-explained" target="_blank"
+              rel="noopener noreferrer">
               <div class="reading-card-media" data-theme="unity">
                 <svg class="reading-art" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
                   <defs>
@@ -1102,36 +1365,42 @@
                     <line x1="270" y1="0" x2="270" y2="180" />
                   </g>
                   <!-- Frame budget threshold lines -->
-                  <line x1="24" y1="114" x2="336" y2="114" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7" />
-                  <line x1="24" y1="68" x2="336" y2="68" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.65" />
+                  <line x1="24" y1="114" x2="336" y2="114" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5 4"
+                    opacity="0.7" />
+                  <line x1="24" y1="68" x2="336" y2="68" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 4"
+                    opacity="0.65" />
                   <!-- Frame-time bars -->
                   <g rx="3">
-                    <rect x="36"  y="120" width="18" height="36" rx="3" fill="#10b981" />
-                    <rect x="62"  y="118" width="18" height="38" rx="3" fill="#10b981" />
-                    <rect x="88"  y="122" width="18" height="34" rx="3" fill="#10b981" />
-                    <rect x="114" y="92"  width="18" height="64" rx="3" fill="#f59e0b" />
-                    <rect x="140" y="74"  width="18" height="82" rx="3" fill="#f59e0b" />
+                    <rect x="36" y="120" width="18" height="36" rx="3" fill="#10b981" />
+                    <rect x="62" y="118" width="18" height="38" rx="3" fill="#10b981" />
+                    <rect x="88" y="122" width="18" height="34" rx="3" fill="#10b981" />
+                    <rect x="114" y="92" width="18" height="64" rx="3" fill="#f59e0b" />
+                    <rect x="140" y="74" width="18" height="82" rx="3" fill="#f59e0b" />
                     <rect x="166" y="116" width="18" height="40" rx="3" fill="#10b981" />
-                    <rect x="192" y="46"  width="18" height="110" rx="3" fill="#ef4444" />
-                    <rect x="218" y="84"  width="18" height="72" rx="3" fill="#f59e0b" />
+                    <rect x="192" y="46" width="18" height="110" rx="3" fill="#ef4444" />
+                    <rect x="218" y="84" width="18" height="72" rx="3" fill="#f59e0b" />
                     <rect x="244" y="118" width="18" height="38" rx="3" fill="#10b981" />
                     <rect x="270" y="114" width="18" height="42" rx="3" fill="#10b981" />
                     <rect x="296" y="120" width="18" height="36" rx="3" fill="#10b981" />
                   </g>
-                  <text x="292" y="109" text-anchor="end" fill="#6ee7b7" font-family="ui-monospace, monospace" font-size="10" font-weight="700">16.7 ms · 60 FPS</text>
-                  <text x="292" y="63" text-anchor="end" fill="#fcd34d" font-family="ui-monospace, monospace" font-size="10" font-weight="700">33.3 ms · 30 FPS</text>
+                  <text x="292" y="109" text-anchor="end" fill="#6ee7b7" font-family="ui-monospace, monospace"
+                    font-size="10" font-weight="700">16.7 ms · 60 FPS</text>
+                  <text x="292" y="63" text-anchor="end" fill="#fcd34d" font-family="ui-monospace, monospace"
+                    font-size="10" font-weight="700">33.3 ms · 30 FPS</text>
                 </svg>
                 <span class="reading-source-pill mono">UNITY BLOG · ARTICLE</span>
               </div>
               <div class="reading-card-body">
-                <h3>Frame Rate in Video Games Explained</h3>
-                <p>A clear technical breakdown of how FPS maps to millisecond frame budgets, why steady pacing matters more than peak numbers, and how engines balance CPU and GPU work.</p>
+                <h3>Frame rate explained: What is fps in video games?</h3>
+                <p>A clear technical breakdown of how FPS maps to millisecond frame budgets, why steady pacing matters
+                  more than peak numbers, and how engines balance CPU and GPU work.</p>
                 <span class="reading-link-cta">Read article <span aria-hidden="true">↗</span></span>
               </div>
             </a>
 
             <!-- CARD 2: X / PROGXPROG -->
-            <a class="reading-card" href="https://x.com/progXprog/status/2123551189656535097" target="_blank" rel="noopener noreferrer">
+            <a class="reading-card" href="https://x.com/progXprog/status/2123551189656535097" target="_blank"
+              rel="noopener noreferrer">
               <div class="reading-card-media" data-theme="xpost">
                 <svg class="reading-art" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
                   <defs>
@@ -1148,50 +1417,41 @@
                     <line x1="240" y1="0" x2="240" y2="180" />
                   </g>
                   <!-- Trade-off curves: smooth exponential cost vs flat budget -->
-                  <path d="M 32 146 Q 150 138 220 96 T 328 36" fill="none" stroke="#a78bfa" stroke-width="3" stroke-linecap="round" />
+                  <path d="M 32 146 Q 150 138 220 96 T 328 36" fill="none" stroke="#a78bfa" stroke-width="3"
+                    stroke-linecap="round" />
                   <path d="M 32 146 Q 150 138 220 96 T 328 36 L 328 154 L 32 154 Z" fill="rgba(167, 139, 250, 0.14)" />
-                  <line x1="32" y1="92" x2="328" y2="92" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.85" />
+                  <line x1="32" y1="92" x2="328" y2="92" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 4"
+                    opacity="0.85" />
                   <circle cx="226" cy="92" r="7" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5" />
                   <circle cx="226" cy="92" r="2.5" fill="#38bdf8" />
-                  <text x="72" y="84" fill="#7dd3fc" font-family="ui-monospace, monospace" font-size="10" font-weight="700">BUDGET CEILING</text>
-                  <text x="290" y="144" text-anchor="end" fill="#c4b5fd" font-family="ui-monospace, monospace" font-size="10" font-weight="700">COST vs. HEADROOM</text>
+                  <text x="72" y="84" fill="#7dd3fc" font-family="ui-monospace, monospace" font-size="10"
+                    font-weight="700">BUDGET CEILING</text>
+                  <text x="290" y="144" text-anchor="end" fill="#c4b5fd" font-family="ui-monospace, monospace"
+                    font-size="10" font-weight="700">COST vs. HEADROOM</text>
                 </svg>
                 <span class="reading-source-pill mono">X · DISCUSSION</span>
               </div>
               <div class="reading-card-body">
                 <h3>The Math &amp; Trade-Offs Behind Frame Pacing</h3>
-                <p>A concise engineering perspective on frame-time math, hardware headroom, and the real compromises involved when choosing between higher frame rates and locked consistency.</p>
+                <p>A concise engineering perspective on frame-time math, hardware headroom, and the real compromises
+                  involved when choosing between higher frame rates and locked consistency.</p>
                 <span class="reading-link-cta">View post <span aria-hidden="true">↗</span></span>
               </div>
             </a>
 
             <!-- CARD 3: YOUTUBE -->
-            <a class="reading-card" href="https://youtu.be/zzIwge_vV1o?si=SYKGB9JL1AUzYdlH" target="_blank" rel="noopener noreferrer">
+            <a class="reading-card" href="https://youtu.be/zzIwge_vV1o?si=SYKGB9JL1AUzYdlH" target="_blank"
+              rel="noopener noreferrer">
               <div class="reading-card-media" data-theme="youtube">
-                <svg class="reading-art" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="readBg3" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stop-color="#18181b" />
-                      <stop offset="100%" stop-color="#27141c" />
-                    </linearGradient>
-                  </defs>
-                  <rect width="360" height="180" fill="url(#readBg3)" />
-                  <!-- Motion cadence ghost frames -->
-                  <rect x="44"  y="62" width="44" height="56" rx="7" fill="rgba(248, 250, 252, 0.1)" stroke="rgba(248, 250, 252, 0.22)" />
-                  <rect x="98"  y="62" width="44" height="56" rx="7" fill="rgba(248, 250, 252, 0.16)" stroke="rgba(248, 250, 252, 0.3)" />
-                  <rect x="218" y="62" width="44" height="56" rx="7" fill="rgba(16, 185, 129, 0.18)" stroke="rgba(52, 211, 153, 0.45)" />
-                  <rect x="272" y="62" width="44" height="56" rx="7" fill="rgba(16, 185, 129, 0.28)" stroke="#34d399" stroke-width="1.5" />
-                  <!-- Center play emblem -->
-                  <circle cx="180" cy="90" r="28" fill="rgba(220, 38, 38, 0.92)" />
-                  <circle cx="180" cy="90" r="35" fill="none" stroke="rgba(239, 68, 68, 0.4)" stroke-width="2" />
-                  <polygon points="173,77 195,90 173,103" fill="#ffffff" />
-                  <text x="180" y="144" text-anchor="middle" fill="rgba(248, 250, 252, 0.72)" font-family="ui-monospace, monospace" font-size="10" font-weight="700">MOTION CLARITY &amp; PACING IN PRACTICE</text>
-                </svg>
+                <img class="reading-art" src="ytvidimg.png"
+                  alt="Why can't GTAVI deliver 60FPS? By DigitalFoundry video thumbnail" loading="lazy"
+                  decoding="async" />
                 <span class="reading-source-pill mono">YOUTUBE · VIDEO</span>
               </div>
               <div class="reading-card-body">
-                <h3>Visualizing Frame Rate &amp; Motion Clarity</h3>
-                <p>A visual deep dive showing how frame intervals, refresh cycles, and pacing differences behave in real motion—helping connect the math to what your eyes actually perceive.</p>
+                <h3>Why can't GTAVI deliver 60FPS? By @DigitalFoundry</h3>
+                <p>A visual deep dive showing how frame intervals, refresh cycles, and pacing differences behave in real
+                  motion—helping connect the math to what your eyes actually perceive.</p>
                 <span class="reading-link-cta">Watch video <span aria-hidden="true">↗</span></span>
               </div>
             </a>
@@ -1223,25 +1483,86 @@
     </button>
   </nav>
 
+  <!-- HOW THIS MODEL WORKS DIALOG -->
+  <div class="model-modal" id="modelModal" hidden role="dialog" aria-modal="true" aria-labelledby="modelModalTitle">
+    <div class="model-modal-backdrop" id="modelModalBackdrop"></div>
+    <div class="model-modal-card">
+      <div class="model-modal-head">
+        <div class="card-title-group">
+          <span class="view-kicker mono">MODEL</span>
+          <h2 id="modelModalTitle">How This Model Works</h2>
+        </div>
+        <button class="pipe-btn" id="modelModalCloseBtn" type="button" aria-label="Close model explanation">✕
+          Close</button>
+      </div>
+      <div class="model-modal-body">
+        <p class="model-modal-lead">
+          The lab compares target FPS rates using a simplified deterministic simulation, a selected workload, and a
+          simulated fixed-refresh display. Real engines and monitors behave differently due to CPU/GPU overlap, render
+          queues, variable refresh rate (VRR), and display processing.
+        </p>
+
+        <div class="model-assumptions-grid">
+          <div class="model-assumption-item">
+            <h3>1. Configured vs. Computed vs. Observed</h3>
+            <p><strong>Configured:</strong> Simulated refresh (60 / 120 Hz), Load (1.0–5.0), Simulation Level (1–5), and
+              0.25× playback speed. <strong>Computed:</strong> FPS, frame intervals, below-target %, and model latency.
+              <strong>Observed:</strong> Only the top-right browser cadence indicator samples
+              <code>requestAnimationFrame</code> callback deltas.
+            </p>
+          </div>
+          <div class="model-assumption-item">
+            <h3>2. Workload, Spikes &amp; Combined Cost</h3>
+            <p>Motion, Pipeline, and Refresh Map model one combined frame cost (<code>14.0 + (Load − 1) × 7.5 ms</code>,
+              split 30% CPU / 70% GPU in Pipeline for illustration), plus transient spikes (<code>+17.5 ms</code>
+              manual, <code>+15 ms</code> in Scenario 2). Simulation scales exponentially
+              (<code>12.0 × 1.52^(Level − 1)</code>) to illustrate heavier scenes.</p>
+          </div>
+          <div class="model-assumption-item">
+            <h3>3. Fixed-Refresh V-Sync Quantization</h3>
+            <p>Completed frames snap to discrete simulated refresh ticks (<code>16.67 ms</code> at 60 Hz,
+              <code>8.33 ms</code> at 120 Hz). V-Sync is assumed; VRR and screen tearing are not modeled. Quarter-speed
+              (<code>0.25×</code>) stretches playback time only and does not alter reported statistics.
+            </p>
+          </div>
+          <div class="model-assumption-item">
+            <h3>4. Simulated Interpolation &amp; Latency</h3>
+            <p>Interpolation runs a 30 FPS source and holds a chosen <code>2×</code> source-interval buffer
+              (<code>~66.7 ms</code> at baseline), outputting at the simulated refresh rate. Artifacts are illustrative
+              visual effects. Latency and Pipeline totals (including full-refresh scanout + <code>2.5 ms</code> GtG) are
+              simplified model estimates, not hardware measurements.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ZERO-TRACKING COOKIE NOTICE -->
   <aside class="cookie-banner" id="cookieBanner" role="dialog" aria-label="Cookie information">
     <div class="cookie-body">
       <div class="cookie-title">🍪 Just a Few Tiny Local Cookies</div>
       <p class="cookie-text">
-        We don't store your cookies on any server or run analytics — everything stays strictly in your browser. We only save three things: <strong>(1)</strong> that you clicked OK on this box, <strong>(2)</strong> that you already completed or skipped the Blind Test, and <strong>(3)</strong> whether you've tried the Load Spike button or Load slider so we stop pulsing their hints on future visits. That's it. No spies, no ads.
+        We don't store your cookies on any server or run analytics — everything stays strictly in your browser. We only
+        save three things: <strong>(1)</strong> that you clicked OK on this box, <strong>(2)</strong> that you already
+        completed or skipped the Blind Test, and <strong>(3)</strong> whether you've tried the Load Spike button or Load
+        slider so we stop pulsing their hints on future visits. That's it. No spies, no ads.
       </p>
     </div>
     <button class="cookie-ok-btn" id="cookieOkBtn" type="button">OK, cool</button>
   </aside>
 
   <noscript>
-    <div style="max-width:720px;margin:24px auto;padding:16px 20px;background:#fff;border:1px solid #cbd5e1;border-radius:12px;font-family:sans-serif;color:#0f172a;">
+    <div
+      style="max-width:720px;margin:24px auto;padding:16px 20px;background:#fff;border:1px solid #cbd5e1;border-radius:12px;font-family:sans-serif;color:#0f172a;">
       <strong>JavaScript is required for interactive simulations.</strong>
-      This tool compares 30 FPS, 40 FPS, 60 FPS, and 30 FPS with motion interpolation across 60Hz and 120Hz displays, including live frame pacing, exponential workload scaling, input latency tracking, the CPU-to-display frame pipeline, and a 100 ms refresh cycle map.
+      This tool compares 30 FPS, 40 FPS, 60 FPS, and 30 FPS with motion interpolation across 60Hz and 120Hz displays,
+      including live frame pacing, exponential workload scaling, input latency tracking, the CPU-to-display frame
+      pipeline, and a 100 ms refresh cycle map.
     </div>
   </noscript>
 
-  <script defer src="app.js?v=36"></script>
+  <script defer src="app.js?v=38"></script>
   <script defer src="ui.js?v=27"></script>
 </body>
+
 </html>

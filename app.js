@@ -23,7 +23,7 @@
   const MODE_META = {
     '30': { name: '30 FPS', gameFps: 30, periodMs: 1000 / 30 },
     '40': { name: '40 FPS', gameFps: 40, periodMs: 1000 / 40 },
-    'interp': { name: '30 FPS + Interpolation', gameFps: 30, periodMs: 1000 / 30 },
+    'interp': { name: '30 FPS + simulated interpolation', gameFps: 30, periodMs: 1000 / 30 },
     '60': { name: '60 FPS', gameFps: 60, periodMs: 1000 / 60 }
   };
 
@@ -262,7 +262,7 @@
   function detectRefreshRate(autoSelectDisplay = false) {
     if (measuringHz) return;
     measuringHz = true;
-    dom.detectedHz.textContent = 'Measuring…';
+    dom.detectedHz.textContent = 'Check…';
     dom.detectedMeta.textContent = '';
 
     const deltas = [];
@@ -303,11 +303,11 @@
 
       if (state.detectedHz >= 110) {
         dom.detectorNote.textContent =
-          'High-refresh display detected. Both 60 Hz and 120 Hz modes run natively.';
+          `Browser animation cadence: approximately ${state.detectedHz} Hz. Simulated 60 Hz and 120 Hz patterns can both play at normal speed.`;
         if (autoSelectDisplay) setDisplayHz(120);
       } else {
         dom.detectorNote.textContent =
-          '60 Hz display detected. Use 0.25× Slow-Mo to inspect 120 Hz cadence accurately.';
+          `Browser animation cadence: approximately ${state.detectedHz} Hz. Use 0.25× slow motion to inspect the simulated 120 Hz timing pattern.`;
         if (autoSelectDisplay) setDisplayHz(60);
       }
 
@@ -429,8 +429,7 @@
       dom.simBanner.className = 'notice';
       dom.simBanner.innerHTML = `
         <span>
-          Your screen refreshes at <strong>${state.detectedHz} Hz</strong>, so 120 Hz cannot be shown natively at 1.0× speed.
-          Switch to <strong>0.25× Slow-Mo</strong> (30 ticks/s) to view 120 Hz pacing accurately.
+          <strong>Browser cadence ~${state.detectedHz} Hz:</strong> Your browser may not show every simulated 120 Hz refresh at normal speed. Use slow motion to inspect the timing pattern.
         </span>
         <button type="button" id="bannerSlowMoBtn">Switch to 0.25×</button>
       `;
@@ -441,7 +440,7 @@
       dom.simBanner.className = 'notice info';
       dom.simBanner.innerHTML = `
         <span>
-          <strong>0.25× Slow-Mo active:</strong> ${state.displayHz} Hz ticks are slowed to ${(state.displayHz * state.speed).toFixed(0)} ticks/s for frame-by-frame inspection.
+          <strong>0.25× Slow-Mo active:</strong> Quarter-speed playback stretches the simulated ${state.displayHz} Hz pattern (${(state.displayHz * state.speed).toFixed(0)} ticks/s) for frame-by-frame inspection; reported stats remain in simulated time.
         </span>
         <button type="button" id="bannerRealTimeBtn">Return to 1.0×</button>
       `;
@@ -482,7 +481,7 @@
       laneBadgeNodes[mode] = nodes;
     }
     const roundedDrop = Math.round(dropPct);
-    const dropText = roundedDrop < 1 ? '0% drop' : `-${roundedDrop}% drop`;
+    const dropText = roundedDrop < 1 ? 'Target met' : `${roundedDrop}% below target`;
     const dropCls = roundedDrop < 1 ? 'meta-item good' : 'meta-item warn';
     const cls0 = c0 ? `meta-item ${c0}` : 'meta-item';
     const cls2 = c2 ? `meta-item ${c2}` : 'meta-item';
@@ -535,19 +534,19 @@
       `${fps30.toFixed(1)} FPS`, drop30 ? 'warn' : '',
       dropPct30,
       `${avg30.toFixed(1)} ms`, drop30 ? 'warn' : '',
-      `~${Math.round(avg30 * 1.8)} ms lag`, ''
+      `Model latency: ~${Math.round(avg30 * 1.8)} ms`, ''
     );
     setLaneCaption(
       '30',
       `${avg30.toFixed(1)} ms`,
       drop30
-        ? `-${Math.round(dropPct30)}% eff · missed 33.3 ms`
-        : (is120 ? 'Locked · even 4-4-4' : 'Locked · even 2-2-2'),
+        ? `${Math.round(dropPct30)}% below target · >33.3 ms`
+        : (is120 ? 'Even 4-4-4 cadence' : 'Even 2-2-2 cadence'),
       drop30 ? 'ft-note judder' : 'ft-note'
     );
     setLaneTag(
       '30',
-      drop30 ? 'Overloaded' : (spikeMs > 2 ? 'Absorbs Spike' : 'Stable'),
+      drop30 ? 'Over budget' : (spikeMs > 2 ? 'Absorbs spike' : 'Within budget'),
       drop30 ? 'warn' : 'good'
     );
 
@@ -557,26 +556,26 @@
     const dropPct40 = getEfficiencyDropPct(fps40, 40);
     const drop40 = dropPct40 >= 3;
     if (!drop40 && is120) {
-      setLaneBadges('40', '40.0 FPS', 'good', 0, '25.0 ms', 'good', '~45 ms lag', '');
-      setLaneCaption('40', '25.0 ms', 'Locked · exact 3 ticks', 'ft-note');
-      setLaneTag('40', 'Stable', 'good');
+      setLaneBadges('40', '40.0 FPS', 'good', 0, '25.0 ms', 'good', 'Model latency: ~45 ms', '');
+      setLaneCaption('40', '25.0 ms', 'Even 3-refresh cadence', 'ft-note');
+      setLaneTag('40', 'Within budget', 'good');
     } else if (!drop40 && !is120) {
-      setLaneBadges('40', '40.0 FPS (judder)', 'warn', 0, '16.7 / 33.3 ms', 'warn', '~50 ms lag', '');
-      setLaneCaption('40', '16.7 / 33.3 ms', '3:2 pulldown judder', 'ft-note judder');
-      setLaneTag('40', '3:2 Judder', 'judder');
+      setLaneBadges('40', '40.0 FPS (uneven)', 'warn', 0, '16.7 / 33.3 ms', 'warn', 'Model latency: ~50 ms', '');
+      setLaneCaption('40', '16.7 / 33.3 ms', 'Uneven 2–1 cadence (60 Hz)', 'ft-note judder');
+      setLaneTag('40', 'Uneven 2–1', 'judder');
     } else {
       setLaneBadges(
         '40',
         `${fps40.toFixed(1)} FPS`, 'warn',
         dropPct40,
         `${avg40.toFixed(1)} ms`, 'warn',
-        `~${Math.round(avg40 * 1.85)} ms lag`, ''
+        `Model latency: ~${Math.round(avg40 * 1.85)} ms`, ''
       );
-      setLaneCaption('40', `${avg40.toFixed(1)} ms`, `-${Math.round(dropPct40)}% eff · missed 25 ms`, 'ft-note judder');
-      setLaneTag('40', spikeMs > 2 ? 'Spike Hitch' : 'Unstable', 'warn');
+      setLaneCaption('40', `${avg40.toFixed(1)} ms`, `${Math.round(dropPct40)}% below target · >25 ms`, 'ft-note judder');
+      setLaneTag('40', spikeMs > 2 ? 'Spike hitch' : 'Over budget', 'warn');
     }
 
-    // 30 FPS + Interp (33.3 ms source budget)
+    // 30 FPS + simulated interpolation (33.3 ms source budget)
     const interpOutMs = (1000 / hz).toFixed(1);
     const bufLag = Math.round(laneState['interp'].currentLagMs || getInterpBufferLagMs(load));
     const srcFps = Math.min(30, 1000 / Math.max(33.33, laneState['interp'].avgSrcMs || getMeanFrameDurMs('interp', load)));
@@ -584,22 +583,22 @@
     const totalInterpLag = Math.round(bufLag + (1000 / srcFps) + 18);
     setLaneBadges(
       'interp',
-      `${hz} Hz (${srcFps.toFixed(0)} src)`, '',
+      `${srcFps.toFixed(0)} src → ${hz} vis`, '',
       dropPctInterp,
-      `+${bufLag} ms buf`, 'warn',
-      `~${totalInterpLag} ms lag`, 'warn'
+      `Buffer: +${bufLag} ms`, 'warn',
+      `Model latency: ~${totalInterpLag} ms`, 'warn'
     );
     setLaneCaption(
       'interp',
       `${interpOutMs} ms (+${bufLag} ms)`,
       dropPctInterp >= 3
-        ? `Src -${Math.round(dropPctInterp)}% · heavy lag`
-        : `${hz} Hz visual · trails true time`,
+        ? `Src ${Math.round(dropPctInterp)}% below target`
+        : `${hz} visual FPS · buffered delay`,
       dropPctInterp >= 3 ? 'ft-note judder' : 'ft-note'
     );
     setLaneTag(
       'interp',
-      dropPctInterp >= 3 ? `+${bufLag} ms · Drops` : `+${bufLag} ms Lag`,
+      dropPctInterp >= 3 ? `Buffer +${bufLag} ms · Drops` : `Model buffer: +${bufLag} ms`,
       dropPctInterp >= 3 ? 'warn' : 'interp'
     );
 
@@ -614,19 +613,19 @@
       `${fps60.toFixed(1)} FPS`, cls60,
       dropPct60,
       `${avg60.toFixed(1)} ms`, cls60,
-      `~${Math.round(avg60 * 1.8)} ms lag`, cls60
+      `Model latency: ~${Math.round(avg60 * 1.8)} ms`, cls60
     );
     setLaneCaption(
       '60',
       `${avg60.toFixed(1)} ms`,
       drop60
-        ? `-${Math.round(dropPct60)}% eff · missed 16.7 ms`
-        : (is120 ? 'Locked · even 2-2-2' : 'Locked · even 1-1-1'),
+        ? `${Math.round(dropPct60)}% below target · >16.7 ms`
+        : (is120 ? 'Even 2-2-2 cadence' : 'Even 1-1-1 cadence'),
       drop60 ? 'ft-note judder' : 'ft-note'
     );
     setLaneTag(
       '60',
-      drop60 ? (spikeMs > 2 || isSpikeScenario ? 'Spike Hitch' : 'Unstable') : 'Stable',
+      drop60 ? (spikeMs > 2 || isSpikeScenario ? 'Spike hitch' : 'Over budget') : 'Within budget',
       drop60 ? 'warn' : 'good'
     );
   }
@@ -826,9 +825,13 @@
 
     const hudW = 118;
     const hudH = 20;
-    const hudX = Math.round(w * 0.5 - hudW / 2);
-    const hudY = 9;
-    const nearHud = Math.abs(blockX - w * 0.5) < 95;
+    const isNarrowInterp = !blindMask && mode === 'interp' && w < 540;
+    const isDesktopInterp = !blindMask && mode === 'interp' && w >= 540 && w < 720;
+    const hudX = isDesktopInterp
+      ? Math.round(w * 0.59 - hudW / 2)
+      : Math.round(w * 0.5 - hudW / 2);
+    const hudY = isNarrowInterp ? Math.max(9, h - hudH - 6) : 9;
+    const nearHud = Math.abs(blockX - (hudX + hudW / 2)) < 95;
     const showArt = !blindMask && mode === 'interp' && state.showArtifacts;
 
     // Artifacts intensify as base 30 FPS drops under heavy load
@@ -998,13 +1001,13 @@
       const srcFps = Math.min(30, 1000 / srcDur);
       const srcDropPct = Math.round(getEfficiencyDropPct(srcFps, 30));
       return {
-        label: '30 FPS + Interpolation',
+        label: '30 FPS + simulated interpolation',
         pipelineDelayMs: totalDelay,
         estLagText: `~${Math.round(totalDelay)}–${Math.round(totalDelay + 18)} ms`,
         visualText: srcDropPct > 0
-          ? `${state.displayHz} FPS (${srcFps.toFixed(0)} src, -${srcDropPct}%)`
-          : `${state.displayHz} FPS (30 src, 0% drop)`,
-        pacingText: srcDropPct > 0 ? 'Heavy buffer lag & hiccups' : 'Smooth visual, buffered',
+          ? `${srcFps.toFixed(0)} src → ${state.displayHz} vis (-${srcDropPct}%)`
+          : `30 source FPS → ${state.displayHz} visual FPS`,
+        pacingText: srcDropPct > 0 ? 'Elevated buffer delay' : 'Smooth visual, buffered',
         status: 'warn'
       };
     }
@@ -1017,8 +1020,8 @@
         label: '60 FPS',
         pipelineDelayMs: meanDur,
         estLagText: `~${totalLow}–${totalHigh} ms`,
-        visualText: dropping ? `${effFps.toFixed(0)} FPS (-${dropPct}% eff)` : '60 FPS (0% drop)',
-        pacingText: dropping ? 'Missed 16.7 ms budget' : (is120 ? 'Even (2-2-2)' : 'Even (1-1-1)'),
+        visualText: dropping ? `${effFps.toFixed(0)} FPS (${dropPct}% below target)` : '60 FPS (Target met)',
+        pacingText: dropping ? 'Over 16.7 ms budget' : (is120 ? 'Even (2-2-2)' : 'Even (1-1-1)'),
         status: dropping ? 'warn' : 'good'
       };
     }
@@ -1027,8 +1030,8 @@
         label: '40 FPS',
         pipelineDelayMs: meanDur,
         estLagText: `~${totalLow}–${totalHigh} ms`,
-        visualText: dropping ? `${effFps.toFixed(0)} FPS (-${dropPct}% eff)` : (is120 ? '40 FPS (0% drop)' : '40 FPS (0% drop, judder)'),
-        pacingText: dropping ? 'Missed 25.0 ms budget' : (is120 ? 'Even (3-3-3)' : '3:2 Judder (1-2-1-2)'),
+        visualText: dropping ? `${effFps.toFixed(0)} FPS (${dropPct}% below target)` : (is120 ? '40 FPS (Target met)' : '40 FPS (Target met, 2–1)'),
+        pacingText: dropping ? 'Over 25.0 ms budget' : (is120 ? 'Even (3-3-3)' : 'Uneven 2–1 cadence'),
         status: (dropping || !is120) ? 'warn' : 'good'
       };
     }
@@ -1036,8 +1039,8 @@
       label: '30 FPS',
       pipelineDelayMs: meanDur,
       estLagText: `~${totalLow}–${totalHigh} ms`,
-      visualText: dropping ? `${effFps.toFixed(0)} FPS (-${dropPct}% eff)` : '30 FPS (0% drop)',
-      pacingText: dropping ? 'Missed 33.3 ms budget' : (is120 ? 'Even (4-4-4)' : 'Even (2-2-2)'),
+      visualText: dropping ? `${effFps.toFixed(0)} FPS (${dropPct}% below target)` : '30 FPS (Target met)',
+      pacingText: dropping ? 'Over 33.3 ms budget' : (is120 ? 'Even (4-4-4)' : 'Even (2-2-2)'),
       status: dropping ? 'warn' : 'good'
     };
   }
@@ -1323,16 +1326,16 @@
     const d60 = estDrop('60');
 
     const rows = [
-      { mode: '30', label: '30 FPS', sub: d30 > 0 ? `-${d30}% eff (33.3 ms cap)` : '0% drop (33.3 ms cap)' },
+      { mode: '30', label: '30 FPS', sub: d30 > 0 ? `${d30}% below target (33.3 ms)` : 'Target met (33.3 ms)' },
       {
         mode: '40',
         label: '40 FPS',
         sub: d40 > 0
-          ? `-${d40}% eff (25.0 ms cap)`
-          : (hz === 120 ? '0% drop · even 25 ms' : '0% drop · 3:2 judder')
+          ? `${d40}% below target (25.0 ms)`
+          : (hz === 120 ? 'Target met · even 25 ms' : 'Target met · uneven 2–1')
       },
-      { mode: 'interp', label: '30 + Interp', sub: `+${Math.round(bufLagMs)} ms buf${d30 > 0 ? ` (-${d30}%)` : ''}` },
-      { mode: '60', label: '60 FPS', sub: d60 > 0 ? `-${d60}% eff (16.7 ms cap)` : '0% drop (16.7 ms cap)' }
+      { mode: 'interp', label: '30 + Interp', sub: `Buffer +${Math.round(bufLagMs)} ms${d30 > 0 ? ` (${d30}% below)` : ''}` },
+      { mode: '60', label: '60 FPS', sub: d60 > 0 ? `${d60}% below target (16.7 ms)` : 'Target met (16.7 ms)' }
     ];
 
     let html = `
@@ -2242,34 +2245,34 @@
 
   const SIM_SCENARIOS = [
     {
-      title: 'Calm Street',
-      impact: 'All FPS Locked',
+      title: 'Light Workload',
+      impact: 'All targets within budget',
       tier: 'low',
-      desc: 'The player stands still or cruises through light traffic—minimal AI checks, simple patrol paths, and plenty of headroom for 60, 40, and 30 FPS.'
+      desc: 'A light scene illustrates low frame cost—leaving headroom inside the 16.7 ms (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30 FPS) budgets.'
     },
     {
-      title: 'Busy District',
-      impact: '60 FPS Struggling',
+      title: 'Moderate Workload',
+      impact: '60 FPS over budget',
       tier: 'mid',
-      desc: 'Traffic thickens and NPCs make complex decisions around lane changes, crosswalks, and avoidance—pushing past 16.7 ms so 60 FPS dips while 40 and 30 FPS stay locked.'
+      desc: 'Increased modeled cost pushes past 16.7 ms so 60 FPS falls below target, while 40 FPS (25.0 ms) and 30 FPS (33.3 ms) remain within budget.'
     },
     {
-      title: 'Active Pursuit',
-      impact: 'Only 30 FPS Locked',
+      title: 'Heavy Workload',
+      impact: 'Only 30 FPS within budget',
       tier: 'warn',
-      desc: 'AI calculates real-time flanking paths for enemies while civilian NPCs react and decide where to run away—both 60 and 40 FPS miss their budgets while 30 FPS still holds 0% drop.'
+      desc: 'Heavier modeled cost crosses both 16.7 ms and 25.0 ms—leaving only the 30 FPS (33.3 ms) target within its frame budget.'
     },
     {
-      title: 'Physics & Crowd Storm',
-      impact: 'All Targets Dropping',
+      title: 'Overloaded Workload',
+      impact: 'All targets below target',
       tier: 'high',
-      desc: 'Chain-reaction collisions, destructible debris, dense crowd pathfinding, and dynamic shadows stack up—even 30 FPS crosses its 33.3 ms budget and begins dipping.'
+      desc: 'Modeled frame cost exceeds 33.3 ms—so every native target falls below its rate while simulated interpolation latency climbs.'
     },
     {
-      title: 'Worst-Case Overload',
-      impact: 'Severe Overload',
+      title: 'Dense Scene Overload',
+      impact: 'Severe overload',
       tier: 'high',
-      desc: 'Extreme entity swarm with heavy O(N²) collision checks, multi-agent AI, and full particle bursts—every FPS target drops sharply and interpolation lag swells past 100 ms.'
+      desc: 'A dense scene illustrates the effect of increased simulation workload; the displayed frame cost comes from the lab’s exponential workload model.'
     }
   ];
 
@@ -2324,9 +2327,9 @@
         : sc.desc;
       if (dom.simImpactTag) {
         dom.simImpactTag.textContent = cost > 33.3
-          ? (nearestLvl >= 5 ? 'Severe Overload' : 'All Targets Dropping')
-          : cost > 25.0 ? 'Only 30 FPS Locked'
-          : cost > 16.7 ? '60 FPS Struggling'
+          ? (nearestLvl >= 5 ? 'Severe overload' : 'All targets below target')
+          : cost > 25.0 ? 'Only 30 FPS within budget'
+          : cost > 16.7 ? '60 FPS over budget'
           : sc.impact;
       }
       if (dom.simMeterBars) {
@@ -2351,8 +2354,8 @@
         const dropPct = Math.round(getEfficiencyDropPct(srcFps, 30));
         const lag = Math.round(ss.currentLagMs);
         el.textContent = dropPct > 2
-          ? `+${lag} ms · -${dropPct}%`
-          : `${state.displayHz} Hz · +${lag} ms`;
+          ? `${srcFps.toFixed(0)} src → ${state.displayHz} vis · +${lag} ms`
+          : `30 src → ${state.displayHz} vis · +${lag} ms`;
         el.className = 'sim-area-stat mono' + (dropPct > 2 ? ' warn' : '');
         if (areaEl) {
           areaEl.classList.toggle('is-blast-interp', inDetonation);
@@ -2370,7 +2373,7 @@
           fps = Math.min(MODE_META[m].gameFps, 1000 / eff);
         }
         const dropPct = Math.round(getEfficiencyDropPct(fps, MODE_META[m].gameFps));
-        el.textContent = `${fps.toFixed(1)} FPS · ${dropPct >= 2 ? `-${dropPct}%` : '0% drop'}`;
+        el.textContent = `${fps.toFixed(1)} FPS · ${dropPct >= 2 ? `${dropPct}% below target` : 'Target met'}`;
         el.className = 'sim-area-stat mono' + (dropPct >= 2 ? ' warn' : ' good');
         if (areaEl) {
           const isStutter = inDetonation && (recentOverCount > 0 || dropPct >= 2);
@@ -2737,53 +2740,53 @@
 
     if (stageIdx === 0) {
       return {
-        title: `1. CPU Simulation & Game State (${cpuMs.toFixed(1)} ms)`,
-        desc: `Targeting ${modeName} (${budgetMs.toFixed(1)} ms frame budget), the CPU samples input, steps physics/AI with dt=${(1000 / effFps).toFixed(1)} ms, and prepares draw commands (while GPU renders the previous frame in parallel).`
+        title: `1. CPU Simulation & Frame Prep (${cpuMs.toFixed(1)} ms modeled)`,
+        desc: `In this example, simulation updates follow the selected ${modeName} target (${budgetMs.toFixed(1)} ms budget). Real engines may update physics, gameplay, and rendering at different rates and overlap CPU/GPU work.`
       };
     }
     if (stageIdx === 1) {
       return {
-        title: `2. PCIe Command Queue & GPU Render (${gpuMs.toFixed(1)} ms · Total ${sceneMs.toFixed(1)} ms)`,
+        title: `2. Command Queue & GPU Render (${gpuMs.toFixed(1)} ms · Combined ${sceneMs.toFixed(1)} ms)`,
         desc: missed
-          ? `OVER BUDGET: CPU+GPU take ${sceneMs.toFixed(1)} ms, exceeding ${modeName}’s ${budgetMs.toFixed(1)} ms deadline! The frame misses its target refresh and drops effective output to ${effFps.toFixed(1)} FPS (-${dropPct}%).`
-          : `WITHIN BUDGET: CPU+GPU finish in ${sceneMs.toFixed(1)} ms—leaving ${(budgetMs - sceneMs).toFixed(1)} ms of spare headroom inside ${modeName}’s ${budgetMs.toFixed(1)} ms frame budget.`
+          ? `OVER BUDGET: Modeled combined cost (${sceneMs.toFixed(1)} ms) exceeds ${modeName}’s ${budgetMs.toFixed(1)} ms budget, reducing modeled rate to ${effFps.toFixed(1)} FPS (${dropPct}% below target).`
+          : `WITHIN BUDGET: Modeled combined cost finishes in ${sceneMs.toFixed(1)} ms—leaving ${(budgetMs - sceneMs).toFixed(1)} ms of spare headroom inside ${modeName}’s ${budgetMs.toFixed(1)} ms budget.`
       };
     }
     if (stageIdx === 2) {
       if (mode === 'interp') {
         return {
-          title: `3. Frame Pacer + Optical-Flow Lookahead Buffer (+${Math.round(waitMs + interpBufMs)} ms)`,
-          desc: `The engine caps source output at 30 FPS (${Math.max(33.3, sceneMs).toFixed(1)} ms), and the display processor must hold Frame A in a 2-frame buffer (+${Math.round(interpBufMs)} ms) until Frame B arrives to synthesize intermediate frames.`
+          title: `3. Frame Pacer + Simulated Lookahead Buffer (+${Math.round(waitMs + interpBufMs)} ms)`,
+          desc: `This interpolation example runs a 30 FPS source (${Math.max(33.3, sceneMs).toFixed(1)} ms) and holds a chosen 2-frame buffer (+${Math.round(interpBufMs)} ms) to synthesize intermediate frames. Actual delay depends on implementation and settings.`
         };
       }
       if (mode === '40' && hz === 60 && !missed) {
         return {
-          title: `3. Frame Pacer & 60 Hz V-Sync Mismatch (+${waitMs.toFixed(1)} ms avg · 3:2 Judder)`,
-          desc: `Because a 25.0 ms frame does not divide evenly into 16.7 ms (60 Hz) refresh ticks, frames alternate waiting 1 refresh (16.7 ms) and 2 refreshes (33.3 ms), causing uneven 3:2 pulldown judder.`
+          title: `3. Frame Pacer & Fixed 60 Hz V-Sync (+${waitMs.toFixed(1)} ms avg · Uneven 2–1)`,
+          desc: `At a fixed 60 Hz (16.7 ms ticks), a 25.0 ms frame alternates 2-refresh (33.3 ms) and 1-refresh (16.7 ms) holds, producing uneven 2–1 cadence.`
         };
       }
       if (mode === '40' && hz === 120 && !missed) {
         return {
-          title: `3. Frame Pacer & 120 Hz V-Sync Lock (+${waitMs.toFixed(1)} ms)`,
-          desc: `On 120 Hz (8.33 ms ticks), the 25.0 ms frame pacer aligns with exact 3-refresh precision (3 × 8.33 ms = 25.0 ms), giving locked 40 FPS with zero judder.`
+          title: `3. Frame Pacer & Fixed 120 Hz V-Sync (+${waitMs.toFixed(1)} ms)`,
+          desc: `At a fixed 120 Hz (8.33 ms ticks), each 25.0 ms frame can occupy three refreshes (3 × 8.33 ms = 25.0 ms) with even pacing.`
         };
       }
       return {
         title: `3. Frame Pacer & V-Sync Gate (+${waitMs.toFixed(1)} ms)`,
         desc: missed
-          ? `Because rendering (${sceneMs.toFixed(1)} ms) missed the ${budgetMs.toFixed(1)} ms v-sync window, the swap chain stalls an extra ${waitMs.toFixed(1)} ms waiting for the next ${hz} Hz refresh tick.`
-          : `The finished frame waits ${waitMs.toFixed(1)} ms at the swap-chain gate to align cleanly with ${modeName}’s ${budgetMs.toFixed(1)} ms cadence on the ${hz} Hz display.`
+          ? `Because modeled rendering (${sceneMs.toFixed(1)} ms) missed the ${budgetMs.toFixed(1)} ms deadline, presentation waits an extra ${waitMs.toFixed(1)} ms for the next simulated ${hz} Hz refresh tick.`
+          : `In this fixed-refresh V-Sync model, the completed frame waits ${waitMs.toFixed(1)} ms to align with ${modeName}’s ${budgetMs.toFixed(1)} ms cadence at ${hz} Hz.`
       };
     }
     if (stageIdx === 3) {
       return {
-        title: `4. HDMI Line-by-Line Signal Stream (${dispPeriod.toFixed(1)} ms @ ${hz} Hz)`,
-        desc: `Pixel rows stream top-to-bottom over HDMI in real time (${dispPeriod.toFixed(1)} ms for a full ${hz} Hz refresh). The monitor does not wait for the whole frame—it scans each line directly to the panel as it arrives (<1 ms TCON buffer).`
+        title: `4. Line-by-Line Signal Stream (${dispPeriod.toFixed(1)} ms @ ${hz} Hz)`,
+        desc: `Pixel rows stream top-to-bottom over a full ${dispPeriod.toFixed(1)} ms refresh period at ${hz} Hz. Stage times illustrate the selected model; real systems can overlap work and use different queue policies.`
       };
     }
     return {
-      title: `5. Simultaneous Panel Scanout & Pixel GtG (~2.5 ms)`,
-      desc: `Physical pixels transition (~2.5 ms GtG) as the scanbeam sweeps down the screen, completing the ${modeName} input-to-photon pipeline in ~${ctx.totalMs.toFixed(1)} ms at ${effFps.toFixed(1)} effective FPS.`
+      title: `5. Scanout and pixel transition (~2.5 ms assumed GtG)`,
+      desc: `In this display model, the image is scanned out progressively and pixel transitions (~2.5 ms assumed) occur as the scan reaches each region, completing bottom-of-screen model latency in ~${ctx.totalMs.toFixed(1)} ms.`
     };
   }
 
@@ -2828,21 +2831,21 @@
     if (pipeEls.targetStatus) {
       if (pipeMode === 'interp') {
         pipeEls.targetStatus.textContent = dropPct > 1
-          ? `${hz} Hz out (${effFps.toFixed(0)} src · -${dropPct}%)`
-          : `${hz} Hz out (30 src · +${Math.round(interpBufMs)} ms buf)`;
+          ? `${effFps.toFixed(0)} src → ${hz} vis (${dropPct}% below)`
+          : `30 src → ${hz} vis · +${Math.round(interpBufMs)} ms buf`;
         pipeEls.targetStatus.className = 'pipe-status mono warn';
       } else if (pipeMode === '40' && hz === 60 && !missed) {
-        pipeEls.targetStatus.textContent = '40.0 FPS · 3:2 judder';
+        pipeEls.targetStatus.textContent = '40.0 FPS · uneven 2–1';
         pipeEls.targetStatus.className = 'pipe-status mono warn';
       } else {
         pipeEls.targetStatus.textContent = dropPct > 1
-          ? `${effFps.toFixed(1)} FPS · -${dropPct}% drop`
-          : `${effFps.toFixed(1)} FPS · 0% drop`;
+          ? `${effFps.toFixed(1)} FPS · ${dropPct}% below target`
+          : `${effFps.toFixed(1)} FPS · Target met`;
         pipeEls.targetStatus.className = 'pipe-status mono ' + (dropPct > 1 ? 'warn' : 'good');
       }
     }
 
-    pipeEls.totalMs.textContent = `Input→Photon: ~${totalMs.toFixed(1)} ms`;
+    pipeEls.totalMs.textContent = `Model latency: ~${totalMs.toFixed(1)} ms`;
     pipeEls.stepCounter.textContent = `${pipeStage + 1} / 5`;
     pipeEls.prevBtn.disabled = pipeStage <= 0;
     pipeEls.nextBtn.disabled = pipeStage >= 4;
@@ -3327,41 +3330,41 @@
       title: 'All Stable',
       load: 1.0,
       tier: 'low',
-      impact: 'All Targets Locked',
-      desc: 'At 14.0 ms per frame, workload sits safely inside the 16.7 ms (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30 FPS) budgets—so every configuration holds 0% frame drops and higher frame rates win purely on clarity and lower lag.'
+      impact: 'All targets within budget',
+      desc: 'At a modeled 14.0 ms per frame, workload sits inside the 16.7 ms (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30 FPS) budgets—so every target meets its rate and higher FPS wins on motion clarity and lower model latency.'
     },
     {
       id: 2,
       title: '60 Hitches on Spikes',
       load: 1.2,
       tier: 'mid',
-      impact: '30 Absorbs Spikes',
+      impact: '30 absorbs spikes',
       autoSpikes: true,
-      desc: 'Base load (15.5 ms) leaves 60 FPS only 1.2 ms of margin before 16.7 ms. Repeating +15 ms workload bursts (~30.5 ms peaks) push 60 and 40 FPS over budget into visible stutter, while 30 FPS absorbs every spike inside its 33.3 ms cushion at 0% drop.'
+      desc: 'Base cost (15.5 ms) leaves 60 FPS only 1.2 ms of margin before 16.7 ms. Repeating +15 ms bursts (~30.5 ms total) push 60 and 40 FPS over budget, while 30 FPS absorbs every spike inside its 33.3 ms budget.'
     },
     {
       id: 3,
       title: '60 FPS Unstable',
       load: 2.0,
       tier: 'mid',
-      impact: '60 FPS Dropping',
-      desc: 'At 21.5 ms per frame, steady workload exceeds 60 FPS’s 16.7 ms budget on every single frame—causing continuous uneven frame holds. Stepping down to a 25.0 ms (40 FPS) or 33.3 ms (30 FPS) budget restores 0% frame drops.'
+      impact: '60 FPS over budget',
+      desc: 'At a modeled cost of 21.5 ms per frame, the workload exceeds the 16.7 ms budget for 60 FPS, while fitting within the budgets for 40 and 30 FPS. The selected refresh timing determines how completed frames are shown.'
     },
     {
       id: 4,
       title: 'Only 30 Absorbs Load',
       load: 3.0,
       tier: 'warn',
-      impact: 'Only 30 FPS Locked',
-      desc: 'Heavy 29.0 ms workload overwhelms both 60 FPS (16.7 ms) and 40 FPS (25.0 ms), forcing severe frame drops. Only 30 FPS absorbs over 2× baseline load inside its 33.3 ms budget with locked pacing—while 30 + Interp masks the rate at the cost of +67 ms lag.'
+      impact: 'Only 30 within budget',
+      desc: 'A modeled 29.0 ms frame cost exceeds both 60 FPS (16.7 ms) and 40 FPS (25.0 ms) budgets. Only 30 FPS stays within its 33.3 ms budget—while simulated interpolation smooths motion by adding a ~67 ms buffer.'
     },
     {
       id: 5,
       title: 'All Overloaded',
       load: 4.3,
       tier: 'high',
-      impact: 'All Targets Dropping',
-      desc: 'At 38.8 ms per frame, workload crosses 30 FPS’s 33.3 ms ceiling. Every native configuration loses lock and stutters, while 30 FPS + Interpolation suffers compounding buffer lag (~140+ ms) and frame-pacing hiccups.'
+      impact: 'All below target',
+      desc: 'At a modeled 38.8 ms per frame, workload exceeds 30 FPS’s 33.3 ms budget. Every native target falls below its rate, while simulated interpolation latency climbs past ~140 ms.'
     }
   ];
 
@@ -3524,7 +3527,13 @@
       const lbl = BLIND_TRACK_LABELS[idx];
       el.dataset.blindLabel = lbl;
       const h3 = el.querySelector('.lane-badge h3');
-      if (h3) h3.dataset.blindLabel = lbl;
+      if (h3) {
+        h3.dataset.blindLabel = lbl;
+        // Replace accessible text during guessing so screen readers / DOM tree don't leak real FPS labels
+        h3.textContent = lbl;
+      }
+      const split = el.querySelector('.lane-telemetry-split');
+      if (split) split.setAttribute('aria-hidden', 'true');
       el.classList.remove('is-blind-picked', 'is-blind-correct');
       el.setAttribute('role', 'button');
       el.setAttribute('tabindex', '0');
@@ -3540,7 +3549,12 @@
       if (!el) return;
       delete el.dataset.blindLabel;
       const h3 = el.querySelector('.lane-badge h3');
-      if (h3) delete h3.dataset.blindLabel;
+      if (h3) {
+        delete h3.dataset.blindLabel;
+        h3.textContent = MODE_META[m].name;
+      }
+      const split = el.querySelector('.lane-telemetry-split');
+      if (split) split.removeAttribute('aria-hidden');
       el.classList.remove('is-blind-picked', 'is-blind-correct');
       el.removeAttribute('role');
       el.removeAttribute('tabindex');
@@ -3582,10 +3596,10 @@
     root.classList.remove('is-blind-revealed');
 
     if (blindEls.head) blindEls.head.dataset.outcome = '';
-    if (blindEls.title) blindEls.title.textContent = 'Spot the True 60 FPS Track';
+    if (blindEls.title) blindEls.title.textContent = 'Spot the 60 FPS Track';
     if (blindEls.sub) {
       blindEls.sub.textContent =
-        'The 4 tracks below are shuffled and unlabeled. Watch the motion closely, then pick the track you think is native 60 FPS.';
+        'Choose the track that looks like native 60 FPS in this simulation. Browser timing and your display can affect the comparison.';
     }
     if (blindEls.retryBtn) blindEls.retryBtn.hidden = true;
     if (blindEls.skipBtn) {
@@ -3615,24 +3629,37 @@
     if (correctEl) correctEl.classList.add('is-blind-correct');
 
     let outcome = 'wrong';
-    let title = 'Tricky — that was 30 FPS';
-    let sub = 'Compare its 33.3 ms steps side-by-side with the highlighted native 60 FPS track below.';
+    let title = 'Track modeled at 30 FPS';
+    let sub = 'You selected the track modeled at 30 FPS. Compare it with the highlighted 60 FPS track.';
 
     if (mode === '60') {
       outcome = 'correct';
-      title = 'Spot on — you found native 60 FPS!';
-      sub = 'Even 16.7 ms frame pacing gives the sharpest motion clarity and lowest input latency.';
+      title = 'You selected the 60 FPS track';
+      sub = 'Even 16.7 ms frame pacing gives smoother motion clarity and lower model latency than the 30 FPS and 40 FPS tracks.';
     } else if (mode === 'interp') {
       outcome = 'interp';
-      title = 'Fooled by TV Motion Smoothing!';
-      sub = 'You picked 30 FPS + Interpolation. It fakes smooth motion by buffering frames — adding +67 ms of lag and halo artifacts.';
+      title = 'Track modeled at 30 FPS + simulated interpolation';
+      sub = 'This interpolation example smooths motion by holding a ~67 ms model buffer, with illustrative artifacts where geometry crosses overlays.';
     } else if (mode === '40') {
       outcome = 'wrong';
-      title = 'Close — that was 40 FPS';
+      title = 'Track modeled at 40 FPS';
       sub = state.displayHz === 120
-        ? 'At 120 Hz, 40 FPS hits an even 25.0 ms cadence — halfway between 30 and 60 FPS.'
-        : 'At 60 Hz, 40 FPS alternates 16.7 / 33.3 ms holds (3:2 pulldown judder). Compare it against native 60 FPS below.';
+        ? 'At a fixed 120 Hz, each 40 FPS frame can occupy three refreshes (25.0 ms). Compare it with the highlighted 60 FPS track.'
+        : 'At a fixed 60 Hz, the 40 FPS model alternates 2-refresh (33.3 ms) and 1-refresh (16.7 ms) holds (uneven 2–1 cadence). Compare it with the highlighted 60 FPS track.';
     }
+
+    // Restore real track titles & telemetry visibility on reveal
+    MODES.forEach((m) => {
+      const el = laneElsByMode[m];
+      if (!el) return;
+      const h3 = el.querySelector('.lane-badge h3');
+      if (h3) h3.textContent = MODE_META[m].name;
+      const split = el.querySelector('.lane-telemetry-split');
+      if (split) split.removeAttribute('aria-hidden');
+      el.removeAttribute('role');
+      el.removeAttribute('tabindex');
+      el.removeAttribute('aria-label');
+    });
 
     if (blindEls.head) blindEls.head.dataset.outcome = outcome;
     if (blindEls.title) blindEls.title.textContent = title;
@@ -3642,14 +3669,6 @@
       blindEls.skipBtn.textContent = 'Enter Full Lab →';
       blindEls.skipBtn.classList.add('is-primary');
     }
-
-    MODES.forEach((m) => {
-      const el = laneElsByMode[m];
-      if (!el) return;
-      el.removeAttribute('role');
-      el.removeAttribute('tabindex');
-      el.removeAttribute('aria-label');
-    });
 
     invalidateAllCanvases();
     updateLaneReadouts();
@@ -3718,6 +3737,35 @@
   if (blindEls.triggerBtn) {
     blindEls.triggerBtn.addEventListener('click', () => enterBlindTest(true));
   }
+
+  // ============================================================================
+  // HOW THIS MODEL WORKS MODAL
+  // ============================================================================
+  const modelModal = document.getElementById('modelModal');
+  const modelModalBackdrop = document.getElementById('modelModalBackdrop');
+  const modelModalCloseBtn = document.getElementById('modelModalCloseBtn');
+  const modelGuideBtn = document.getElementById('modelGuideBtn');
+  const blindModelBtn = document.getElementById('blindModelBtn');
+
+  function openModelModal() {
+    if (!modelModal) return;
+    modelModal.hidden = false;
+  }
+
+  function closeModelModal() {
+    if (!modelModal) return;
+    modelModal.hidden = true;
+  }
+
+  if (modelGuideBtn) modelGuideBtn.addEventListener('click', openModelModal);
+  if (blindModelBtn) blindModelBtn.addEventListener('click', openModelModal);
+  if (modelModalBackdrop) modelModalBackdrop.addEventListener('click', closeModelModal);
+  if (modelModalCloseBtn) modelModalCloseBtn.addEventListener('click', closeModelModal);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modelModal && !modelModal.hidden) {
+      closeModelModal();
+    }
+  });
 
   // ============================================================================
   // DISCOVERY HEARTBEAT NUDGES (LOAD SPIKE BUTTON + LOAD SLIDER)

@@ -176,6 +176,57 @@ html, body {
   font-weight: 700;
 }
 
+.topbar-right-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-model-guide {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: clamp(12.5px, 1.35vh, 14px);
+  line-height: var(--lbl-h);
+  font-weight: 650;
+  padding: 2px 10px 2px 7px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.btn-model-guide:hover {
+  background: var(--text);
+  border-color: var(--text);
+  color: #ffffff;
+}
+
+.model-q-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.08);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-model-guide:hover .model-q-dot {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .detector-pill {
   position: relative;
   display: inline-flex;
@@ -253,8 +304,18 @@ html, body {
 
 .detector-note {
   margin: 0;
-  font-size: 13.5px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.detector-subnote {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  line-height: 16px;
   color: var(--text-muted);
 }
 
@@ -4030,6 +4091,14 @@ html.is-intro-revealed #motionSection .slide-inner {
   background: #d97706;
 }
 
+.blind-scope {
+  margin: 2px 0;
+  font-size: clamp(11.5px, 1.25vh, 13px);
+  line-height: 1.4;
+  color: var(--text);
+  font-weight: 550;
+}
+
 .blind-sub {
   margin: 0;
   font-size: clamp(12.5px, 1.4vh, 14px);
@@ -4318,6 +4387,8 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
 .reading-art {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  object-position: center;
   display: block;
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -4418,7 +4489,58 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
     font-size: 10px;
   }
 
-  .detector-pill {
+  .topbar-right-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-model-guide {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: clamp(12.5px, 1.35vh, 14px);
+  line-height: var(--lbl-h);
+  font-weight: 650;
+  padding: 2px 10px 2px 7px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.btn-model-guide:hover {
+  background: var(--text);
+  border-color: var(--text);
+  color: #ffffff;
+}
+
+.model-q-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.08);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-model-guide:hover .model-q-dot {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.detector-pill {
     padding: 2px 4px 2px 8px;
     gap: 6px;
   }
@@ -4559,7 +4681,7 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
 
   .topbar {
     padding: 6px 8px;
-    gap: 5px;
+    gap: 4px;
     border-bottom: 1px solid transparent;
     transition: border-color 0.22s ease;
   }
@@ -4569,7 +4691,7 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
   }
 
   .brand {
-    gap: 5px;
+    gap: 4px;
   }
 
   .brand-mark {
@@ -4578,15 +4700,22 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
   }
 
   .brand h1 {
-    font-size: 12.5px;
+    font-size: 12px;
     line-height: 24px;
   }
 
-  .detector-pill {
+  .topbar-right-tools {
     margin-left: auto;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .detector-pill {
+    margin-left: 0;
     padding: 2px 3px 2px 6px;
     gap: 4px;
     border-radius: 8px;
+    max-width: 110px;
   }
 
   .detector-dot {
@@ -4597,10 +4726,11 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
   .hz-num {
     font-size: 11px;
     line-height: 22px;
+    white-space: nowrap;
   }
 
   .btn-remeasure {
-    font-size: 10.5px;
+    font-size: 10px;
     line-height: 22px;
     padding: 0 5px;
     border-radius: 6px;
@@ -6163,7 +6293,15 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
     padding: 0 6px;
   }
 
-  html.is-blind-test .blind-sub {
+  html.is-blind-test .blind-scope {
+  margin: 2px 0;
+  font-size: clamp(11.5px, 1.25vh, 13px);
+  line-height: 1.4;
+  color: var(--text);
+  font-weight: 550;
+}
+
+.blind-sub {
     font-size: 11.5px;
     line-height: 1.35;
   }
@@ -6341,5 +6479,155 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
   #readingSection .reading-link-cta {
     font-size: 11px;
     padding-top: 2px;
+  }
+
+  .topbar-right-tools {
+    gap: 4px;
+  }
+
+  .btn-model-guide {
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    justify-content: center;
+    border-radius: 8px;
+  }
+
+  .model-btn-lbl {
+    display: none;
+  }
+
+  .model-q-dot {
+    background: transparent;
+    font-size: 12px;
+  }
+
+  .blind-scope {
+    font-size: 11px;
+    line-height: 1.32;
+  }
+
+  .model-modal-card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .model-assumptions-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+/* ============================================================================
+   HOW THIS MODEL WORKS MODAL
+   ============================================================================ */
+.model-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.model-modal[hidden] {
+  display: none;
+}
+
+.model-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(4px);
+}
+
+.model-modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  max-height: 86dvh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.model-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.model-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.model-modal-lead {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.model-assumptions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.model-assumption-item {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.model-assumption-item h3 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 750;
+  color: var(--text);
+}
+
+.model-assumption-item p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.model-assumption-item code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(15, 23, 42, 0.06);
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: var(--text);
+}
+
+@media (max-width: 820px) {
+  .model-modal-card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .model-assumptions-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
