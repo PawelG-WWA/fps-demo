@@ -171,9 +171,11 @@
 
   const simCanvases = {};
   const simStatEls = {};
+  const simAreaEls = {};
   MODES.forEach((m) => {
     simCanvases[m] = document.getElementById(`sim-canvas-${m}`);
     simStatEls[m] = document.getElementById(`sim-stat-${m}`);
+    simAreaEls[m] = document.querySelector(`.sim-area[data-sim-mode="${m}"]`);
   });
   const simLevelBtns = Array.from(document.querySelectorAll('.sim-lvl-btn'));
 
@@ -182,6 +184,7 @@
   const laneMetricsEl = {};
   const ftValEl = {};
   const ftCapEl = {};
+  const laneTagEl = {};
 
   MODES.forEach((m) => {
     laneCanvases[m] = document.getElementById(`canvas-${m}`);
@@ -189,6 +192,7 @@
     laneMetricsEl[m] = document.getElementById(`metrics-${m}`);
     ftValEl[m] = document.getElementById(`ft-val-${m}`);
     ftCapEl[m] = document.getElementById(`ft-cap-${m}`);
+    laneTagEl[m] = document.getElementById(`lane-tag-${m}`);
   });
 
   // ============================================================================
@@ -348,21 +352,37 @@
   }
 
   function updateLoadDisplay() {
-    const sceneMs = getMeanSceneRenderMs(state.load, state.simSpikeMs);
-    const tier = (state.load >= 3.0 || state.simSpikeMs > 8) ? 'high' : (state.load >= 1.5 || state.simSpikeMs > 1) ? 'mid' : 'low';
+    const onSim = isSectionVisible('simSection');
+    const onMotion = isSectionVisible('motionSection');
+    const simUi = (onSim && typeof getSimBlastUiState === 'function')
+      ? getSimBlastUiState(state.tSim)
+      : { active: false, charging: 0, bursting: 0, burstMs: 0 };
+    const autoMotionSpikeMs = (onMotion && typeof getMotionScenarioAutoSpikeMs === 'function')
+      ? getMotionScenarioAutoSpikeMs(state.tSim)
+      : 0;
+    const effectiveSpikeMs = onSim
+      ? Math.max(state.simSpikeMs, simUi.burstMs)
+      : Math.max(state.simSpikeMs, autoMotionSpikeMs);
+    const sceneMs = getMeanSceneRenderMs(state.load, effectiveSpikeMs);
+    const tier = (state.load >= 3.0 || effectiveSpikeMs > 8) ? 'high' : (state.load >= 1.5 || effectiveSpikeMs > 1) ? 'mid' : 'low';
     if (dom.loadPod) dom.loadPod.dataset.tier = tier;
     if (dom.loadResetBtn) dom.loadResetBtn.hidden = state.load <= 1.01;
     dom.loadVal.textContent = `${state.load.toFixed(1)}`;
     dom.loadVal.className = 'load-val mono' + (state.load >= 3.0 ? ' high' : state.load >= 1.5 ? ' mid' : '');
     dom.loadMs.textContent = `${sceneMs.toFixed(1)} ms`;
-    dom.loadMs.className = 'load-ms mono' + (state.simSpikeMs > 0.5 ? ' spike' : '');
-    const spikePct = Math.max(0, Math.min(100, (state.simSpikeMs / SPIKE_PEAK_MS) * 100));
+    dom.loadMs.className = 'load-ms mono' + (effectiveSpikeMs > 0.5 ? ' spike' : '');
+    const motionPct = Math.max(0, Math.min(100, (state.simSpikeMs / SPIKE_PEAK_MS) * 100));
+    const simPct = simUi.bursting > 0.01 ? simUi.bursting * 100 : simUi.charging * 100;
+    const spikePct = Math.max(motionPct, simPct);
     dom.explodeBtn.style.setProperty('--spike-pct', `${spikePct.toFixed(1)}%`);
-    dom.explodeBtn.classList.toggle('active', state.simSpikeMs > 2.0);
+    dom.explodeBtn.classList.toggle('active', state.simSpikeMs > 2.0 || simUi.bursting > 0.08);
   }
 
-  function setLoad(val) {
+  function setLoad(val, fromScenario = false) {
     state.load = Math.max(1, Math.min(5, val));
+    if (!fromScenario && typeof syncMotionScenarioFromLoad === 'function') {
+      syncMotionScenarioFromLoad(state.load);
+    }
     updateLoadDisplay();
     if (isSectionVisible('motionSection')) updateLaneReadouts();
     if (isSectionVisible('simSection')) {
@@ -377,16 +397,22 @@
 
   function triggerExplode() {
     if (typeof markSpikeInteracted === 'function') markSpikeInteracted();
+    if (isSectionVisible('simSection') && typeof triggerSimNpcExplosion === 'function') {
+      // On 02 Simulation, sync the workload spike strictly to the NPC detonation burst (0–950ms charge -> 950–2050ms blast)
+      triggerSimNpcExplosion();
+      updateLoadDisplay();
+      updateSimReadouts();
+      drawExpCurve();
+      requestCanvasRedraw();
+      return;
+    }
+    // 01 Motion & other sections: preserve original immediate transient load spike
     state.spikeStartSim = state.tSim;
     state.spikeStartReal = performance.now();
     state.simSpikeMs = SPIKE_PEAK_MS;
     state.realSpikeMs = SPIKE_PEAK_MS;
     updateLoadDisplay();
     if (isSectionVisible('motionSection')) updateLaneReadouts();
-    if (isSectionVisible('simSection')) {
-      updateSimReadouts();
-      drawExpCurve();
-    }
     if (isSectionVisible('inputSection')) updateArenaStaticStats();
     if (isSectionVisible('timelineSection')) drawTimeline();
     if (isSectionVisible('pipelineSection')) updatePipelineView();
@@ -480,12 +506,24 @@
     if (capEl.className !== capCls) capEl.className = capCls;
   }
 
+  function setLaneTag(mode, text, tone) {
+    const tagEl = laneTagEl[mode];
+    if (!tagEl) return;
+    if (tagEl.textContent !== text) tagEl.textContent = text;
+    const cls = tone ? `lane-sim-tag mono ${tone}` : 'lane-sim-tag mono';
+    if (tagEl.className !== cls) tagEl.className = cls;
+  }
+
   function updateLaneReadouts() {
     const hz = state.displayHz;
     const is120 = hz === 120;
     const load = state.load;
-    const spikeMs = state.simSpikeMs;
-    const underLoad = load > 1.05 || spikeMs > 0.5;
+    const autoSpikeMs = typeof getMotionScenarioAutoSpikeMs === 'function'
+      ? getMotionScenarioAutoSpikeMs(state.tSim)
+      : 0;
+    const spikeMs = Math.max(state.simSpikeMs, autoSpikeMs);
+    const isSpikeScenario = typeof activeMotionScenario === 'number' && activeMotionScenario === 2;
+    const underLoad = load > 1.05 || spikeMs > 0.5 || isSpikeScenario;
 
     // 30 FPS (33.3 ms budget)
     const fps30 = underLoad ? getEffectiveFpsFromHistory('30') : 30.0;
@@ -507,6 +545,11 @@
         : (is120 ? 'Locked · even 4-4-4' : 'Locked · even 2-2-2'),
       drop30 ? 'ft-note judder' : 'ft-note'
     );
+    setLaneTag(
+      '30',
+      drop30 ? 'Overloaded' : (spikeMs > 2 ? 'Absorbs Spike' : 'Stable'),
+      drop30 ? 'warn' : 'good'
+    );
 
     // 40 FPS (25.0 ms budget)
     const fps40 = underLoad ? getEffectiveFpsFromHistory('40') : 40.0;
@@ -516,9 +559,11 @@
     if (!drop40 && is120) {
       setLaneBadges('40', '40.0 FPS', 'good', 0, '25.0 ms', 'good', '~45 ms lag', '');
       setLaneCaption('40', '25.0 ms', 'Locked · exact 3 ticks', 'ft-note');
+      setLaneTag('40', 'Stable', 'good');
     } else if (!drop40 && !is120) {
       setLaneBadges('40', '40.0 FPS (judder)', 'warn', 0, '16.7 / 33.3 ms', 'warn', '~50 ms lag', '');
       setLaneCaption('40', '16.7 / 33.3 ms', '3:2 pulldown judder', 'ft-note judder');
+      setLaneTag('40', '3:2 Judder', 'judder');
     } else {
       setLaneBadges(
         '40',
@@ -528,6 +573,7 @@
         `~${Math.round(avg40 * 1.85)} ms lag`, ''
       );
       setLaneCaption('40', `${avg40.toFixed(1)} ms`, `-${Math.round(dropPct40)}% eff · missed 25 ms`, 'ft-note judder');
+      setLaneTag('40', spikeMs > 2 ? 'Spike Hitch' : 'Unstable', 'warn');
     }
 
     // 30 FPS + Interp (33.3 ms source budget)
@@ -551,6 +597,11 @@
         : `${hz} Hz visual · trails true time`,
       dropPctInterp >= 3 ? 'ft-note judder' : 'ft-note'
     );
+    setLaneTag(
+      'interp',
+      dropPctInterp >= 3 ? `+${bufLag} ms · Drops` : `+${bufLag} ms Lag`,
+      dropPctInterp >= 3 ? 'warn' : 'interp'
+    );
 
     // 60 FPS (16.7 ms budget)
     const fps60 = underLoad ? getEffectiveFpsFromHistory('60') : 60.0;
@@ -572,6 +623,11 @@
         ? `-${Math.round(dropPct60)}% eff · missed 16.7 ms`
         : (is120 ? 'Locked · even 2-2-2' : 'Locked · even 1-1-1'),
       drop60 ? 'ft-note judder' : 'ft-note'
+    );
+    setLaneTag(
+      '60',
+      drop60 ? (spikeMs > 2 || isSpikeScenario ? 'Spike Hitch' : 'Unstable') : 'Stable',
+      drop60 ? 'warn' : 'good'
     );
   }
 
@@ -617,9 +673,13 @@
       for (let i = 1; i <= ticksToStep; i++) {
         const tick = ls.lastDisplayTick + i;
         const tTick = tick * dispPeriod;
-        const tickSpikeMs = state.spikeStartSim >= 0
+        const manualSpikeMs = state.spikeStartSim >= 0
           ? getSpikeEnvelopeMs(tTick - state.spikeStartSim)
           : 0;
+        const autoSpikeMs = typeof getMotionScenarioAutoSpikeMs === 'function'
+          ? getMotionScenarioAutoSpikeMs(tTick)
+          : 0;
+        const tickSpikeMs = Math.max(manualSpikeMs, autoSpikeMs);
 
         if (mode === 'interp') {
           // Advance underlying 30 FPS source producer under current load
@@ -1529,6 +1589,171 @@
   // ============================================================================
   const SIM_MAX_NPCS = 200;
   const SIM_SHAPES = ['dot', 'rect', 'tri'];
+  const SIM_BLAST_CHARGE_MS = 950;
+  const SIM_BLAST_BURST_MS = 1100;
+  const SIM_BLAST_RESPAWN_MS = 320;
+  const SIM_BLAST_TOTAL_MS = SIM_BLAST_CHARGE_MS + SIM_BLAST_BURST_MS + SIM_BLAST_RESPAWN_MS;
+  const SIM_SHARD_COLORS = ['#ef4444', '#f97316', '#fbbf24', '#fef08a', '#dc2626'];
+  const simNpcBlasts = new Map();
+  let simBlastNonce = 1;
+
+  function triggerSimNpcExplosion() {
+    const npcCount = getSimEntityCount(state.simLevel);
+    const targetCount = Math.max(1, Math.round(npcCount * 0.2));
+    const candidates = [];
+    for (let i = 0; i < npcCount; i++) {
+      const existing = simNpcBlasts.get(i);
+      if (!existing || state.tSim - existing.startSimMs >= SIM_BLAST_TOTAL_MS) {
+        candidates.push(i);
+      }
+    }
+    if (!candidates.length) return;
+
+    // Fisher-Yates shuffle to pick 20% of active NPCs randomly
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = candidates[i];
+      candidates[i] = candidates[j];
+      candidates[j] = tmp;
+    }
+
+    const chosen = candidates.slice(0, Math.min(targetCount, candidates.length));
+    const startSimMs = state.tSim;
+    const detSec = (startSimMs + SIM_BLAST_CHARGE_MS) / 1000;
+
+    chosen.forEach((idx) => {
+      const seed = (simBlastNonce++ * 2654435761) >>> 0;
+      const rng = createSeededRng(seed);
+      const shardCount = 9 + Math.floor(rng() * 4);
+      const shards = [];
+      for (let s = 0; s < shardCount; s++) {
+        const baseAngle = (s / shardCount) * Math.PI * 2;
+        const angle = baseAngle + (rng() - 0.5) * 0.55;
+        shards.push({
+          angle,
+          dist: 16 + rng() * 26,
+          size: 1.5 + rng() * 2.4,
+          color: SIM_SHARD_COLORS[Math.floor(rng() * SIM_SHARD_COLORS.length)],
+          isSpark: rng() > 0.55
+        });
+      }
+      simNpcBlasts.set(idx, {
+        startSimMs,
+        detSec,
+        seed: rng() * Math.PI * 2,
+        shards
+      });
+    });
+  }
+
+  function pruneSimNpcBlasts() {
+    if (!simNpcBlasts.size) return;
+    // Keep entries slightly past total duration so lagged interp arena completes respawn cleanly
+    const expireAfter = SIM_BLAST_TOTAL_MS + 350;
+    simNpcBlasts.forEach((blast, idx) => {
+      if (state.tSim - blast.startSimMs > expireAfter) {
+        simNpcBlasts.delete(idx);
+      }
+    });
+  }
+
+  function getSimDestroyedCount(npcCount) {
+    if (!simNpcBlasts.size) return 0;
+    let destroyed = 0;
+    simNpcBlasts.forEach((blast, idx) => {
+      if (idx >= npcCount) return;
+      const elapsed = state.tSim - blast.startSimMs;
+      if (elapsed >= SIM_BLAST_CHARGE_MS && elapsed < SIM_BLAST_CHARGE_MS + SIM_BLAST_BURST_MS) {
+        destroyed++;
+      }
+    });
+    return destroyed;
+  }
+
+  function getSimBlastEnvelope(burstElapsed) {
+    if (burstElapsed < 0 || burstElapsed >= SIM_BLAST_BURST_MS) return 0;
+    const u = burstElapsed / SIM_BLAST_BURST_MS;
+    if (u < 0.06) return u / 0.06;
+    if (u < 0.72) return 1.0 - 0.14 * ((u - 0.06) / 0.66);
+    const tail = 1 - (u - 0.72) / 0.28;
+    return 0.86 * Math.pow(Math.max(0, tail), 1.6);
+  }
+
+  // Calibrated per-level explosion headroom deltas:
+  // At Load=1.0, L1 (12.0ms + 19.4 = 31.4ms) and L2 (18.2ms + 13.4 = 31.6ms) stay strictly under 33.3ms (30 FPS locked)
+  // while oscillating across 16.7ms (60 FPS) & 25.0ms (40 FPS). At L3+ (27.7ms + 14.5 = 42.2ms), 30 FPS finally breaks too.
+  function getSimBlastDeltaBounds(level) {
+    if (level <= 2.0) {
+      const t = Math.max(0, Math.min(1, level - 1.0));
+      return {
+        floorDelta: 3.6 - 0.4 * t,
+        peakDelta: 19.4 - 6.0 * t
+      };
+    }
+    const t = Math.max(0, Math.min(1, level - 2.0));
+    return {
+      floorDelta: 3.2 + 2.3 * t,
+      peakDelta: 13.4 + 1.1 * t
+    };
+  }
+
+  function getSimBlastMaxEnv(tMs) {
+    if (!simNpcBlasts.size) return 0;
+    let maxEnv = 0;
+    simNpcBlasts.forEach((blast) => {
+      const env = getSimBlastEnvelope(tMs - (blast.startSimMs + SIM_BLAST_CHARGE_MS));
+      if (env > maxEnv) maxEnv = env;
+    });
+    return maxEnv;
+  }
+
+  function getSimBlastWorkloadMs(tMs, frameSeq, level) {
+    const env = getSimBlastMaxEnv(tMs);
+    if (env <= 0.001) return 0;
+    const { floorDelta, peakDelta } = getSimBlastDeltaBounds(level);
+    // Deterministic bursty frame-to-frame oscillation so 60/40 FPS visibly hitch across V-Sync boundaries
+    // while 30 FPS clamps every frame <= 33.3ms to an even, locked cadence
+    const wave01 = 0.5 + 0.5 * Math.sin(frameSeq * 2.15 + 0.4);
+    const burst = floorDelta + (peakDelta - floorDelta) * wave01;
+    return burst * env;
+  }
+
+  function getSimBlastMeanSpikeMs(tMs, level) {
+    const env = getSimBlastMaxEnv(tMs);
+    if (env <= 0.001) return 0;
+    const { floorDelta, peakDelta } = getSimBlastDeltaBounds(level);
+    return (floorDelta + (peakDelta - floorDelta) * 0.62) * env;
+  }
+
+  function getSimBlastCurvePeakMs(tMs, level) {
+    const env = getSimBlastMaxEnv(tMs);
+    if (env <= 0.001) return 0;
+    const { peakDelta } = getSimBlastDeltaBounds(level);
+    return peakDelta * env;
+  }
+
+  function getSimBlastUiState(tMs) {
+    let charging = 0;
+    let bursting = 0;
+    let active = false;
+    let inDetonation = false;
+    simNpcBlasts.forEach((blast) => {
+      const elapsed = tMs - blast.startSimMs;
+      if (elapsed >= 0 && elapsed < SIM_BLAST_TOTAL_MS) {
+        active = true;
+        if (elapsed < SIM_BLAST_CHARGE_MS) {
+          const c = elapsed / SIM_BLAST_CHARGE_MS;
+          if (c > charging) charging = c;
+        } else if (elapsed < SIM_BLAST_CHARGE_MS + SIM_BLAST_BURST_MS) {
+          inDetonation = true;
+          const b = 1 - (elapsed - SIM_BLAST_CHARGE_MS) / SIM_BLAST_BURST_MS;
+          if (b > bursting) bursting = b;
+        }
+      }
+    });
+    const burstMs = inDetonation ? getSimBlastMeanSpikeMs(tMs, state.simLevel) : 0;
+    return { active, inDetonation, charging, bursting, burstMs };
+  }
 
   // Deterministic PRNG so all 4 FPS areas share the exact same world & entity count
   function createSeededRng(seed) {
@@ -1589,6 +1814,7 @@
 
   const simState = {};
   function initSimArenaState() {
+    simNpcBlasts.clear();
     MODES.forEach((m) => {
       simState[m] = {
         lastDisplayTick: -1,
@@ -1597,6 +1823,8 @@
         holdTicks: 0,
         presentedTime: 0,
         ftHistory: [],
+        ftOverBudget: [],
+        pendingOverBudget: false,
         srcFrameSeq: 0,
         srcNextReadyTime: 0,
         srcHoldTicks: 0,
@@ -1630,6 +1858,7 @@
 
   function stepSimArenas() {
     if (!dom.expCurveCanvas) return;
+    pruneSimNpcBlasts();
     const dispPeriod = 1000 / state.displayHz;
     const targetTick = Math.floor((state.tSim + 0.001) / dispPeriod);
 
@@ -1645,7 +1874,7 @@
       for (let i = 1; i <= ticksToStep; i++) {
         const tick = ss.lastDisplayTick + i;
         const tTick = tick * dispPeriod;
-        const tickSpikeMs = state.spikeStartSim >= 0
+        const baseSpikeMs = state.spikeStartSim >= 0
           ? getSpikeEnvelopeMs(tTick - state.spikeStartSim)
           : 0;
 
@@ -1653,11 +1882,13 @@
           if (ss.srcFrameSeq === 0) {
             ss.srcFrameSeq = 1;
             ss.srcHoldTicks = 1;
+            const tickSpikeMs = Math.max(baseSpikeMs, getSimBlastWorkloadMs(tTick, 1, state.simLevel));
             ss.srcNextReadyTime = Math.max(gamePeriod, getSimRenderTimeMs(state.simLevel, 1, tickSpikeMs));
           } else if (tTick + 0.001 >= ss.srcNextReadyTime) {
             const heldMs = ss.srcHoldTicks * dispPeriod;
             ss.avgSrcMs = ss.avgSrcMs * 0.75 + heldMs * 0.25;
             ss.srcFrameSeq++;
+            const tickSpikeMs = Math.max(baseSpikeMs, getSimBlastWorkloadMs(tTick, ss.srcFrameSeq, state.simLevel));
             const dur = Math.max(gamePeriod, getSimRenderTimeMs(state.simLevel, ss.srcFrameSeq, tickSpikeMs));
             ss.srcNextReadyTime = Math.max(ss.srcNextReadyTime + dur, tTick + dispPeriod * 0.05);
             ss.srcHoldTicks = 1;
@@ -1674,21 +1905,31 @@
           } else {
             ss.ftHistory.push(dispPeriod * 2);
           }
+          ss.ftOverBudget.push(hiccup || ss.avgSrcMs > 35.0);
           if (ss.ftHistory.length > 24) ss.ftHistory.shift();
+          if (ss.ftOverBudget.length > 24) ss.ftOverBudget.shift();
         } else {
           if (ss.frameSeq === 0) {
             ss.frameSeq = 1;
             ss.holdTicks = 1;
             ss.presentedTime = tTick;
-            ss.nextFrameReadyTime = tTick + Math.max(gamePeriod, getSimRenderTimeMs(state.simLevel, 1, tickSpikeMs));
+            const tickSpikeMs = Math.max(baseSpikeMs, getSimBlastWorkloadMs(tTick, 1, state.simLevel));
+            const renderMs = getSimRenderTimeMs(state.simLevel, 1, tickSpikeMs);
+            ss.pendingOverBudget = renderMs > gamePeriod + 0.5;
+            ss.nextFrameReadyTime = tTick + Math.max(gamePeriod, renderMs);
           } else if (tTick + 0.001 >= ss.nextFrameReadyTime) {
             const heldMs = ss.holdTicks * dispPeriod;
             ss.ftHistory.push(heldMs);
+            ss.ftOverBudget.push(!!ss.pendingOverBudget);
             if (ss.ftHistory.length > 24) ss.ftHistory.shift();
+            if (ss.ftOverBudget.length > 24) ss.ftOverBudget.shift();
 
             ss.presentedTime = ss.nextFrameReadyTime;
             ss.frameSeq++;
-            const dur = Math.max(gamePeriod, getSimRenderTimeMs(state.simLevel, ss.frameSeq, tickSpikeMs));
+            const tickSpikeMs = Math.max(baseSpikeMs, getSimBlastWorkloadMs(tTick, ss.frameSeq, state.simLevel));
+            const renderMs = getSimRenderTimeMs(state.simLevel, ss.frameSeq, tickSpikeMs);
+            ss.pendingOverBudget = renderMs > gamePeriod + 0.5;
+            const dur = Math.max(gamePeriod, renderMs);
             ss.nextFrameReadyTime = ss.nextFrameReadyTime + dur;
             if (ss.nextFrameReadyTime < tTick) {
               ss.nextFrameReadyTime = tTick + dur;
@@ -1704,12 +1945,30 @@
     });
   }
 
+  function drawSimNpcShape(ctx, shape, r) {
+    if (shape === 'dot') {
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (shape === 'rect') {
+      ctx.fillRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 1.05);
+      ctx.lineTo(r * 0.95, r * 0.85);
+      ctx.lineTo(-r * 0.95, r * 0.85);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
   function drawSimArena(mode) {
     const canvas = simCanvases[mode];
     if (!canvas) return;
     const { ctx, w, h } = setupCanvas(canvas);
     const ss = simState[mode];
-    const tSec = ss.presentedTime / 1000;
+    const presentedMs = ss.presentedTime;
+    const tSec = presentedMs / 1000;
     const npcCount = getSimEntityCount(state.simLevel);
 
     ctx.fillStyle = '#11141c';
@@ -1744,12 +2003,144 @@
     ctx.stroke();
     ctx.restore();
 
-    // Draw identical count of white NPCs (dots, rects, triangles), highlighting those in player proximity
+    // Draw identical count of white NPCs (dots, rects, triangles), handling Load Spike blasts
     for (let i = 0; i < npcCount; i++) {
       const n = simNpcs[i];
       const nx = pingPong(n.x0 + n.vx * tSec, 0.04, 0.96) * w;
       const ny = pingPong(n.y0 + n.vy * tSec, 0.06, 0.94) * h;
       const r = n.size;
+      const blast = simNpcBlasts.get(i);
+      const elapsed = blast ? presentedMs - blast.startSimMs : -1;
+
+      if (blast && elapsed >= 0 && elapsed < SIM_BLAST_TOTAL_MS) {
+        if (elapsed < SIM_BLAST_CHARGE_MS) {
+          // Phase 1: Turn red, grow slowly, and shake with escalating intensity
+          const p = elapsed / SIM_BLAST_CHARGE_MS;
+          const scale = 1 + 1.25 * Math.pow(p, 1.3);
+          const shakeAmp = Math.pow(p, 1.75) * 5.2;
+          const freq = 24 + p * 38;
+          const sx = Math.sin(elapsed * 0.001 * freq * Math.PI * 2 + blast.seed) * shakeAmp;
+          const sy = Math.cos(elapsed * 0.001 * (freq * 1.27) * Math.PI * 2 + blast.seed * 1.7) * shakeAmp;
+          const bx = nx + sx;
+          const by = ny + sy;
+          const cT = Math.min(1, p * 2.8);
+          const cr = Math.round(241 + (239 - 241) * cT);
+          const cg = Math.round(245 + (52 - 245) * cT);
+          const cb = Math.round(249 + (52 - 249) * cT);
+
+          // Growing danger aura
+          ctx.beginPath();
+          ctx.arc(bx, by, r * scale * 1.7, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(239, 68, 68, ${(0.14 + p * 0.36).toFixed(3)})`;
+          ctx.fill();
+
+          ctx.save();
+          ctx.translate(bx, by);
+          if (n.shape !== 'dot') ctx.rotate(n.angle0 + n.vAngle * tSec);
+          ctx.fillStyle = `rgb(${cr}, ${cg}, ${cb})`;
+          drawSimNpcShape(ctx, n.shape, r * scale);
+
+          // Overheat core flicker right before detonation
+          if (p > 0.72) {
+            const flicker = 0.45 + 0.55 * Math.sin(elapsed * 0.065 + blast.seed);
+            ctx.beginPath();
+            ctx.arc(0, 0, r * scale * 0.42, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(254, 240, 138, ${((p - 0.72) / 0.28 * flicker).toFixed(3)})`;
+            ctx.fill();
+          }
+          ctx.restore();
+          continue;
+        }
+
+        if (elapsed < SIM_BLAST_CHARGE_MS + SIM_BLAST_BURST_MS) {
+          // Phase 2: Destroyed NPC explodes into vanishing debris particles
+          const bp = (elapsed - SIM_BLAST_CHARGE_MS) / SIM_BLAST_BURST_MS;
+          const detX = pingPong(n.x0 + n.vx * blast.detSec, 0.04, 0.96) * w;
+          const detY = pingPong(n.y0 + n.vy * blast.detSec, 0.06, 0.94) * h;
+
+          // Brief detonation core flash
+          if (bp < 0.22) {
+            const fa = 1 - bp / 0.22;
+            ctx.beginPath();
+            ctx.arc(detX, detY, r * (1.8 + bp * 6), 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(254, 226, 226, ${(fa * 0.85).toFixed(3)})`;
+            ctx.fill();
+          }
+
+          // Expanding shockwave ring
+          if (bp < 0.56) {
+            const rp = bp / 0.56;
+            ctx.beginPath();
+            ctx.arc(detX, detY, r * (1.5 + rp * 6.5), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(239, 68, 68, ${((1 - rp) * 0.75).toFixed(3)})`;
+            ctx.lineWidth = Math.max(0.8, 2.2 * (1 - rp));
+            ctx.stroke();
+          }
+
+          // Radial vanishing particles
+          const easeOut = 1 - Math.pow(1 - bp, 2.3);
+          const pAlpha = Math.max(0, 1 - Math.pow(bp, 1.35));
+          ctx.save();
+          // Optical-flow motion-smoothing ghost trails behind fast-moving shards on Interp arena
+          if (mode === 'interp' && state.showArtifacts) {
+            const ghostEase = Math.max(0, easeOut * 0.72);
+            ctx.globalAlpha = pAlpha * 0.42;
+            ctx.fillStyle = '#a78bfa';
+            for (let s = 0; s < blast.shards.length; s++) {
+              const sh = blast.shards[s];
+              const gxS = detX + Math.cos(sh.angle) * (sh.dist * ghostEase);
+              const gyS = detY + Math.sin(sh.angle) * (sh.dist * ghostEase);
+              const gSz = Math.max(1.2, sh.size * 1.15);
+              ctx.beginPath();
+              ctx.arc(gxS, gyS, gSz, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          ctx.globalAlpha = pAlpha;
+          for (let s = 0; s < blast.shards.length; s++) {
+            const sh = blast.shards[s];
+            const dist = sh.dist * easeOut;
+            const pxS = detX + Math.cos(sh.angle) * dist;
+            const pyS = detY + Math.sin(sh.angle) * dist;
+            const sz = Math.max(0.6, sh.size * (1 - bp * 0.58));
+            ctx.fillStyle = sh.color;
+            if (sh.isSpark) {
+              ctx.save();
+              ctx.translate(pxS, pyS);
+              ctx.rotate(sh.angle);
+              ctx.fillRect(-sz * 1.15, -sz * 0.45, sz * 2.3, sz * 0.9);
+              ctx.restore();
+            } else {
+              ctx.beginPath();
+              ctx.arc(pxS, pyS, sz, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          ctx.restore();
+          continue;
+        }
+
+        // Phase 3: Recreate destroyed NPC in its default form
+        const rp = (elapsed - SIM_BLAST_CHARGE_MS - SIM_BLAST_BURST_MS) / SIM_BLAST_RESPAWN_MS;
+        const popScale = 0.2 + 0.8 * (1 - Math.pow(1 - rp, 2.5));
+        const nearPlayer = Math.hypot(nx - px, ny - py) <= proxRadius;
+
+        ctx.beginPath();
+        ctx.arc(nx, ny, r * (1.2 + rp * 2.2), 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(241, 245, 249, ${((1 - rp) * 0.45).toFixed(3)})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, rp * 1.45);
+        ctx.translate(nx, ny);
+        if (n.shape !== 'dot') ctx.rotate(n.angle0 + n.vAngle * tSec);
+        ctx.fillStyle = nearPlayer ? '#fde047' : 'rgba(241, 245, 249, 0.88)';
+        drawSimNpcShape(ctx, n.shape, r * popScale);
+        ctx.restore();
+        continue;
+      }
+
       const nearPlayer = Math.hypot(nx - px, ny - py) <= proxRadius;
       ctx.fillStyle = nearPlayer ? '#fde047' : 'rgba(241, 245, 249, 0.88)';
 
@@ -1757,22 +2148,11 @@
         ctx.beginPath();
         ctx.arc(nx, ny, r * 0.78, 0, Math.PI * 2);
         ctx.fill();
-      } else if (n.shape === 'rect') {
-        ctx.save();
-        ctx.translate(nx, ny);
-        ctx.rotate(n.angle0 + n.vAngle * tSec);
-        ctx.fillRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
-        ctx.restore();
       } else {
         ctx.save();
         ctx.translate(nx, ny);
         ctx.rotate(n.angle0 + n.vAngle * tSec);
-        ctx.beginPath();
-        ctx.moveTo(0, -r * 1.05);
-        ctx.lineTo(r * 0.95, r * 0.85);
-        ctx.lineTo(-r * 0.95, r * 0.85);
-        ctx.closePath();
-        ctx.fill();
+        drawSimNpcShape(ctx, n.shape, r);
         ctx.restore();
       }
     }
@@ -1798,6 +2178,66 @@
     ctx.arc(px, py, 6, 0, Math.PI * 2);
     ctx.fillStyle = '#facc15';
     ctx.fill();
+
+    // Transient top-left detonation verdict pill inside each arena during explosion burst
+    const blastEnv = getSimBlastMaxEnv(presentedMs);
+    if (blastEnv > 0.04) {
+      const overHist = ss.ftOverBudget;
+      const recentLen = Math.min(6, overHist ? overHist.length : 0);
+      let recentOver = 0;
+      for (let k = (overHist ? overHist.length : 0) - recentLen; k < (overHist ? overHist.length : 0); k++) {
+        if (k >= 0 && overHist[k]) recentOver++;
+      }
+      const isNarrow = w < 220;
+      let pillText = '';
+      let pillBg = '';
+      if (mode === 'interp') {
+        const srcDropped = ss.avgSrcMs > 35.0;
+        pillBg = srcDropped ? 'rgba(217, 119, 6, 0.92)' : 'rgba(124, 58, 237, 0.9)';
+        pillText = isNarrow
+          ? (srcDropped ? 'LAG SPIKE' : 'HALO')
+          : (srcDropped ? `LAG SPIKE · +${Math.round(ss.currentLagMs)} ms` : `HALO · +${Math.round(ss.currentLagMs)} ms`);
+      } else if (recentOver > 0) {
+        pillBg = 'rgba(220, 38, 38, 0.92)';
+        pillText = isNarrow ? 'STUTTER' : 'BUDGET MISSED · STUTTER';
+      } else {
+        pillBg = 'rgba(5, 150, 105, 0.92)';
+        pillText = isNarrow ? 'LOCKED' : 'LOCKED · 0% DROP';
+      }
+
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, blastEnv * 2.2);
+      ctx.font = isNarrow
+        ? '700 8.5px ui-monospace, SFMono-Regular, Menlo, monospace'
+        : '700 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+      const tw = ctx.measureText(pillText).width;
+      const pxPad = isNarrow ? 5 : 7;
+      const ph = isNarrow ? 15 : 18;
+      const pw = tw + pxPad * 2;
+      const rx = 6;
+      const ry = 6;
+      const rad = 4;
+
+      ctx.fillStyle = pillBg;
+      ctx.beginPath();
+      ctx.moveTo(rx + rad, ry);
+      ctx.lineTo(rx + pw - rad, ry);
+      ctx.quadraticCurveTo(rx + pw, ry, rx + pw, ry + rad);
+      ctx.lineTo(rx + pw, ry + ph - rad);
+      ctx.quadraticCurveTo(rx + pw, ry + ph, rx + pw - rad, ry + ph);
+      ctx.lineTo(rx + rad, ry + ph);
+      ctx.quadraticCurveTo(rx, ry + ph, rx, ry + ph - rad);
+      ctx.lineTo(rx, ry + rad);
+      ctx.quadraticCurveTo(rx, ry, rx + rad, ry);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(pillText, rx + pxPad, ry + ph / 2 + 0.5);
+      ctx.restore();
+    }
   }
 
   const SIM_SCENARIOS = [
@@ -1851,12 +2291,15 @@
   function updateSimReadouts() {
     if (!dom.simLevelVal) return;
     const lvl = state.simLevel;
-    const cost = getSimMeanRenderMs(lvl, state.simSpikeMs);
+    const blastMeanSpikeMs = getSimBlastMeanSpikeMs(state.tSim, lvl);
+    const cost = getSimMeanRenderMs(lvl, Math.max(state.simSpikeMs, blastMeanSpikeMs));
     const count = getSimEntityCount(lvl);
+    const liveCount = Math.max(0, count - getSimDestroyedCount(count));
+    const inDetonation = getSimBlastMaxEnv(state.tSim) > 0.04;
 
     dom.simLevelVal.textContent = lvl.toFixed(1);
     dom.simLevelVal.className = 'sim-kpi-val mono' + (cost > 33.3 ? ' high' : cost > 16.7 ? ' mid' : '');
-    dom.simEntityVal.textContent = String(count);
+    dom.simEntityVal.textContent = String(liveCount);
     dom.simCostVal.textContent = `${cost.toFixed(1)} ms`;
     dom.simCostVal.className = 'sim-kpi-val mono' + (cost > 33.3 ? ' high' : cost > 16.7 ? ' mid' : '');
 
@@ -1897,8 +2340,12 @@
 
     MODES.forEach((m) => {
       const el = simStatEls[m];
+      const areaEl = simAreaEls[m];
       if (!el) return;
       const ss = simState[m];
+      const overHist = ss.ftOverBudget || [];
+      const recentOverCount = overHist.slice(-6).filter(Boolean).length;
+
       if (m === 'interp') {
         const srcFps = Math.min(30, 1000 / Math.max(33.33, ss.avgSrcMs));
         const dropPct = Math.round(getEfficiencyDropPct(srcFps, 30));
@@ -1907,6 +2354,10 @@
           ? `+${lag} ms · -${dropPct}%`
           : `${state.displayHz} Hz · +${lag} ms`;
         el.className = 'sim-area-stat mono' + (dropPct > 2 ? ' warn' : '');
+        if (areaEl) {
+          areaEl.classList.toggle('is-blast-interp', inDetonation);
+          areaEl.classList.remove('is-blast-locked', 'is-blast-stutter');
+        }
       } else {
         const hist = ss.ftHistory;
         let fps = MODE_META[m].gameFps;
@@ -1921,6 +2372,12 @@
         const dropPct = Math.round(getEfficiencyDropPct(fps, MODE_META[m].gameFps));
         el.textContent = `${fps.toFixed(1)} FPS · ${dropPct >= 2 ? `-${dropPct}%` : '0% drop'}`;
         el.className = 'sim-area-stat mono' + (dropPct >= 2 ? ' warn' : ' good');
+        if (areaEl) {
+          const isStutter = inDetonation && (recentOverCount > 0 || dropPct >= 2);
+          areaEl.classList.toggle('is-blast-stutter', isStutter);
+          areaEl.classList.toggle('is-blast-locked', inDetonation && !isStutter);
+          areaEl.classList.remove('is-blast-interp');
+        }
       }
     });
   }
@@ -2038,6 +2495,71 @@
     // Active draggable handle
     const hx = lvlToX(state.simLevel);
     const hy = msToY(curCost);
+
+    // Live vertical detonation spike excursion vector jumping across FPS budget lines
+    const spikeJumpMs = Math.max(state.simSpikeMs, getSimBlastCurvePeakMs(state.tSim, state.simLevel));
+    if (spikeJumpMs > 0.5) {
+      const spikedCost = curCost + spikeJumpMs;
+      const sy = msToY(spikedCost);
+      const crosses30 = spikedCost > 33.33;
+      const spikeColor = crosses30 ? '#dc2626' : '#ea580c';
+
+      // Soft translucent glow beam
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx, sy);
+      ctx.strokeStyle = crosses30 ? 'rgba(220, 38, 38, 0.24)' : 'rgba(234, 88, 12, 0.24)';
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Dashed vertical excursion vector
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx, sy);
+      ctx.strokeStyle = spikeColor;
+      ctx.lineWidth = 2.2;
+      ctx.setLineDash([3, 2]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Peak detonation dot
+      ctx.beginPath();
+      ctx.arc(hx, sy, 6.5, 0, Math.PI * 2);
+      ctx.fillStyle = crosses30 ? 'rgba(220, 38, 38, 0.22)' : 'rgba(234, 88, 12, 0.22)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(hx, sy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = spikeColor;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      // Compact peak ms callout tag
+      const tag = `${spikedCost.toFixed(0)} ms`;
+      ctx.font = '700 9.5px ui-monospace, SFMono-Regular, Menlo, monospace';
+      const tw = ctx.measureText(tag).width;
+      const tagW = tw + 10;
+      const tagH = 16;
+      const placeLeft = hx + 10 + tagW > w - 4;
+      const tx = placeLeft ? Math.max(4, hx - 10 - tagW) : hx + 10;
+      const ty = Math.max(4, Math.min(padT + ch - tagH - 2, sy - tagH / 2));
+
+      ctx.fillStyle = spikeColor;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(tx, ty, tagW, tagH, 4) : ctx.rect(tx, ty, tagW, tagH);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tag, tx + tagW / 2, ty + tagH / 2 + 0.5);
+      ctx.restore();
+    }
+
     ctx.beginPath();
     ctx.arc(hx, hy, 9, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
@@ -2689,6 +3211,8 @@
     return dtReal;
   }
 
+  let wasSimBlasting = false;
+
   function loop(now) {
     rafId = null;
     if (document.hidden) {
@@ -2756,9 +3280,23 @@
 
     needsPausedRedraw = false;
 
-    if ((!state.paused || isSpiking) && now - lastReadoutTime > (isSpiking ? 90 : 260)) {
+    const simBlasting = simVisible && simNpcBlasts.size > 0;
+    if (simBlasting || wasSimBlasting) {
+      updateLoadDisplay();
+      if (simVisible) {
+        drawExpCurve();
+        if (!simBlasting) updateSimReadouts();
+      }
+      wasSimBlasting = simBlasting;
+    }
+
+    const motionAutoSpiking = motionVisible && !blindActive && activeMotionScenario === 2;
+    if ((!state.paused || isSpiking) && now - lastReadoutTime > (isSpiking || simBlasting || motionAutoSpiking ? 90 : 260)) {
       lastReadoutTime = now;
-      if (motionVisible) updateLaneReadouts();
+      if (motionVisible) {
+        updateLaneReadouts();
+        if (motionAutoSpiking) updateLoadDisplay();
+      }
       if (simVisible) updateSimReadouts();
     }
 
@@ -2779,6 +3317,161 @@
       lastRafTime = null;
     }
   }
+
+  // ============================================================================
+  // SECTION 1 (MOTION): SIMPLIFIED ↔ DETAILED VIEW & 5 LOAD HEADROOM SCENARIOS
+  // ============================================================================
+  const MOTION_SCENARIOS = [
+    {
+      id: 1,
+      title: 'All Stable',
+      load: 1.0,
+      tier: 'low',
+      impact: 'All Targets Locked',
+      desc: 'At 14.0 ms per frame, workload sits safely inside the 16.7 ms (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30 FPS) budgets—so every configuration holds 0% frame drops and higher frame rates win purely on clarity and lower lag.'
+    },
+    {
+      id: 2,
+      title: '60 Hitches on Spikes',
+      load: 1.2,
+      tier: 'mid',
+      impact: '30 Absorbs Spikes',
+      autoSpikes: true,
+      desc: 'Base load (15.5 ms) leaves 60 FPS only 1.2 ms of margin before 16.7 ms. Repeating +15 ms workload bursts (~30.5 ms peaks) push 60 and 40 FPS over budget into visible stutter, while 30 FPS absorbs every spike inside its 33.3 ms cushion at 0% drop.'
+    },
+    {
+      id: 3,
+      title: '60 FPS Unstable',
+      load: 2.0,
+      tier: 'mid',
+      impact: '60 FPS Dropping',
+      desc: 'At 21.5 ms per frame, steady workload exceeds 60 FPS’s 16.7 ms budget on every single frame—causing continuous uneven frame holds. Stepping down to a 25.0 ms (40 FPS) or 33.3 ms (30 FPS) budget restores 0% frame drops.'
+    },
+    {
+      id: 4,
+      title: 'Only 30 Absorbs Load',
+      load: 3.0,
+      tier: 'warn',
+      impact: 'Only 30 FPS Locked',
+      desc: 'Heavy 29.0 ms workload overwhelms both 60 FPS (16.7 ms) and 40 FPS (25.0 ms), forcing severe frame drops. Only 30 FPS absorbs over 2× baseline load inside its 33.3 ms budget with locked pacing—while 30 + Interp masks the rate at the cost of +67 ms lag.'
+    },
+    {
+      id: 5,
+      title: 'All Overloaded',
+      load: 4.3,
+      tier: 'high',
+      impact: 'All Targets Dropping',
+      desc: 'At 38.8 ms per frame, workload crosses 30 FPS’s 33.3 ms ceiling. Every native configuration loses lock and stutters, while 30 FPS + Interpolation suffers compounding buffer lag (~140+ ms) and frame-pacing hiccups.'
+    }
+  ];
+
+  const motionSectionEl = document.getElementById('motionSection');
+  const motionFooterCard = document.getElementById('motionFooterCard');
+  const motionScenarioNum = document.getElementById('motionScenarioNum');
+  const motionScenarioTitle = document.getElementById('motionScenarioTitle');
+  const motionScenarioDesc = document.getElementById('motionScenarioDesc');
+  const motionImpactTag = document.getElementById('motionImpactTag');
+  const motionMeterBars = Array.from(document.querySelectorAll('#motionMeter span'));
+  const motionScenarioBtns = Array.from(document.querySelectorAll('[data-motion-scenario]'));
+  const motionViewBtns = Array.from(document.querySelectorAll('[data-motion-view-btn]'));
+
+  let activeMotionScenario = 1;
+  let motionAutoSpikeAnchorMs = 0;
+  let motionFooterPulseTimer = null;
+
+  function getMotionScenarioAutoSpikeMs(tMs) {
+    if (activeMotionScenario !== 2 || blindActive || !isSectionVisible('motionSection')) return 0;
+    const cycleMs = 2400;
+    const burstMs = 680;
+    const phase = (((tMs - motionAutoSpikeAnchorMs) % cycleMs) + cycleMs) % cycleMs;
+    if (phase >= burstMs) return 0;
+    // Fast attack, brief plateau, smooth decay; peak +15.0 ms on 15.5 ms base = 30.5 ms (< 33.3 ms for 30 FPS!)
+    if (phase < 45) return 15.0 * (phase / 45);
+    if (phase < 320) return 15.0;
+    const k = 1 - (phase - 320) / (burstMs - 320);
+    return 15.0 * k * k;
+  }
+
+  function triggerMotionFooterPulse() {
+    if (!motionFooterCard) return;
+    motionFooterCard.classList.remove('is-updating');
+    void motionFooterCard.offsetWidth;
+    motionFooterCard.classList.add('is-updating');
+    clearTimeout(motionFooterPulseTimer);
+    motionFooterPulseTimer = setTimeout(() => {
+      motionFooterCard.classList.remove('is-updating');
+    }, 540);
+  }
+
+  function applyMotionScenarioUI(id, pulse = true) {
+    const sc = MOTION_SCENARIOS[Math.max(0, Math.min(MOTION_SCENARIOS.length - 1, id - 1))];
+    if (!sc) return;
+    const changed = activeMotionScenario !== sc.id;
+    activeMotionScenario = sc.id;
+
+    motionScenarioBtns.forEach((btn) => {
+      btn.classList.toggle('active', Number(btn.dataset.motionScenario) === sc.id);
+    });
+    if (motionFooterCard) motionFooterCard.dataset.tier = sc.tier;
+    if (motionScenarioNum) motionScenarioNum.textContent = `SCENARIO ${sc.id}`;
+    if (motionScenarioTitle) motionScenarioTitle.textContent = sc.title;
+    if (motionScenarioDesc) motionScenarioDesc.textContent = sc.desc;
+    if (motionImpactTag) motionImpactTag.textContent = sc.impact;
+    if (motionMeterBars.length) {
+      motionMeterBars.forEach((bar, i) => bar.classList.toggle('is-lit', i < sc.id));
+    }
+    if (pulse && changed) triggerMotionFooterPulse();
+  }
+
+  function setMotionScenario(id) {
+    const sc = MOTION_SCENARIOS[Math.max(0, Math.min(MOTION_SCENARIOS.length - 1, id - 1))];
+    if (!sc) return;
+    applyMotionScenarioUI(sc.id, true);
+    if (sc.autoSpikes) {
+      // Fire first periodic spike almost immediately so user sees 60/40 hitch vs 30 absorb right away
+      motionAutoSpikeAnchorMs = state.tSim - 60;
+    }
+    if (dom.loadSlider) {
+      dom.loadSlider.value = String(sc.load);
+      syncRangeFill(dom.loadSlider);
+    }
+    setLoad(sc.load, true);
+  }
+
+  function syncMotionScenarioFromLoad(loadVal) {
+    let matched = 1;
+    if (loadVal >= 3.58) matched = 5;
+    else if (loadVal >= 2.47) matched = 4;
+    else if (loadVal >= 1.36) matched = 3;
+    else matched = 1;
+    applyMotionScenarioUI(matched, matched !== activeMotionScenario);
+  }
+
+  function setMotionViewMode(mode) {
+    const next = mode === 'detailed' ? 'detailed' : 'simplified';
+    if (motionSectionEl) motionSectionEl.dataset.motionView = next;
+    motionViewBtns.forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.motionViewBtn === next);
+    });
+    invalidateAllCanvases();
+    updateLaneReadouts();
+    requestCanvasRedraw();
+  }
+
+  motionScenarioBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = Number(btn.dataset.motionScenario);
+      if (id >= 1 && id <= 5) setMotionScenario(id);
+    });
+  });
+
+  motionViewBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setMotionViewMode(btn.dataset.motionViewBtn);
+    });
+  });
+
+  applyMotionScenarioUI(1, false);
 
   // ============================================================================
   // BLIND TEST CHALLENGE (FIRST-VISIT & ON-DEMAND FROM CONSOLE)
@@ -2973,6 +3666,7 @@
     root.classList.add('is-intro-revealed');
 
     restoreCanonicalLaneOrder();
+    motionAutoSpikeAnchorMs = state.tSim;
 
     if (blindSavedState) {
       const prev = blindSavedState;

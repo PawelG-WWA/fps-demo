@@ -1184,25 +1184,60 @@ h2 {
    VIEW 1: MOTION & FRAME PACING (PACKED UNIFIED LANES)
    ============================================================================ */
 /* ============================================================================
-   VIEW 1: MOTION & FRAME PACING (50vh DEMOS, VERTICALLY CENTERED)
+   VIEW 1: MOTION & FRAME PACING (SIMPLIFIED SCENARIOS ↔ DETAILED TELEMETRY)
    ============================================================================ */
 .motion-stack {
   justify-content: center;
+  gap: clamp(10px, 1.5vh, 16px);
 }
 
 .motion-card {
   height: auto;
 }
 
-.lanes {
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.motion-view-switch {
+  flex-shrink: 0;
+}
+
+.motion-view-switch .seg-btn {
+  font-size: clamp(11.5px, 1.25vh, 13px);
+  line-height: 24px;
+  padding: 0 9px;
+}
+
+.motion-body {
   flex: 0 0 auto;
-  height: 50vh;
+  height: clamp(336px, 46vh, 476px);
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: var(--surface-alt);
+}
+
+html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .motion-body {
+  grid-template-columns: minmax(0, 1fr) clamp(310px, 30vw, 415px);
+}
+
+.lanes {
+  flex: 1 1 auto;
+  height: 100%;
   min-height: 0;
   display: grid;
   grid-template-rows: repeat(4, minmax(0, 1fr));
   padding: clamp(8px, 1vh, 12px) 16px clamp(10px, 1.1vh, 14px);
   gap: clamp(6px, 0.85vh, 10px);
   background: var(--surface-alt);
+}
+
+html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lanes {
+  padding-right: 12px;
 }
 
 .lane {
@@ -1218,6 +1253,301 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(370px, 33vw, 490px);
   gap: 10px;
+}
+
+html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-track-unit {
+  grid-template-columns: 1fr;
+}
+
+html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-telemetry-split {
+  display: none;
+}
+
+#motionSection[data-motion-view="detailed"] .motion-scenarios-pane,
+#motionSection[data-motion-view="detailed"] .lane-sim-tag {
+  display: none;
+}
+
+/* Live compact status tag anchored top-right inside each canvas (Simplified mode only) */
+.lane-sim-tag {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  font-size: clamp(10.5px, 1.15vh, 12px);
+  line-height: 22px;
+  font-weight: 750;
+  padding: 1px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+
+.lane-sim-tag.good {
+  background: rgba(6, 78, 59, 0.86);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  color: #6ee7b7;
+}
+
+.lane-sim-tag.warn {
+  background: rgba(127, 29, 29, 0.88);
+  border: 1px solid rgba(248, 113, 113, 0.52);
+  color: #fca5a5;
+}
+
+.lane-sim-tag.judder {
+  background: rgba(120, 53, 15, 0.88);
+  border: 1px solid rgba(251, 191, 36, 0.52);
+  color: #fde68a;
+}
+
+.lane-sim-tag.interp {
+  background: rgba(76, 29, 149, 0.86);
+  border: 1px solid rgba(167, 139, 250, 0.52);
+  color: #ddd6fe;
+}
+
+/* Right-hand Load & Stability Scenarios pane (Simplified view) */
+.motion-scenarios-pane {
+  height: 100%;
+  min-height: 0;
+  padding: clamp(8px, 1vh, 12px) 16px clamp(10px, 1.1vh, 14px) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.motion-scenarios-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px;
+}
+
+.motion-scenarios-eyebrow {
+  font-size: 10.5px;
+  line-height: 16px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.motion-scenarios-hint {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-dim);
+  font-weight: 550;
+}
+
+.motion-scenarios-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.motion-scenario-btn {
+  appearance: none;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.12s ease;
+}
+
+.motion-scenario-btn:hover {
+  border-color: rgba(15, 23, 42, 0.28);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.ms-row-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.ms-idx {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.ms-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: clamp(12px, 1.3vh, 13.5px);
+  line-height: 1.2;
+  font-weight: 750;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ms-load {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  line-height: 17px;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+}
+
+.ms-summary {
+  padding-left: 25px;
+  font-size: clamp(10.5px, 1.15vh, 12px);
+  line-height: 1.25;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.motion-scenario-btn.active[data-tier="low"] {
+  background: #ecfdf5;
+  border-color: rgba(5, 150, 105, 0.55);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.16);
+}
+.motion-scenario-btn.active[data-tier="low"] .ms-idx {
+  background: #059669;
+  color: #ffffff;
+}
+.motion-scenario-btn.active[data-tier="low"] .ms-load {
+  background: rgba(5, 150, 105, 0.14);
+  color: #047857;
+}
+
+.motion-scenario-btn.active[data-tier="mid"] {
+  background: #fffbeb;
+  border-color: rgba(217, 119, 6, 0.55);
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.16);
+}
+.motion-scenario-btn.active[data-tier="mid"] .ms-idx {
+  background: #d97706;
+  color: #ffffff;
+}
+.motion-scenario-btn.active[data-tier="mid"] .ms-load {
+  background: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+}
+
+.motion-scenario-btn.active[data-tier="warn"] {
+  background: #fff7ed;
+  border-color: rgba(234, 88, 12, 0.58);
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.16);
+}
+.motion-scenario-btn.active[data-tier="warn"] .ms-idx {
+  background: #ea580c;
+  color: #ffffff;
+}
+.motion-scenario-btn.active[data-tier="warn"] .ms-load {
+  background: rgba(234, 88, 12, 0.15);
+  color: #c2410c;
+}
+
+.motion-scenario-btn.active[data-tier="high"] {
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, 0.58);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.16);
+}
+.motion-scenario-btn.active[data-tier="high"] .ms-idx {
+  background: #dc2626;
+  color: #ffffff;
+}
+.motion-scenario-btn.active[data-tier="high"] .ms-load {
+  background: rgba(220, 38, 38, 0.15);
+  color: #b91c1c;
+}
+
+.motion-scenario-btn.active .ms-summary {
+  color: var(--text-muted);
+  font-weight: 550;
+}
+
+/* Mobile-only scenario pill row hidden on desktop/tablet */
+.motion-mob-scenarios {
+  display: none;
+}
+
+/* Motion bottom footer right group + quick 1–5 buttons in Detailed view */
+.motion-footer-right {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.motion-footer-btns {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+#motionSection[data-motion-view="detailed"] .motion-footer-btns {
+  display: inline-flex;
+}
+
+.mf-btn {
+  appearance: none;
+  width: 26px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.mf-btn:hover {
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.mf-btn.active {
+  background: var(--text);
+  color: #ffffff;
 }
 
 .lane-canvas-wrap {
@@ -1437,6 +1767,22 @@ h2 {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sim-area.is-blast-locked {
+  border-color: rgba(5, 150, 105, 0.72);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.24), var(--shadow-card);
+}
+
+.sim-area.is-blast-stutter {
+  border-color: rgba(220, 38, 38, 0.78);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.28), var(--shadow-card);
+}
+
+.sim-area.is-blast-interp {
+  border-color: rgba(124, 58, 237, 0.65);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.24), var(--shadow-card);
 }
 
 .sim-area-head {
@@ -3728,8 +4074,30 @@ html.is-blind-test .top-bar-shell {
 html.is-blind-test .notice-host,
 html.is-blind-test .cookie-banner,
 html.is-blind-test .stage-slide:not(#motionSection),
-html.is-blind-test .motion-card .card-head {
-  display: none;
+html.is-blind-test .motion-card .card-head,
+html.is-blind-test .motion-scenarios-pane,
+html.is-blind-test .motion-mob-scenarios,
+html.is-blind-test .motion-footer-card,
+html.is-blind-test .lane-sim-tag {
+  display: none !important;
+}
+
+html.is-blind-test .motion-body {
+  grid-template-columns: 1fr !important;
+  height: auto !important;
+}
+
+html.is-blind-test.is-blind-revealed .lanes {
+  height: 50vh;
+  padding: clamp(8px, 1vh, 12px) 16px clamp(10px, 1.1vh, 14px);
+}
+
+html.is-blind-test.is-blind-revealed .lane-track-unit {
+  grid-template-columns: minmax(0, 1fr) clamp(370px, 33vw, 490px);
+}
+
+html.is-blind-test.is-blind-revealed .lane-telemetry-split {
+  display: grid;
 }
 
 html.is-blind-test .blind-head {
@@ -3952,6 +4320,28 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
     font-size: 12px;
     padding: 0 7px;
     gap: 4px;
+  }
+
+  /* Motion section tablet adjustments */
+  #motionSection .card-head {
+    padding: 8px 14px;
+    gap: 8px;
+  }
+
+  #motionSection .card-head h2 {
+    font-size: 16.5px;
+  }
+
+  #motionSection[data-motion-view="simplified"] .motion-body {
+    grid-template-columns: minmax(0, 1fr) 292px;
+  }
+
+  #motionSection .motion-scenarios-pane {
+    padding-right: 12px;
+  }
+
+  #motionSection .motion-scenario-btn {
+    padding: 5px 8px;
   }
 
   /* Latency footer: Option 3 asymmetric 2fr / 1fr 3-row grid (zero truncation) */
@@ -4381,15 +4771,59 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
   #motionSection .motion-stack {
     justify-content: flex-start;
     min-height: 0;
+    gap: 7px;
   }
 
   #motionSection .motion-card {
     flex: 1 1 auto;
+    min-height: 0;
   }
 
   .motion-card .card-head {
-    padding: 9px 12px;
-    gap: 8px;
+    padding: 8px 12px;
+    gap: 7px;
+  }
+
+  .motion-card .card-title-row {
+    width: 100%;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .motion-card .card-title-group {
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .motion-card .card-title-group .view-kicker {
+    font-size: 11px;
+    line-height: 22px;
+    padding: 0 6px;
+  }
+
+  .motion-card .card-head h2 {
+    font-size: 14px;
+    line-height: 22px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .motion-view-switch .seg-btn {
+    font-size: 11px;
+    line-height: 22px;
+    padding: 0 7px;
+  }
+
+  .motion-body {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    grid-template-columns: 1fr !important;
+  }
+
+  .motion-scenarios-pane {
+    display: none !important;
   }
 
   .motion-card .view-controls {
@@ -4550,6 +4984,189 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
     contain: size;
     width: 100%;
     height: 100%;
+  }
+
+  /* Mobile Motion Simplified view: hide 4 charts to give taller canvases + mobile scenarios + footer */
+  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lanes {
+    padding: 7px 10px 8px;
+    gap: 6px;
+  }
+
+  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-track-unit {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(60px, 1fr);
+    gap: 3px 8px;
+  }
+
+  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .ft-top,
+  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .ft-chart-card {
+    display: none;
+  }
+
+  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-sim-tag {
+    position: static;
+    top: auto;
+    right: auto;
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: end;
+    align-self: center;
+    font-size: 9.5px;
+    line-height: 16px;
+    padding: 0 6px;
+    border-radius: 4px;
+  }
+
+  #motionSection[data-motion-view="simplified"] .lane-sim-tag.good {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #047857;
+  }
+
+  #motionSection[data-motion-view="simplified"] .lane-sim-tag.warn {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+  }
+
+  #motionSection[data-motion-view="simplified"] .lane-sim-tag.judder {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #b45309;
+  }
+
+  #motionSection[data-motion-view="simplified"] .lane-sim-tag.interp {
+    background: #f5f3ff;
+    border-color: #ddd6fe;
+    color: #6d28d9;
+  }
+
+  /* Mobile 5-pill scenario strip (Simplified view) */
+  #motionSection[data-motion-view="simplified"] .motion-mob-scenarios {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+  }
+
+  .mob-scen-btn {
+    appearance: none;
+    padding: 0 3px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  }
+
+  .mob-scen-btn.active {
+    background: var(--text);
+    border-color: var(--text);
+    color: #ffffff;
+  }
+
+  /* Mobile Motion footer: matches Simulation 2-row compact footer in Simplified view */
+  #motionSection .motion-footer-card {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 3px 8px;
+    padding: 6px 10px 6px 13px;
+    border-radius: 12px;
+  }
+
+  #motionSection .motion-footer-card .sim-footer-left {
+    grid-row: 1;
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 0;
+    border-right: none;
+    min-width: 0;
+  }
+
+  #motionSection .motion-footer-card .sim-footer-badge {
+    font-size: 9px;
+    line-height: 16px;
+    padding: 1px 6px;
+    gap: 4px;
+  }
+
+  #motionSection .motion-footer-card .sim-pulse-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  #motionSection .motion-footer-card .sim-footer-title-wrap {
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+  }
+
+  #motionSection .motion-footer-card .sim-footer-title {
+    font-size: 11.5px;
+    line-height: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #motionSection .motion-footer-card .sim-meter {
+    display: none;
+  }
+
+  #motionSection .motion-footer-right {
+    grid-row: 1;
+    grid-column: 2;
+    gap: 5px;
+  }
+
+  #motionSection .motion-footer-card .sim-impact-pill {
+    font-size: 9px;
+    line-height: 16px;
+    padding: 1px 6px;
+    border-radius: 5px;
+  }
+
+  #motionSection .motion-footer-card .sim-footer-desc {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    font-size: 10.5px;
+    line-height: 1.28;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Mobile Detailed view: condense footer to single compact row with 1–5 quick buttons */
+  #motionSection[data-motion-view="detailed"] .motion-footer-card {
+    grid-template-rows: auto;
+    padding: 5px 8px 5px 12px;
+  }
+
+  #motionSection[data-motion-view="detailed"] .motion-footer-card .sim-footer-desc,
+  #motionSection[data-motion-view="detailed"] .motion-footer-card .sim-impact-pill {
+    display: none;
+  }
+
+  #motionSection[data-motion-view="detailed"] .mf-btn {
+    width: 24px;
+    height: 22px;
+    font-size: 11px;
   }
 
   /* Mobile Simulation section: 50% 2x2 canvases / 40% interactive curve / 10% 2-row description */
@@ -5439,6 +6056,32 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
     line-height: 18px;
     font-weight: 700;
     color: var(--text-dim);
+  }
+
+  html.is-blind-test.is-blind-revealed .lanes {
+    height: auto;
+    padding: 7px 10px 8px;
+    gap: 7px;
+  }
+
+  html.is-blind-test.is-blind-revealed .lane-track-unit {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(62px, 63fr) minmax(34px, 37fr);
+    gap: 3px 8px;
+  }
+
+  html.is-blind-test.is-blind-revealed .lane-telemetry-split {
+    display: contents;
+  }
+
+  html.is-blind-test.is-blind-revealed .ft-top,
+  html.is-blind-test.is-blind-revealed .ft-chart-card {
+    display: flex;
+  }
+
+  html.is-blind-test.is-blind-revealed .lane-badge {
+    grid-column: 1;
+    width: auto;
   }
 
   html.is-blind-test.is-blind-revealed .lane.is-blind-correct .ft-top,

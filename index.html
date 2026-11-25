@@ -123,12 +123,12 @@
     html.is-intro-replay .pipe-card,html.is-intro-replay .notice-host,html.is-intro-replay .stage-slide:not(#pipelineSection){display:none}
     html.is-intro-replay .top-chrome,html.is-intro-replay .rail-nav{opacity:0;visibility:hidden;pointer-events:none}
     html.is-blind-test .blind-head{display:flex}
-    html.is-blind-test .motion-card .card-head,html.is-blind-test .notice-host,html.is-blind-test .cookie-banner,html.is-blind-test .stage-slide:not(#motionSection),html.is-blind-test:not(.is-blind-revealed) .lane-telemetry-split{display:none}
+    html.is-blind-test .motion-card .card-head,html.is-blind-test .motion-scenarios-pane,html.is-blind-test .motion-mob-scenarios,html.is-blind-test .motion-footer-card,html.is-blind-test .lane-sim-tag,html.is-blind-test .notice-host,html.is-blind-test .cookie-banner,html.is-blind-test .stage-slide:not(#motionSection),html.is-blind-test:not(.is-blind-revealed) .lane-telemetry-split{display:none}
     html.is-blind-test .top-chrome,html.is-blind-test .rail-nav{opacity:0;visibility:hidden;pointer-events:none}
-    @media (max-width:820px){:root{--stage-w:calc(100vw - 32px)}.top-chrome{top:auto;bottom:max(10px,env(safe-area-inset-bottom))}.step-nav,.rail-nav,.pipe-card,.lane-meta{display:none}.pipe-intro-card{display:flex}.control-pane{max-height:0;padding:0 10px;opacity:0;overflow:hidden;pointer-events:none}.stage-slide{padding:16px 0 24px}}
+    @media (max-width:820px){:root{--stage-w:calc(100vw - 32px)}.top-chrome{top:auto;bottom:max(10px,env(safe-area-inset-bottom))}.step-nav,.rail-nav,.pipe-card,.lane-meta,.motion-scenarios-pane{display:none}.pipe-intro-card{display:flex}.control-pane{max-height:0;padding:0 10px;opacity:0;overflow:hidden;pointer-events:none}.stage-slide{padding:16px 0 24px}}
   </style>
-  <link rel="preload" href="styles.css?v=31" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="styles.css?v=31" /></noscript>
+  <link rel="preload" href="styles.css?v=34" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="styles.css?v=34" /></noscript>
 </head>
 <body>
   <!-- FLOATING ANCHORED TOP BAR -->
@@ -276,7 +276,7 @@
   <!-- FULL-VIEWPORT CENTERED STAGE -->
   <main class="stage-scroller" id="stageScroller">
     <!-- VIEW 1: MOTION & FRAME PACING -->
-    <section class="stage-slide is-active" id="motionSection" data-slide-index="0">
+    <section class="stage-slide is-active" id="motionSection" data-slide-index="0" data-motion-view="simplified">
       <div class="slide-inner motion-stack">
         <div class="stage-card motion-card">
           <!-- BLIND TEST CHALLENGE HEADER (VISIBLE ONLY IN html.is-blind-test) -->
@@ -297,9 +297,16 @@
           </div>
 
           <div class="card-head">
-            <div class="card-title-group">
-              <span class="view-kicker">01</span>
-              <h2>Motion &amp; Frame Pacing</h2>
+            <div class="card-title-row">
+              <div class="card-title-group">
+                <span class="view-kicker">01</span>
+                <h2>Motion &amp; Frame Pacing</h2>
+              </div>
+
+              <div class="segmented motion-view-switch" role="group" aria-label="Motion view detail level">
+                <button class="seg-btn active" type="button" data-motion-view-btn="simplified" id="btnMotionSimple">Simplified</button>
+                <button class="seg-btn" type="button" data-motion-view-btn="detailed" id="btnMotionDetailed">Detailed</button>
+              </div>
             </div>
 
             <div class="view-controls">
@@ -323,102 +330,197 @@
             </div>
           </div>
 
-          <div class="lanes" id="lanesContainer">
-            <article class="lane" data-mode="30">
-              <div class="lane-track-unit">
-                <div class="lane-canvas-wrap">
-                  <div class="lane-badge">
-                    <span class="swatch swatch-30"></span>
-                    <h3>30 FPS</h3>
+          <div class="motion-body">
+            <div class="lanes" id="lanesContainer">
+              <article class="lane" data-mode="30">
+                <div class="lane-track-unit">
+                  <div class="lane-canvas-wrap">
+                    <div class="lane-badge">
+                      <span class="swatch swatch-30"></span>
+                      <h3>30 FPS</h3>
+                    </div>
+                    <span class="lane-sim-tag mono good" id="lane-tag-30">Stable</span>
+                    <canvas class="lane-canvas" id="canvas-30" width="900" height="128"></canvas>
                   </div>
-                  <canvas class="lane-canvas" id="canvas-30" width="900" height="128"></canvas>
-                </div>
-                <div class="lane-telemetry-split">
-                  <div class="ft-info-card">
-                    <div class="lane-meta" id="metrics-30"></div>
-                    <div class="ft-top">
-                      <span class="ft-note" id="ft-cap-30">Even 2-2-2 cadence</span>
-                      <span class="mono" id="ft-val-30">33.3 ms</span>
+                  <div class="lane-telemetry-split">
+                    <div class="ft-info-card">
+                      <div class="lane-meta" id="metrics-30"></div>
+                      <div class="ft-top">
+                        <span class="ft-note" id="ft-cap-30">Even 2-2-2 cadence</span>
+                        <span class="mono" id="ft-val-30">33.3 ms</span>
+                      </div>
+                    </div>
+                    <div class="ft-chart-card">
+                      <canvas class="ft-canvas" id="ft-30" width="180" height="96"></canvas>
                     </div>
                   </div>
-                  <div class="ft-chart-card">
-                    <canvas class="ft-canvas" id="ft-30" width="180" height="96"></canvas>
-                  </div>
                 </div>
-              </div>
-            </article>
+              </article>
 
-            <article class="lane" data-mode="40">
-              <div class="lane-track-unit">
-                <div class="lane-canvas-wrap">
-                  <div class="lane-badge">
-                    <span class="swatch swatch-40"></span>
-                    <h3>40 FPS</h3>
+              <article class="lane" data-mode="40">
+                <div class="lane-track-unit">
+                  <div class="lane-canvas-wrap">
+                    <div class="lane-badge">
+                      <span class="swatch swatch-40"></span>
+                      <h3>40 FPS</h3>
+                    </div>
+                    <span class="lane-sim-tag mono warn" id="lane-tag-40">3:2 Judder</span>
+                    <canvas class="lane-canvas" id="canvas-40" width="900" height="128"></canvas>
                   </div>
-                  <canvas class="lane-canvas" id="canvas-40" width="900" height="128"></canvas>
-                </div>
-                <div class="lane-telemetry-split">
-                  <div class="ft-info-card">
-                    <div class="lane-meta" id="metrics-40"></div>
-                    <div class="ft-top">
-                      <span class="ft-note" id="ft-cap-40">3:2 judder on 60 Hz</span>
-                      <span class="mono" id="ft-val-40">16.7 / 33.3 ms</span>
+                  <div class="lane-telemetry-split">
+                    <div class="ft-info-card">
+                      <div class="lane-meta" id="metrics-40"></div>
+                      <div class="ft-top">
+                        <span class="ft-note" id="ft-cap-40">3:2 judder on 60 Hz</span>
+                        <span class="mono" id="ft-val-40">16.7 / 33.3 ms</span>
+                      </div>
+                    </div>
+                    <div class="ft-chart-card">
+                      <canvas class="ft-canvas" id="ft-40" width="180" height="96"></canvas>
                     </div>
                   </div>
-                  <div class="ft-chart-card">
-                    <canvas class="ft-canvas" id="ft-40" width="180" height="96"></canvas>
-                  </div>
                 </div>
-              </div>
-            </article>
+              </article>
 
-            <article class="lane" data-mode="interp">
-              <div class="lane-track-unit">
-                <div class="lane-canvas-wrap">
-                  <div class="lane-badge">
-                    <span class="swatch swatch-interp"></span>
-                    <h3>30 FPS + Interpolation</h3>
+              <article class="lane" data-mode="interp">
+                <div class="lane-track-unit">
+                  <div class="lane-canvas-wrap">
+                    <div class="lane-badge">
+                      <span class="swatch swatch-interp"></span>
+                      <h3>30 FPS + Interpolation</h3>
+                    </div>
+                    <span class="lane-sim-tag mono interp" id="lane-tag-interp">+67 ms Lag</span>
+                    <canvas class="lane-canvas" id="canvas-interp" width="900" height="128"></canvas>
                   </div>
-                  <canvas class="lane-canvas" id="canvas-interp" width="900" height="128"></canvas>
-                </div>
-                <div class="lane-telemetry-split">
-                  <div class="ft-info-card">
-                    <div class="lane-meta" id="metrics-interp"></div>
-                    <div class="ft-top">
-                      <span class="ft-note" id="ft-cap-interp">60 Hz output, trails true time</span>
-                      <span class="mono" id="ft-val-interp">16.7 ms (+67 ms)</span>
+                  <div class="lane-telemetry-split">
+                    <div class="ft-info-card">
+                      <div class="lane-meta" id="metrics-interp"></div>
+                      <div class="ft-top">
+                        <span class="ft-note" id="ft-cap-interp">60 Hz output, trails true time</span>
+                        <span class="mono" id="ft-val-interp">16.7 ms (+67 ms)</span>
+                      </div>
+                    </div>
+                    <div class="ft-chart-card">
+                      <canvas class="ft-canvas" id="ft-interp" width="180" height="96"></canvas>
                     </div>
                   </div>
-                  <div class="ft-chart-card">
-                    <canvas class="ft-canvas" id="ft-interp" width="180" height="96"></canvas>
-                  </div>
                 </div>
-              </div>
-            </article>
+              </article>
 
-            <article class="lane" data-mode="60">
-              <div class="lane-track-unit">
-                <div class="lane-canvas-wrap">
-                  <div class="lane-badge">
-                    <span class="swatch swatch-60"></span>
-                    <h3>60 FPS</h3>
+              <article class="lane" data-mode="60">
+                <div class="lane-track-unit">
+                  <div class="lane-canvas-wrap">
+                    <div class="lane-badge">
+                      <span class="swatch swatch-60"></span>
+                      <h3>60 FPS</h3>
+                    </div>
+                    <span class="lane-sim-tag mono good" id="lane-tag-60">Stable</span>
+                    <canvas class="lane-canvas" id="canvas-60" width="900" height="128"></canvas>
                   </div>
-                  <canvas class="lane-canvas" id="canvas-60" width="900" height="128"></canvas>
-                </div>
-                <div class="lane-telemetry-split">
-                  <div class="ft-info-card">
-                    <div class="lane-meta" id="metrics-60"></div>
-                    <div class="ft-top">
-                      <span class="ft-note" id="ft-cap-60">Even 1-1-1 cadence</span>
-                      <span class="mono" id="ft-val-60">16.7 ms</span>
+                  <div class="lane-telemetry-split">
+                    <div class="ft-info-card">
+                      <div class="lane-meta" id="metrics-60"></div>
+                      <div class="ft-top">
+                        <span class="ft-note" id="ft-cap-60">Even 1-1-1 cadence</span>
+                        <span class="mono" id="ft-val-60">16.7 ms</span>
+                      </div>
+                    </div>
+                    <div class="ft-chart-card">
+                      <canvas class="ft-canvas" id="ft-60" width="180" height="96"></canvas>
                     </div>
                   </div>
-                  <div class="ft-chart-card">
-                    <canvas class="ft-canvas" id="ft-60" width="180" height="96"></canvas>
-                  </div>
                 </div>
+              </article>
+            </div>
+
+            <!-- RIGHT-HAND LOAD & STABILITY SCENARIOS PANE (SIMPLIFIED VIEW ON DESKTOP/TABLET) -->
+            <aside class="motion-scenarios-pane" id="motionScenariosPane" aria-label="Workload and stability scenarios">
+              <div class="motion-scenarios-head">
+                <span class="motion-scenarios-eyebrow mono">LOAD SCENARIOS</span>
+                <span class="motion-scenarios-hint">Click to test headroom</span>
               </div>
-            </article>
+              <div class="motion-scenarios-list" role="group" aria-label="Motion load scenarios">
+                <button class="motion-scenario-btn active" type="button" data-motion-scenario="1" data-tier="low">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">1</span>
+                    <span class="ms-title">All Stable</span>
+                    <span class="ms-load mono">14.0 ms</span>
+                  </div>
+                  <span class="ms-summary">30, 40 &amp; 60 within budget</span>
+                </button>
+                <button class="motion-scenario-btn" type="button" data-motion-scenario="2" data-tier="mid">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">2</span>
+                    <span class="ms-title">60 Hitches on Spikes</span>
+                    <span class="ms-load mono">Spikes</span>
+                  </div>
+                  <span class="ms-summary">30 absorbs spikes · 60 stutters</span>
+                </button>
+                <button class="motion-scenario-btn" type="button" data-motion-scenario="3" data-tier="mid">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">3</span>
+                    <span class="ms-title">60 FPS Unstable</span>
+                    <span class="ms-load mono">21.5 ms</span>
+                  </div>
+                  <span class="ms-summary">30 &amp; 40 stable · 60 drops</span>
+                </button>
+                <button class="motion-scenario-btn" type="button" data-motion-scenario="4" data-tier="warn">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">4</span>
+                    <span class="ms-title">Only 30 Absorbs Load</span>
+                    <span class="ms-load mono">29.0 ms</span>
+                  </div>
+                  <span class="ms-summary">30 locked · 40 &amp; 60 overwhelmed</span>
+                </button>
+                <button class="motion-scenario-btn" type="button" data-motion-scenario="5" data-tier="high">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">5</span>
+                    <span class="ms-title">All Overloaded</span>
+                    <span class="ms-load mono">38.8 ms</span>
+                  </div>
+                  <span class="ms-summary">Exceeds 33.3 ms · all drop</span>
+                </button>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <!-- COMPACT MOBILE SCENARIO BAR (<= 820px SIMPLIFIED VIEW) -->
+        <div class="motion-mob-scenarios" role="group" aria-label="Mobile load scenarios">
+          <button class="mob-scen-btn active" type="button" data-motion-scenario="1">1 Stable</button>
+          <button class="mob-scen-btn" type="button" data-motion-scenario="2">2 Spikes</button>
+          <button class="mob-scen-btn" type="button" data-motion-scenario="3">3 60 Drops</button>
+          <button class="mob-scen-btn" type="button" data-motion-scenario="4">4 Only 30</button>
+          <button class="mob-scen-btn" type="button" data-motion-scenario="5">5 Overload</button>
+        </div>
+
+        <!-- FLOATING MOTION SCENARIO EXPLANATION FOOTER (MIRRORS 02 SIMULATION) -->
+        <div class="sim-footer-card motion-footer-card" id="motionFooterCard" data-tier="low" aria-live="polite">
+          <div class="sim-footer-accent" aria-hidden="true"></div>
+          <div class="sim-footer-left">
+            <span class="sim-footer-badge mono" id="motionScenarioBadge">
+              <span class="sim-pulse-dot" aria-hidden="true"></span>
+              <span id="motionScenarioNum">SCENARIO 1</span>
+            </span>
+            <div class="sim-footer-title-wrap">
+              <span class="sim-footer-title" id="motionScenarioTitle">All Stable</span>
+              <div class="sim-meter" id="motionMeter" aria-hidden="true">
+                <span class="is-lit"></span><span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+          <p class="sim-footer-desc" id="motionScenarioDesc">
+            At 14.0 ms per frame, workload sits safely inside the 16.7 ms (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30 FPS) budgets—so every configuration holds 0% frame drops and higher frame rates win purely on clarity and lower lag.
+          </p>
+          <div class="motion-footer-right">
+            <div class="motion-footer-btns" role="group" aria-label="Quick scenario selector">
+              <button class="mf-btn active" type="button" data-motion-scenario="1" title="Scenario 1: All Stable">1</button>
+              <button class="mf-btn" type="button" data-motion-scenario="2" title="Scenario 2: 60 Hitches on Spikes">2</button>
+              <button class="mf-btn" type="button" data-motion-scenario="3" title="Scenario 3: 60 FPS Unstable">3</button>
+              <button class="mf-btn" type="button" data-motion-scenario="4" title="Scenario 4: Only 30 Absorbs Load">4</button>
+              <button class="mf-btn" type="button" data-motion-scenario="5" title="Scenario 5: All Overloaded">5</button>
+            </div>
+            <span class="sim-impact-pill mono" id="motionImpactTag">All Targets Locked</span>
           </div>
         </div>
       </div>
@@ -994,7 +1096,7 @@
     </div>
   </noscript>
 
-  <script defer src="app.js?v=30"></script>
+  <script defer src="app.js?v=36"></script>
   <script defer src="ui.js?v=27"></script>
 </body>
 </html>
