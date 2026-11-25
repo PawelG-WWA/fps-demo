@@ -11,8 +11,7 @@
   const pipelineIdx = slides.findIndex((s) => s.id === 'pipelineSection');
 
   function isFirstVisitLocked() {
-    const root = document.documentElement;
-    return root.classList.contains('is-first-visit') || root.classList.contains('is-intro-replay');
+    return document.documentElement.classList.contains('is-intro-replay');
   }
 
   let activeIndex = (isFirstVisitLocked() && pipelineIdx >= 0) ? pipelineIdx : 0;

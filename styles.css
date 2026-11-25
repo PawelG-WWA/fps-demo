@@ -3046,12 +3046,10 @@ h2 {
   overflow: hidden;
 }
 
-html.is-first-visit .pipe-intro-card,
 html.is-intro-replay .pipe-intro-card {
   display: flex;
 }
 
-html.is-first-visit .pipe-card,
 html.is-intro-replay .pipe-card {
   display: none;
 }
@@ -3351,8 +3349,7 @@ html.is-intro-replay .intro-exit-btn {
   animation: introCopySwap 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* First-visit & Replay global chrome hiding */
-html.is-first-visit .top-chrome,
+/* Replay global chrome hiding */
 html.is-intro-replay .top-chrome {
   opacity: 0;
   visibility: hidden;
@@ -3360,12 +3357,10 @@ html.is-intro-replay .top-chrome {
   transform: translateY(-20px);
 }
 
-html.is-first-visit .top-bar-shell,
 html.is-intro-replay .top-bar-shell {
   pointer-events: none;
 }
 
-html.is-first-visit .rail-nav,
 html.is-intro-replay .rail-nav {
   opacity: 0;
   visibility: hidden;
@@ -3373,17 +3368,14 @@ html.is-intro-replay .rail-nav {
   transform: translateY(-50%) translateX(20px);
 }
 
-html.is-first-visit .notice-host,
 html.is-intro-replay .notice-host {
   display: none;
 }
 
-html.is-first-visit .stage-slide:not(#pipelineSection),
 html.is-intro-replay .stage-slide:not(#pipelineSection) {
   display: none;
 }
 
-html.is-first-visit #pipelineSection,
 html.is-intro-replay #pipelineSection {
   padding: 28px 0;
 }
@@ -3895,7 +3887,6 @@ html.is-intro-revealed #motionSection .slide-inner {
     color: #ffffff;
   }
 
-  html.is-first-visit .top-chrome,
   html.is-intro-replay .top-chrome {
     transform: translateY(20px);
   }
@@ -3926,7 +3917,6 @@ html.is-intro-revealed #motionSection .slide-inner {
     border-radius: 14px;
   }
 
-  html.is-first-visit .cookie-banner,
   html.is-intro-replay .cookie-banner {
     bottom: max(16px, env(safe-area-inset-bottom));
   }
@@ -4040,7 +4030,7 @@ html.is-intro-revealed #motionSection .slide-inner {
   .lane-track-unit {
     position: relative;
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto minmax(62px, 1fr) auto auto;
+    grid-template-rows: auto minmax(62px, 63fr) minmax(34px, 37fr);
     gap: 3px 8px;
   }
 
@@ -4121,43 +4111,26 @@ html.is-intro-revealed #motionSection .slide-inner {
     box-shadow: 0 3px 10px rgba(15, 23, 42, 0.1);
   }
 
-  /* 4 separate feature squares in one horizontal row above the chart */
+  /* Hide the 4 small feature labels on mobile; split freed height 50/50 between canvas and live chart */
   .lane-meta {
+    display: none;
+  }
+
+  /* Full-width frame-time chart stretched by 50% of freed space */
+  .ft-chart-card {
     grid-row: 3;
     grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 1.22fr 0.76fr 1.08fr 0.94fr;
-    grid-template-rows: 1fr;
-    gap: 4px;
-    font-size: 9px;
-    line-height: 1.15;
-    letter-spacing: -0.025em;
-  }
-
-  .lane-meta .meta-item {
-    min-height: 23px;
-    padding: 2px 3px;
-    background: var(--surface);
-    border-radius: 7px;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
-  }
-
-  .lane-meta .meta-item.warn {
-    background: #fef2f2;
-  }
-
-  .lane-meta .meta-item.good {
-    background: #ecfdf5;
-  }
-
-  /* Compact full-width frame-time chart */
-  .ft-chart-card {
-    grid-row: 4;
-    grid-column: 1 / -1;
     width: 100%;
-    height: 34px;
+    height: 100%;
+    min-height: 34px;
     padding: 3px 6px;
     border-radius: 8px;
+  }
+
+  .ft-canvas {
+    contain: size;
+    width: 100%;
+    height: 100%;
   }
 
   /* Mobile Simulation section: 50% 2x2 canvases / 40% interactive curve / 10% 2-row description */
@@ -4546,27 +4519,25 @@ html.is-intro-revealed #motionSection .slide-inner {
     display: none;
   }
 
-  html:not(.is-first-visit):not(.is-intro-replay) #introScrollHint {
+  html:not(.is-intro-replay) #introScrollHint {
     display: none;
   }
 
-  html:not(.is-first-visit):not(.is-intro-replay) .intro-mob-nav {
+  html:not(.is-intro-replay) .intro-mob-nav {
     margin-left: auto;
   }
 
-  html:not(.is-first-visit):not(.is-intro-replay) #pipeIntroCard[data-stage="4"] #introMobNextBtn {
+  html:not(.is-intro-replay) #pipeIntroCard[data-stage="4"] #introMobNextBtn {
     opacity: 0.4;
     pointer-events: none;
     font-size: 0;
   }
 
-  html:not(.is-first-visit):not(.is-intro-replay) #pipeIntroCard[data-stage="4"] #introMobNextBtn::after {
+  html:not(.is-intro-replay) #pipeIntroCard[data-stage="4"] #introMobNextBtn::after {
     content: "Next →";
     font-size: 12.5px;
   }
 
-  html.is-first-visit,
-  html.is-first-visit body,
   html.is-intro-replay,
   html.is-intro-replay body {
     height: 100dvh;
@@ -4574,13 +4545,11 @@ html.is-intro-revealed #motionSection .slide-inner {
     overscroll-behavior: none;
   }
 
-  html.is-first-visit .stage-scroller,
   html.is-intro-replay .stage-scroller {
     height: 100dvh;
     overflow: hidden;
   }
 
-  html.is-first-visit #pipelineSection,
   html.is-intro-replay #pipelineSection {
     height: 100dvh;
     min-height: 100dvh;
@@ -4588,14 +4557,12 @@ html.is-intro-revealed #motionSection .slide-inner {
     align-items: center;
   }
 
-  html.is-first-visit #pipelineSection .slide-inner,
   html.is-intro-replay #pipelineSection .slide-inner {
     width: min(var(--stage-w), 520px);
     height: 100%;
     justify-content: center;
   }
 
-  html.is-first-visit .pipe-intro-card,
   html.is-intro-replay .pipe-intro-card {
     max-height: calc(100dvh - 32px);
     touch-action: none;

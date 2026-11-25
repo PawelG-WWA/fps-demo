@@ -2151,18 +2151,12 @@
 
   let pipeStage = 0;
   let pipeMode = '60';
-  const INTRO_COOKIE_NAME = 'fps_lab_pipeline_seen';
   let introCompleting = false;
   let lastIntroRenderedStage = -1;
   let introLastDir = 'up';
 
   function isIntroModeActive() {
-    const root = document.documentElement;
-    return root.classList.contains('is-first-visit') || root.classList.contains('is-intro-replay');
-  }
-
-  function setIntroCookie() {
-    document.cookie = `${INTRO_COOKIE_NAME}=1; path=/; max-age=31536000; SameSite=Lax`;
+    return document.documentElement.classList.contains('is-intro-replay');
   }
 
   function startPipelineIntroReplay() {
@@ -2179,17 +2173,13 @@
   function completeIntroPresentation() {
     const root = document.documentElement;
     if (introCompleting || !isIntroModeActive()) return;
-    const wasReplay = root.classList.contains('is-intro-replay');
     introCompleting = true;
-    if (!wasReplay) {
-      setIntroCookie();
-    }
 
-    // Gently vanish the Pipeline intro before revealing the target section
+    // Gently vanish the Pipeline intro replay before returning to Pipeline
     root.classList.add('is-intro-vanishing');
 
     setTimeout(() => {
-      root.classList.remove('is-first-visit', 'is-intro-replay', 'is-intro-vanishing');
+      root.classList.remove('is-intro-replay', 'is-intro-vanishing');
       root.classList.add('is-intro-revealed');
 
       pipeStage = 0;
@@ -2197,7 +2187,7 @@
       updatePipelineView();
 
       window.dispatchEvent(new CustomEvent('fpslab:intro-unlocked', {
-        detail: { target: wasReplay ? 'pipeline' : 'motion' }
+        detail: { target: 'pipeline' }
       }));
       syncVisibleSectionsNow();
       introCompleting = false;
