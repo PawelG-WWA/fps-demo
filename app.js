@@ -305,12 +305,19 @@
         dom.detectorNote.textContent =
           `Browser animation cadence: approximately ${state.detectedHz} Hz. Simulated 60 Hz and 120 Hz patterns can both play at normal speed.`;
         if (autoSelectDisplay) setDisplayHz(120);
+      } else if (state.detectedHz <= 45) {
+        dom.detectorNote.textContent =
+          `Browser animation cadence is throttled to ~${state.detectedHz} Hz (likely Chrome Energy Saver or OS Low Power Mode). Live 40/60 FPS motion will not look precise until power saving is disabled.`;
+        if (autoSelectDisplay) setDisplayHz(60);
       } else {
         dom.detectorNote.textContent =
           `Browser animation cadence: approximately ${state.detectedHz} Hz. Use 0.25× slow motion to inspect the simulated 120 Hz timing pattern.`;
         if (autoSelectDisplay) setDisplayHz(60);
       }
 
+      if (typeof updatePowerSaveNotice === 'function') {
+        updatePowerSaveNotice(state.detectedHz);
+      }
       updateSimBanner();
     }
 
@@ -340,7 +347,11 @@
     if (isSectionVisible('inputSection')) updateArenaStaticStats();
     if (isSectionVisible('timelineSection')) drawTimeline();
     if (isSectionVisible('pipelineSection')) updatePipelineView();
+    if (isSectionVisible('physicsSection') && typeof onPhysicsSettingChanged === 'function') {
+      onPhysicsSettingChanged(true);
+    }
     requestCanvasRedraw();
+    scheduleUrlSync();
   }
 
   function setSpeed(spd) {
@@ -349,6 +360,7 @@
     dom.btnSpeedSlow.classList.toggle('active', spd !== 1);
     updateSimBanner();
     requestCanvasRedraw();
+    scheduleUrlSync();
   }
 
   function updateLoadDisplay() {
@@ -392,7 +404,11 @@
     if (isSectionVisible('inputSection')) updateArenaStaticStats();
     if (isSectionVisible('timelineSection')) drawTimeline();
     if (isSectionVisible('pipelineSection')) updatePipelineView();
+    if (isSectionVisible('physicsSection') && typeof onPhysicsSettingChanged === 'function') {
+      onPhysicsSettingChanged(false);
+    }
     requestCanvasRedraw();
+    scheduleUrlSync();
   }
 
   function triggerExplode() {
@@ -1495,6 +1511,7 @@
     }
     dom.pauseBtn.classList.toggle('is-paused', state.paused);
     requestCanvasRedraw();
+    scheduleUrlSync();
   }
 
   dom.explodeBtn.addEventListener('click', () => {
@@ -1519,11 +1536,13 @@
   dom.toggleTruePos.addEventListener('change', (e) => {
     state.showTruePos = e.target.checked;
     requestCanvasRedraw();
+    scheduleUrlSync();
   });
 
   dom.toggleArtifacts.addEventListener('change', (e) => {
     state.showArtifacts = e.target.checked;
     requestCanvasRedraw();
+    scheduleUrlSync();
   });
 
   dom.pauseBtn.addEventListener('click', () => {
@@ -1536,6 +1555,7 @@
     state.panSpeed = v;
     dom.panSpeedLabel.textContent = `${v} px/s`;
     requestCanvasRedraw();
+    scheduleUrlSync();
   });
 
   syncRangeFill(dom.loadSlider);
@@ -1550,16 +1570,19 @@
       arena.shots = 0;
       arena.hits = 0;
       updateArenaStaticStats();
+      scheduleUrlSync();
     });
   });
 
   dom.toggleGhostCursor.addEventListener('change', (e) => {
     state.showGhostCursor = e.target.checked;
+    scheduleUrlSync();
   });
 
   dom.toggleHideOSCursor.addEventListener('change', (e) => {
     state.hideOSCursor = e.target.checked;
     dom.arenaCanvas.classList.toggle('hide-cursor', state.hideOSCursor);
+    scheduleUrlSync();
   });
 
   function recordPointer(clientX, clientY) {
@@ -2582,6 +2605,7 @@
     updateSimReadouts();
     drawExpCurve();
     requestCanvasRedraw();
+    scheduleUrlSync();
   }
 
   // Interactive swipe/drag along the exponential curve
@@ -3009,6 +3033,7 @@
     introLastDir = clamped < pipeStage ? 'down' : 'up';
     pipeStage = clamped;
     updatePipelineView();
+    scheduleUrlSync();
   }
 
   function stepPipeline(dir) {
@@ -3091,7 +3116,7 @@
   // ============================================================================
   // VIEWPORT VISIBILITY GATING (ONLY VISIBLE SCREEN DOES WORK)
   // ============================================================================
-  const SECTION_IDS = ['motionSection', 'simSection', 'inputSection', 'pipelineSection', 'timelineSection'];
+  const SECTION_IDS = ['motionSection', 'simSection', 'physicsSection', 'inputSection', 'pipelineSection', 'timelineSection'];
   const visibleSections = new Set();
 
   function isSectionVisible(id) {
@@ -3120,6 +3145,10 @@
       resyncSimArenas();
       updateSimReadouts();
       drawExpCurve();
+      requestCanvasRedraw();
+    } else if (id === 'physicsSection') {
+      if (typeof resetPhysicsChambers === 'function') resetPhysicsChambers();
+      if (typeof updatePhysicsReadouts === 'function') updatePhysicsReadouts();
       requestCanvasRedraw();
     } else if (id === 'inputSection') {
       arena.lastDispTick = -1;
@@ -3227,6 +3256,10 @@
     const dtReal = Math.min(now - lastRafTime, 50);
     lastRafTime = now;
 
+    if (typeof observeLivePowerSaveFrame === 'function') {
+      observeLivePowerSaveFrame(dtReal);
+    }
+
     const vsyncDt = getQuantizedVsyncDt(dtReal);
     state.tRealSynced += vsyncDt;
 
@@ -3243,6 +3276,7 @@
 
     const motionVisible = isSectionVisible('motionSection');
     const simVisible = isSectionVisible('simSection');
+    const physicsVisible = isSectionVisible('physicsSection');
     const inputVisible = isSectionVisible('inputSection');
     const pipelineVisible = isSectionVisible('pipelineSection');
     const timelineVisible = isSectionVisible('timelineSection');
@@ -3250,6 +3284,9 @@
     if (!state.paused) {
       if (motionVisible) stepLaneSimulators();
       if (simVisible) stepSimArenas();
+      if (physicsVisible && typeof stepPhysicsChambers === 'function') {
+        stepPhysicsChambers(vsyncDt * state.speed);
+      }
     }
 
     const isSpiking = state.simSpikeMs > 0.1 || state.realSpikeMs > 0.1;
@@ -3281,6 +3318,10 @@
       });
     }
 
+    if (physicsVisible && shouldDrawSimCanvases && typeof drawPhysicsChambers === 'function') {
+      drawPhysicsChambers();
+    }
+
     needsPausedRedraw = false;
 
     const simBlasting = simVisible && simNpcBlasts.size > 0;
@@ -3301,6 +3342,7 @@
         if (motionAutoSpiking) updateLoadDisplay();
       }
       if (simVisible) updateSimReadouts();
+      if (physicsVisible && typeof updatePhysicsReadouts === 'function') updatePhysicsReadouts();
     }
 
     if (inputVisible) {
@@ -3312,7 +3354,7 @@
       inputVisible ||
       isSpiking ||
       wasSpiking ||
-      (!state.paused && (motionVisible || simVisible));
+      (!state.paused && (motionVisible || simVisible || physicsVisible));
 
     if (keepRunning) {
       rafId = requestAnimationFrame(loop);
@@ -3459,6 +3501,7 @@
     invalidateAllCanvases();
     updateLaneReadouts();
     requestCanvasRedraw();
+    scheduleUrlSync();
   }
 
   motionScenarioBtns.forEach((btn) => {
@@ -3673,6 +3716,7 @@
     invalidateAllCanvases();
     updateLaneReadouts();
     requestCanvasRedraw();
+    scheduleUrlSync();
   }
 
   function exitBlindTest() {
@@ -3918,6 +3962,1354 @@
   });
 
   // ============================================================================
+  // SECTION 3 (SIMULATION): CONSTANT 30 HZ PHYSICS STEP ACROSS ENVIRONMENTS
+  // ============================================================================
+  const PHYS_FIXED_DT = 1 / 30; // 33.333 ms constant simulation step
+  const PHYS_WORLD_W = 1000;
+  const PHYS_WORLD_H = 260;
+  const PHYS_START_X = 190;
+  const PHYS_LEDGE_Y = 186;
+  const PHYS_LEDGE_X1 = 532;
+  const PHYS_LEDGE_X2 = 884;
+  const PHYS_SLAB_H = 12;
+  const PHYS_CYCLE_PAUSE_SEC = 0.58;
+
+  const PHYS_ENVIRONMENTS = [
+    {
+      id: 1,
+      tier: 'low',
+      swatch: 'swatch-60',
+      pillClass: 'good',
+      title: 'Decoupled 30 Hz + Smooth Blending',
+      shortTitle: 'Decoupled 30 Hz',
+      impact: 'Same landing every time',
+      desc: 'Both boxes follow the exact same dotted yellow path and land on the same spot every jump. Try dragging Load or pressing Load Spike—even when frame rate drops, the jump stays rock-solid and smooth.',
+      more: {
+        look: 'Both green landing dots stack on the exact same spot every cycle, and the ball glides smoothly between the green step ticks along the bottom strip.',
+        why: 'The game runs physics on its own steady 30-times-per-second clock, separate from how fast the screen draws. Between updates, the renderer blends the previous and next positions so motion stays fluid on 60 Hz and 120 Hz screens.',
+        takeaway: 'Every player gets identical, predictable physics on any hardware. The only trade-off is a tiny visual delay (one physics step) needed to blend between positions.'
+      }
+    },
+    {
+      id: 2,
+      tier: 'mid',
+      swatch: 'swatch-40',
+      pillClass: 'mid',
+      title: '30 Hz on 60/120 Hz · No Blending',
+      shortTitle: '60/120 Hz · No Interp',
+      impact: 'Exact landing · Choppy motion',
+      desc: 'The bottom ball still lands on the exact same spot every time, just like the top one—but watch it move: it stutters in small steps instead of gliding smoothly.',
+      more: {
+        look: 'Compare the motion trail in the bottom box against the top box (try 0.25× Speed to see it clearly). The ball freezes in place for multiple screen refreshes before snapping forward.',
+        why: 'Physics still ticks steadily 30 times a second, so the jump never drifts. Without blending between updates, a 60 Hz screen shows every physics position twice in a row (and 120 Hz shows it four times)—and on monitors like 144 Hz, 30 does not divide evenly, creating uneven holds.',
+        takeaway: 'Gameplay stays fair and identical across devices, but camera and character movement look choppy on high-refresh monitors unless the engine blends between ticks.'
+      }
+    },
+    {
+      id: 3,
+      tier: 'warn',
+      swatch: 'swatch-40',
+      pillClass: 'warn',
+      title: 'Variable Frame Step',
+      shortTitle: 'Variable Frame Step',
+      impact: 'Jumps overshoot or miss',
+      desc: 'Watch the landing dots scatter in the bottom box: some jumps overshoot the yellow target line, while others fall short and drop straight into the red gap.',
+      more: {
+        look: 'The top box lands on the yellow target every single jump. In the bottom box, faster frames make the ball overshoot, while frame hitches make it clip the edge and fall into the pit (red × marks).',
+        why: 'Here, physics updates once per rendered frame and tries to scale motion by how long the last frame took. Because real game jumps speed up, slow down, and change direction mid-air, bigger or smaller time slices actually bend the jump path itself.',
+        takeaway: 'This is why frame-rate-dependent physics breaks games: a jump that feels effortless on a fast PC can become impossible during lag—or on someone else’s monitor.'
+      }
+    },
+    {
+      id: 4,
+      tier: 'high',
+      swatch: 'swatch-30',
+      pillClass: 'bad',
+      title: 'Tied to Monitor Refresh (2× Speed on 60 Hz)',
+      shortTitle: 'Tied to Monitor Refresh',
+      impact: '2× speed at 60 Hz',
+      desc: 'The bottom ball moves through the exact same jump twice as fast as the top one at 60 Hz—flip Simulated Refresh to 120 Hz and it runs at four times the speed.',
+      more: {
+        look: 'Count how many times the bottom ball completes the jump while the top ball only finishes once. Now drag the Load slider up: as frame rate drops, the bottom game suddenly slows into slow-motion.',
+        why: 'The physics code assumes every screen refresh equals one fixed 30 Hz step without checking real wall-clock time. On a 60 Hz screen it advances 60 times a second (double speed), and on 120 Hz it advances 120 times a second (quadruple speed).',
+        takeaway: 'A classic bug when older 30 FPS console games are unlocked on PC: tying physics steps directly to display refreshes makes the whole game fast-forward on speedy monitors and crawl during lag.'
+      }
+    },
+    {
+      id: 5,
+      tier: 'high',
+      swatch: 'swatch-30',
+      pillClass: 'bad',
+      title: 'Constant 30 Hz Limits',
+      shortTitle: '30 Hz Limit: Falling Through Floors',
+      impact: 'Falls through floor',
+      desc: 'At 30 updates per second, a fast-falling ball jumps a big distance in a single step—from above the thin floor straight to underneath it. The bottom game only checks where the ball lands on each step, so it never notices the floor in between.',
+      more: {
+        look: 'Compare the two boxes as the ball drops onto the thin floor. In the bottom box, watch the two red circles: on Step 1 the ball is still above the floor, and on Step 2 it is already below it—falling straight through.',
+        why: 'Updating only 30 times a second leaves noticeable time gaps between checks. If something moves faster than a wall or floor is thick, it can jump from one side to the other in a single step—a classic bug called tunneling.',
+        takeaway: 'Games with a slow 30 Hz physics clock need extra safety checks—like tracing the entire path between two steps (as the top box does)—or fast bullets and falling players will clip through solid walls.'
+      }
+    }
+  ];
+
+  const physEls = {
+    section: document.getElementById('physicsSection'),
+    refCanvas: document.getElementById('physRefCanvas'),
+    testCanvas: document.getElementById('physTestCanvas'),
+    refMeta: document.getElementById('physRefMeta'),
+    refTitle: document.querySelector('#physTrackRef .phys-chamber-title h3'),
+    testMeta: document.getElementById('physTestMeta'),
+    testTrack: document.getElementById('physTrackTest'),
+    testSwatch: document.getElementById('physTestSwatch'),
+    testTitle: document.getElementById('physTestTitle'),
+    envBtns: Array.from(document.querySelectorAll('.phys-env-btn')),
+    footerCard: document.getElementById('physicsFooterCard'),
+    footerNum: document.getElementById('physFooterNum'),
+    footerTitle: document.getElementById('physFooterTitle'),
+    footerDesc: document.getElementById('physFooterDesc'),
+    impactTag: document.getElementById('physImpactTag'),
+    meterBars: Array.from(document.querySelectorAll('#physFooterMeter span')),
+    moreBtn: document.getElementById('physMoreBtn'),
+    morePane: document.getElementById('physMorePane'),
+    moreBackdrop: document.getElementById('physMoreBackdrop'),
+    moreCloseBtn: document.getElementById('physMoreCloseBtn'),
+    moreBadge: document.getElementById('physMoreBadge'),
+    moreTitle: document.getElementById('physMoreTitle'),
+    moreLook: document.getElementById('physMoreLook'),
+    moreWhy: document.getElementById('physMoreWhy'),
+    moreTakeaway: document.getElementById('physMoreTakeaway')
+  };
+
+  const physState = {
+    env: 1,
+    refArcNormal: [],
+    refLandNormal: 550.6,
+    refArcTunnel: [],
+    refLandTunnel: 599.6,
+    ref: null,
+    test: null
+  };
+
+  function getPhysParams(isTunnelMode) {
+    return isTunnelMode
+      ? { vx0: 1140, vy0: -628, vT: 220, dragR: 3.4, gUp: 1180, gDown: 2950 }
+      : { vx0: 1080, vy0: -470, vT: 220, dragR: 5.6, gUp: 690, gDown: 1950 };
+  }
+
+  function precomputePhysReference(isTunnelMode) {
+    const p = getPhysParams(isTunnelMode);
+    let x = PHYS_START_X;
+    let y = PHYS_LEDGE_Y;
+    let vx = p.vx0;
+    let vy = p.vy0;
+    const pts = [{ x, y }];
+    let landX = 550.6;
+    for (let k = 0; k < 90; k++) {
+      const px = x;
+      const py = y;
+      const g = vy < 0 ? p.gUp : p.gDown;
+      vx += (p.vT - vx) * Math.min(1.4, p.dragR * PHYS_FIXED_DT);
+      vy += g * PHYS_FIXED_DT;
+      x += vx * PHYS_FIXED_DT;
+      y += vy * PHYS_FIXED_DT;
+      if (x >= PHYS_LEDGE_X1 && x <= PHYS_LEDGE_X2 && vy > 0 && py <= PHYS_LEDGE_Y && y >= PHYS_LEDGE_Y) {
+        const f = (PHYS_LEDGE_Y - py) / Math.max(0.001, y - py);
+        landX = px + (x - px) * f;
+        pts.push({ x: landX, y: PHYS_LEDGE_Y });
+        break;
+      }
+      pts.push({ x, y });
+      if (y > PHYS_WORLD_H - 12) break;
+    }
+    return { pts, landX };
+  }
+
+  {
+    const norm = precomputePhysReference(false);
+    physState.refArcNormal = norm.pts;
+    physState.refLandNormal = norm.landX;
+    const tun = precomputePhysReference(true);
+    physState.refArcTunnel = tun.pts;
+    physState.refLandTunnel = tun.landX;
+  }
+
+  function createPhysChamberState(isTunnelMode) {
+    const p = getPhysParams(isTunnelMode);
+    return {
+      x: PHYS_START_X,
+      y: PHYS_LEDGE_Y,
+      prevX: PHYS_START_X,
+      prevY: PHYS_LEDGE_Y,
+      vx: p.vx0,
+      vy: p.vy0,
+      dispX: PHYS_START_X,
+      dispY: PHYS_LEDGE_Y,
+      landed: false,
+      fell: false,
+      tunneled: false,
+      tunnelFrom: null,
+      tunnelTo: null,
+      pauseTimer: 0,
+      accumSec: 0,
+      renderAccumSec: 0,
+      wallClockSec: 0,
+      simClockSec: 0,
+      speedRatio: 1.0,
+      lastDriftPx: 0,
+      maxDriftPx: 0,
+      missedCount: 0,
+      totalJumps: 0,
+      history: [],
+      trail: [],
+      ticks: [], // { t, type: 'render' | 'step' | 'stall' }
+      frameSeq: 0,
+      holdCount: 1,
+      lastHoldCount: 1,
+      stepsThisFrame: 0
+    };
+  }
+
+  function resetBodyForNextJump(ch, isTunnelMode) {
+    const p = getPhysParams(isTunnelMode);
+    ch.x = PHYS_START_X;
+    ch.y = PHYS_LEDGE_Y;
+    ch.prevX = PHYS_START_X;
+    ch.prevY = PHYS_LEDGE_Y;
+    ch.vx = p.vx0;
+    ch.vy = p.vy0;
+    ch.dispX = PHYS_START_X;
+    ch.dispY = PHYS_LEDGE_Y;
+    ch.landed = false;
+    ch.fell = false;
+    ch.tunneled = false;
+    ch.tunnelFrom = null;
+    ch.tunnelTo = null;
+    ch.pauseTimer = 0;
+    ch.trail = [{ x: PHYS_START_X, y: PHYS_LEDGE_Y }];
+  }
+
+  function stepSingleJumpBody(ch, dtSec, isTunnelMode, useDiscreteCollision) {
+    const p = getPhysParams(isTunnelMode);
+    const refLandX = isTunnelMode ? physState.refLandTunnel : physState.refLandNormal;
+    ch.prevX = ch.x;
+    ch.prevY = ch.y;
+
+    if (ch.landed || ch.fell) {
+      ch.pauseTimer += dtSec;
+      if (ch.pauseTimer >= PHYS_CYCLE_PAUSE_SEC) {
+        resetBodyForNextJump(ch, isTunnelMode);
+      }
+      return;
+    }
+
+    const g = ch.vy < 0 ? p.gUp : p.gDown;
+    ch.vx += (p.vT - ch.vx) * Math.min(1.4, p.dragR * dtSec);
+    ch.vy += g * dtSec;
+    ch.x += ch.vx * dtSec;
+    ch.y += ch.vy * dtSec;
+
+    if (ch.x >= PHYS_LEDGE_X1 && ch.x <= PHYS_LEDGE_X2 && ch.vy > 0) {
+      if (useDiscreteCollision) {
+        if (ch.y >= PHYS_LEDGE_Y && ch.y <= PHYS_LEDGE_Y + PHYS_SLAB_H) {
+          ch.y = PHYS_LEDGE_Y;
+          ch.vx = 0;
+          ch.vy = 0;
+          ch.landed = true;
+          ch.pauseTimer = 0;
+          const drift = ch.x - refLandX;
+          ch.lastDriftPx = drift;
+          ch.maxDriftPx = Math.max(ch.maxDriftPx, Math.abs(drift));
+          ch.totalJumps += 1;
+          ch.history.push({ x: ch.x, y: PHYS_LEDGE_Y, missed: false, tunneled: false });
+          if (ch.history.length > 6) ch.history.shift();
+          return;
+        } else if (ch.prevY < PHYS_LEDGE_Y && ch.y > PHYS_LEDGE_Y + PHYS_SLAB_H && !ch.tunneled) {
+          ch.tunneled = true;
+          ch.tunnelFrom = { x: ch.prevX, y: ch.prevY };
+          ch.tunnelTo = { x: ch.x, y: ch.y };
+        }
+      } else if (ch.prevY <= PHYS_LEDGE_Y && ch.y >= PHYS_LEDGE_Y) {
+        const f = (PHYS_LEDGE_Y - ch.prevY) / Math.max(0.001, ch.y - ch.prevY);
+        const lx = ch.prevX + (ch.x - ch.prevX) * f;
+        ch.x = lx;
+        ch.y = PHYS_LEDGE_Y;
+        ch.vx = 0;
+        ch.vy = 0;
+        ch.landed = true;
+        ch.pauseTimer = 0;
+        const drift = lx - refLandX;
+        ch.lastDriftPx = drift;
+        ch.maxDriftPx = Math.max(ch.maxDriftPx, Math.abs(drift));
+        ch.totalJumps += 1;
+        ch.history.push({ x: lx, y: PHYS_LEDGE_Y, missed: false, tunneled: false });
+        if (ch.history.length > 6) ch.history.shift();
+        return;
+      }
+    }
+
+    if (ch.y >= PHYS_WORLD_H - 14) {
+      ch.y = PHYS_WORLD_H - 14;
+      ch.vx = 0;
+      ch.vy = 0;
+      ch.fell = true;
+      ch.pauseTimer = 0;
+      const drift = ch.x - refLandX;
+      ch.lastDriftPx = drift;
+      ch.maxDriftPx = Math.max(ch.maxDriftPx, Math.abs(drift));
+      ch.missedCount += 1;
+      ch.totalJumps += 1;
+      ch.history.push({ x: ch.x, y: PHYS_WORLD_H - 14, missed: true, tunneled: ch.tunneled });
+      if (ch.history.length > 6) ch.history.shift();
+    }
+  }
+
+  function recordPhysTick(ch, type) {
+    ch.ticks.push({ t: ch.wallClockSec, type });
+    const cutoff = ch.wallClockSec - 1.15;
+    while (ch.ticks.length && ch.ticks[0].t < cutoff) {
+      ch.ticks.shift();
+    }
+  }
+
+  function getPhysRenderFrameSec(ch, displayHz, envMode) {
+    const refreshPeriodMs = 1000 / displayHz;
+    if (envMode === 4) {
+      // Lightweight 30 FPS game running unlocked on 60/120 Hz hardware: renders in ~6.5 ms at Load 1.0 -> 2x at 60 Hz, 4x at 120 Hz, slows down under Load
+      const renderMs = 6.5 + (state.load - 1.0) * 8.5 + state.simSpikeMs;
+      const ticksHeld = Math.max(1, Math.ceil(renderMs / refreshPeriodMs));
+      return (ticksHeld * refreshPeriodMs) / 1000;
+    }
+    let renderMs = getRenderTimeMs('60', state.load, ch.frameSeq, state.simSpikeMs);
+    if (envMode === 3) {
+      // Env 3 (Bad Variable Δt): alternate clean high-FPS jumps (overshoot) with hitched jumps (65–90 ms drops that fall into the gap!)
+      const isHitchJump = (ch.totalJumps % 2 === 1) || state.load > 1.25;
+      if (isHitchJump) {
+        const phase = ch.frameSeq % 9;
+        if (phase === 2 || phase === 6) {
+          renderMs += 62 + (ch.frameSeq % 3) * 14;
+        }
+      } else {
+        // Clean high-FPS run so 120 Hz actually steps at 8.33 ms and 60 Hz at 16.67 ms (showing pure Δt integration overshoot)
+        renderMs = 6.5 + state.simSpikeMs;
+      }
+    }
+    const ticksHeld = Math.max(1, Math.ceil(renderMs / refreshPeriodMs));
+    return (ticksHeld * refreshPeriodMs) / 1000;
+  }
+
+  function resetPhysicsChambers() {
+    const isTunnel = physState.env === 5;
+    physState.ref = createPhysChamberState(isTunnel);
+    physState.test = createPhysChamberState(isTunnel);
+  }
+
+  function stepPhysicsChambers(dtSimMs) {
+    if (!physState.ref || !physState.test) resetPhysicsChambers();
+    const dtWallSec = Math.max(0, Math.min(0.08, dtSimMs / 1000));
+    if (dtWallSec <= 0) return;
+
+    const env = physState.env;
+    const isTunnel = env === 5;
+    const refHz = state.displayHz;
+    const testHz = state.displayHz;
+
+    // 1. REFERENCE TRACK: Always proper fixed 30 Hz accumulator + prev/curr state interpolation
+    {
+      const ch = physState.ref;
+      ch.wallClockSec += dtWallSec;
+      ch.renderAccumSec += dtWallSec;
+      const frameSec = getPhysRenderFrameSec(ch, refHz, 1);
+      while (ch.renderAccumSec >= frameSec) {
+        ch.renderAccumSec -= frameSec;
+        ch.frameSeq += 1;
+        recordPhysTick(ch, 'render');
+        ch.accumSec += frameSec;
+        let steps = 0;
+        while (ch.accumSec >= PHYS_FIXED_DT && steps < 6) {
+          stepSingleJumpBody(ch, PHYS_FIXED_DT, isTunnel, false);
+          ch.accumSec -= PHYS_FIXED_DT;
+          ch.simClockSec += PHYS_FIXED_DT;
+          steps += 1;
+          recordPhysTick(ch, 'step');
+        }
+        ch.stepsThisFrame = steps;
+        const alpha = ch.accumSec / PHYS_FIXED_DT;
+        ch.dispX = ch.prevX + (ch.x - ch.prevX) * alpha;
+        ch.dispY = ch.prevY + (ch.y - ch.prevY) * alpha;
+        ch.trail.push({ x: ch.dispX, y: ch.dispY });
+        if (ch.trail.length > 16) ch.trail.shift();
+      }
+      ch.speedRatio = 1.0;
+    }
+
+    // 2. TEST TRACK: Selected environment 1..5
+    {
+      const ch = physState.test;
+      ch.wallClockSec += dtWallSec;
+      ch.renderAccumSec += dtWallSec;
+      const frameSec = getPhysRenderFrameSec(ch, testHz, env);
+      while (ch.renderAccumSec >= frameSec) {
+        ch.renderAccumSec -= frameSec;
+        ch.frameSeq += 1;
+        recordPhysTick(ch, 'render');
+
+        if (env === 1) {
+          // Good: Decoupled 30 Hz accumulator + state interpolation
+          ch.accumSec += frameSec;
+          let steps = 0;
+          while (ch.accumSec >= PHYS_FIXED_DT && steps < 6) {
+            stepSingleJumpBody(ch, PHYS_FIXED_DT, false, false);
+            ch.accumSec -= PHYS_FIXED_DT;
+            ch.simClockSec += PHYS_FIXED_DT;
+            steps += 1;
+            recordPhysTick(ch, 'step');
+          }
+          ch.stepsThisFrame = steps;
+          const alpha = ch.accumSec / PHYS_FIXED_DT;
+          ch.dispX = ch.prevX + (ch.x - ch.prevX) * alpha;
+          ch.dispY = ch.prevY + (ch.y - ch.prevY) * alpha;
+          ch.speedRatio = 1.0;
+        } else if (env === 2) {
+          // Fixed 30 Hz on 60/120/144 Hz WITHOUT interpolation (raw curr state -> repeated display holds)
+          ch.accumSec += frameSec;
+          let steps = 0;
+          while (ch.accumSec >= PHYS_FIXED_DT && steps < 6) {
+            stepSingleJumpBody(ch, PHYS_FIXED_DT, false, false);
+            ch.accumSec -= PHYS_FIXED_DT;
+            ch.simClockSec += PHYS_FIXED_DT;
+            steps += 1;
+            recordPhysTick(ch, 'step');
+          }
+          ch.stepsThisFrame = steps;
+          if (steps > 0) {
+            ch.lastHoldCount = ch.holdCount;
+            ch.holdCount = 1;
+          } else {
+            ch.holdCount += 1;
+          }
+          ch.dispX = ch.x;
+          ch.dispY = ch.y;
+          ch.speedRatio = 1.0;
+        } else if (env === 3) {
+          // Bad: Variable Δt ("multiply by dt") tied to render frame time & drops
+          stepSingleJumpBody(ch, frameSec, false, false);
+          ch.simClockSec += frameSec;
+          ch.stepsThisFrame = 1;
+          recordPhysTick(ch, 'step');
+          ch.dispX = ch.x;
+          ch.dispY = ch.y;
+          ch.speedRatio = 1.0;
+        } else if (env === 4) {
+          // Tick-Locked 30 Hz: step(1/30) called ONCE per rendered V-Sync frame -> 2x at 60 Hz, 4x at 120 Hz, slow-mo on Load!
+          stepSingleJumpBody(ch, PHYS_FIXED_DT, false, false);
+          ch.simClockSec += PHYS_FIXED_DT;
+          ch.stepsThisFrame = 1;
+          recordPhysTick(ch, 'step');
+          ch.dispX = ch.x;
+          ch.dispY = ch.y;
+          const effRenderFps = 1 / Math.max(0.004, frameSec);
+          ch.speedRatio = effRenderFps / 30;
+        } else if (env === 5 && isTunnel) {
+          // 5A · Coarse 33.3 ms step discrete tunneling
+          ch.accumSec += frameSec;
+          let steps = 0;
+          while (ch.accumSec >= PHYS_FIXED_DT && steps < 6) {
+            stepSingleJumpBody(ch, PHYS_FIXED_DT, true, true);
+            ch.accumSec -= PHYS_FIXED_DT;
+            ch.simClockSec += PHYS_FIXED_DT;
+            steps += 1;
+            recordPhysTick(ch, 'step');
+          }
+          ch.stepsThisFrame = steps;
+          const alpha = ch.accumSec / PHYS_FIXED_DT;
+          ch.dispX = ch.prevX + (ch.x - ch.prevX) * alpha;
+          ch.dispY = ch.prevY + (ch.y - ch.prevY) * alpha;
+          ch.speedRatio = 1.0;
+        }
+
+        ch.trail.push({ x: ch.dispX, y: ch.dispY });
+        if (ch.trail.length > 16) ch.trail.shift();
+      }
+    }
+  }
+
+  function drawSinglePhysChamber(canvas, ch, isReference) {
+    if (!canvas || !ch) return;
+    const { ctx, w, h } = setupCanvas(canvas);
+    if (w < 10 || h < 10) return;
+
+    const env = physState.env;
+    const isTunnel = env === 5;
+    const refPts = isTunnel ? physState.refArcTunnel : physState.refArcNormal;
+    const refLandX = isTunnel ? physState.refLandTunnel : physState.refLandNormal;
+
+    const stripH = 16;
+    const drawH = Math.max(40, h - stripH);
+    const sx = w / PHYS_WORLD_W;
+    const sy = drawH / PHYS_WORLD_H;
+
+    // Background
+    ctx.fillStyle = '#11141c';
+    ctx.fillRect(0, 0, w, h);
+
+    // Subtle engineering grid
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let gx = 80; gx < PHYS_WORLD_W; gx += 80) {
+      const px = Math.round(gx * sx) + 0.5;
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, drawH);
+    }
+    for (let gy = 52; gy < PHYS_WORLD_H; gy += 52) {
+      const py = Math.round(gy * sy) + 0.5;
+      ctx.moveTo(0, py);
+      ctx.lineTo(w, py);
+    }
+    ctx.stroke();
+
+    // Hazard gap floor
+    const gapX1 = 210 * sx;
+    const gapX2 = PHYS_LEDGE_X1 * sx;
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.08)';
+    ctx.fillRect(gapX1, drawH - 14 * sy, gapX2 - gapX1, 14 * sy);
+    ctx.strokeStyle = 'rgba(248, 113, 113, 0.32)';
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(gapX1, drawH - 14 * sy);
+    ctx.lineTo(gapX2, drawH - 14 * sy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Start platform (solid left ground)
+    const ledgeY = PHYS_LEDGE_Y * sy;
+    ctx.fillStyle = '#1e2536';
+    ctx.fillRect(28 * sx, ledgeY, (210 - 28) * sx, drawH - ledgeY);
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(28 * sx, ledgeY, (210 - 28) * sx, Math.max(2, 3 * sy));
+    // Launch pad accent
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect((PHYS_START_X - 18) * sx, ledgeY, 36 * sx, Math.max(2.5, 3.5 * sy));
+
+    // Target thin precision platform (12 px floating slab!)
+    const lx1 = PHYS_LEDGE_X1 * sx;
+    const lx2 = PHYS_LEDGE_X2 * sx;
+    const slabPxH = Math.max(5, PHYS_SLAB_H * sy);
+    ctx.fillStyle = isTunnel ? 'rgba(248, 113, 113, 0.22)' : '#1e293b';
+    ctx.fillRect(lx1, ledgeY, lx2 - lx1, slabPxH);
+    ctx.strokeStyle = isTunnel ? 'rgba(248, 113, 113, 0.72)' : 'rgba(52, 211, 153, 0.65)';
+    ctx.lineWidth = 1.25;
+    ctx.strokeRect(lx1 + 0.5, ledgeY + 0.5, lx2 - lx1 - 1, slabPxH - 1);
+    ctx.fillStyle = isTunnel ? '#f87171' : '#34d399';
+    ctx.fillRect(lx1, ledgeY, lx2 - lx1, Math.max(2, 2.5 * sy));
+
+    // Target bullseye line at exact 30 Hz landing X
+    const targetX = refLandX * sx;
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.55)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(targetX, ledgeY - 26 * sy);
+    ctx.lineTo(targetX, ledgeY + slabPxH + 6);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Labels for geometry
+    ctx.font = '700 9.5px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
+    ctx.fillText('LAUNCH', 38 * sx, ledgeY + Math.min(18, (drawH - ledgeY) * 0.52));
+    ctx.fillStyle = 'rgba(248, 113, 113, 0.62)';
+    ctx.fillText('GAP', (gapX1 + gapX2) * 0.5 - 10, drawH - 18 * sy);
+    ctx.fillStyle = isTunnel ? 'rgba(252, 165, 165, 0.85)' : 'rgba(110, 231, 183, 0.8)';
+    ctx.fillText(
+      isTunnel ? 'THIN FLOOR' : 'TARGET LEDGE',
+      lx2 - (isTunnel ? 66 : 82),
+      isTunnel ? ledgeY - 6 : ledgeY + slabPxH + 12
+    );
+
+    // Dotted golden 30 Hz reference arc
+    if (refPts.length > 1) {
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.34)';
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      refPts.forEach((pt, idx) => {
+        const px = pt.x * sx;
+        const py = pt.y * sy;
+        if (idx === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Faint 30 Hz tick dots along reference arc
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.42)';
+      for (let i = 0; i < refPts.length; i += 2) {
+        ctx.beginPath();
+        ctx.arc(refPts[i].x * sx, refPts[i].y * sy, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Tunneling skipped-step visual highlight (Env 5A: Step 1 above -> Step 2 below)
+    if (!isReference && ch.tunneled && ch.tunnelFrom && ch.tunnelTo) {
+      const x1 = ch.tunnelFrom.x * sx;
+      const y1 = ch.tunnelFrom.y * sy;
+      const x2 = ch.tunnelTo.x * sx;
+      const y2 = ch.tunnelTo.y * sy;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.4;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Two clear step circles: Step 1 (above floor) & Step 2 (below floor)
+      [
+        { x: x1, y: y1, lbl: 'Step 1 (above)' },
+        { x: x2, y: y2, lbl: 'Step 2 (below)' }
+      ].forEach((pt, idx) => {
+        ctx.fillStyle = '#11141c';
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#f87171';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.font = '700 9.5px ui-monospace, SFMono-Regular, Menlo, monospace';
+        ctx.fillStyle = '#fecaca';
+        ctx.fillText(pt.lbl, Math.min(w - 92, pt.x + 10), idx === 0 ? pt.y - 3 : pt.y + 8);
+      });
+
+      const badgeTxt = 'SKIPPED FLOOR IN 1 STEP!';
+      ctx.font = '700 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+      const bw = ctx.measureText(badgeTxt).width + 14;
+      const bx = Math.max(12, Math.min(w - bw - 8, x1 - bw - 14));
+      const by = Math.max(10, ledgeY - 26);
+      ctx.fillStyle = 'rgba(127, 29, 29, 0.94)';
+      ctx.fillRect(bx, by, bw, 20);
+      ctx.strokeStyle = 'rgba(248, 113, 113, 0.72)';
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 19);
+      ctx.fillStyle = '#fecaca';
+      ctx.fillText(badgeTxt, bx + 7, by + 13.5);
+    }
+
+    // Landing history pips (last 6 jumps)
+    ch.history.forEach((item, idx) => {
+      const px = item.x * sx;
+      const py = item.y * sy;
+      const alpha = 0.45 + (idx / Math.max(1, ch.history.length)) * 0.55;
+      if (item.missed) {
+        ctx.strokeStyle = `rgba(248, 113, 113, ${alpha.toFixed(2)})`;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(px - 4, py - 4);
+        ctx.lineTo(px + 4, py + 4);
+        ctx.moveTo(px + 4, py - 4);
+        ctx.lineTo(px - 4, py + 4);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = isReference || env <= 2
+          ? `rgba(52, 211, 153, ${alpha.toFixed(2)})`
+          : `rgba(251, 191, 36, ${alpha.toFixed(2)})`;
+        ctx.beginPath();
+        ctx.arc(px, py - 3, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    // Puck color based on track status
+    const puckColor = isReference || env === 1
+      ? '#10b981'
+      : env === 2
+        ? '#f59e0b'
+        : env === 3
+          ? '#fb923c'
+          : '#ef4444';
+
+    // Motion trail
+    if (ch.trail.length > 1) {
+      for (let i = 1; i < ch.trail.length; i++) {
+        const a = (i / ch.trail.length) * 0.5;
+        ctx.strokeStyle = puckColor;
+        ctx.globalAlpha = a;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(ch.trail[i - 1].x * sx, (ch.trail[i - 1].y - 8) * sy);
+        ctx.lineTo(ch.trail[i].x * sx, (ch.trail[i].y - 8) * sy);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Active jumper puck
+    const puckX = ch.dispX * sx;
+    const puckY = (ch.dispY - 8) * sy;
+    const pr = Math.max(5.5, Math.min(8.5, 7.5 * Math.min(sx, sy * 1.4)));
+    ctx.fillStyle = puckColor;
+    ctx.beginPath();
+    ctx.arc(puckX, puckY, pr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    // Bottom 16px rolling tick cadence strip (Display ticks vs 30 Hz physics step ticks)
+    ctx.fillStyle = '#0b0e14';
+    ctx.fillRect(0, drawH, w, stripH);
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+    ctx.beginPath();
+    ctx.moveTo(0, drawH + 0.5);
+    ctx.lineTo(w, drawH + 0.5);
+    ctx.stroke();
+
+    const winSec = 1.0;
+    const stripLeft = 92;
+    const stripW = Math.max(40, w - stripLeft - 8);
+    ctx.font = '700 8.5px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
+    ctx.fillText('STEPS / VSYNC', 8, drawH + 11);
+
+    ch.ticks.forEach((tk) => {
+      const age = ch.wallClockSec - tk.t;
+      if (age < 0 || age > winSec) return;
+      const px = stripLeft + (1 - age / winSec) * stripW;
+      if (tk.type === 'render') {
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.34)';
+        ctx.fillRect(px, drawH + 9, 1.2, 5);
+      } else {
+        ctx.fillStyle = tk.type === 'stall' ? '#ef4444' : puckColor;
+        ctx.fillRect(px - 0.8, drawH + 2, 2.2, 8);
+      }
+    });
+  }
+
+  function drawPhysicsChambers() {
+    if (!physState.ref || !physState.test) resetPhysicsChambers();
+    drawSinglePhysChamber(physEls.refCanvas, physState.ref, true);
+    drawSinglePhysChamber(physEls.testCanvas, physState.test, false);
+  }
+
+  function updatePhysicsReadouts() {
+    if (!physState.ref || !physState.test) return;
+    const env = physState.env;
+    const isTunnel = env === 5;
+
+    if (physEls.refMeta) {
+      const refLbl = isTunnel
+        ? '30 Hz · Checks full path · Lands safely'
+        : `30 Hz · ${state.displayHz} Hz smooth · Exact`;
+      physEls.refMeta.textContent = refLbl;
+    }
+
+    if (physEls.testMeta) {
+      const ch = physState.test;
+      let txt = '';
+      if (env === 1) {
+        txt = `30 Hz · ${state.displayHz} Hz smooth · Exact`;
+      } else if (env === 2) {
+        const hz = state.displayHz;
+        txt = `30 Hz on ${hz} Hz · ${Math.round(hz / 30)}× repeat · Exact`;
+      } else if (env === 3) {
+        const missTxt = ch.missedCount > 0 ? ` · ${ch.missedCount} missed` : '';
+        const driftTxt = Math.abs(ch.lastDriftPx) < 1.5
+          ? 'Shifting arc'
+          : (ch.lastDriftPx > 0 ? 'Overshot target' : 'Fell short');
+        txt = `${state.displayHz} Hz var step · ${driftTxt}${missTxt}`;
+      } else if (env === 4) {
+        const spd = ch.speedRatio;
+        const speedWord = spd > 1.15 ? 'accelerated' : (spd < 0.85 ? 'slowed' : 'normal');
+        txt = `${spd.toFixed(1)}× speed (${speedWord})`;
+      } else if (isTunnel) {
+        txt = ch.tunneled ? '30 Hz · Fell through floor!' : '30 Hz · Only checks step points';
+      }
+      physEls.testMeta.textContent = txt;
+    }
+  }
+
+  function applyPhysicsEnvUI() {
+    const meta = PHYS_ENVIRONMENTS[physState.env - 1] || PHYS_ENVIRONMENTS[0];
+    if (physEls.section) {
+      physEls.section.dataset.physEnv = String(meta.id);
+    }
+
+    physEls.envBtns.forEach((btn) => {
+      btn.classList.toggle('active', Number(btn.dataset.physEnv) === meta.id);
+    });
+
+    if (physEls.refTitle) {
+      physEls.refTitle.textContent = meta.id === 5
+        ? 'Reference · 30 Hz (Checks Full Path)'
+        : 'Reference · Decoupled 30 Hz + State Interp';
+    }
+    if (physEls.testTrack) physEls.testTrack.dataset.tier = meta.tier;
+    if (physEls.testSwatch) physEls.testSwatch.className = `swatch ${meta.swatch}`;
+    if (physEls.testTitle) {
+      let title = `Test · ${meta.title}`;
+      if (meta.id === 5) {
+        title = 'Test · 30 Hz (Only Checks Position on Each Step)';
+      } else if (meta.id === 4) {
+        title = state.displayHz === 120
+          ? 'Test · Tied to Monitor (4× Speed on 120 Hz)'
+          : 'Test · Tied to Monitor (2× Speed on 60 Hz)';
+      }
+      physEls.testTitle.textContent = title;
+    }
+    if (physEls.testMeta) physEls.testMeta.className = `phys-pill mono ${meta.pillClass}`;
+
+    if (physEls.footerCard) physEls.footerCard.dataset.tier = meta.tier;
+    if (physEls.footerNum) physEls.footerNum.textContent = `ENV ${meta.id}`;
+    if (physEls.footerTitle) physEls.footerTitle.textContent = meta.shortTitle;
+    if (physEls.footerDesc) physEls.footerDesc.textContent = meta.desc;
+    if (physEls.impactTag) {
+      physEls.impactTag.textContent = meta.id === 4
+        ? (state.displayHz === 120 ? '4× speed at 120 Hz' : '2× speed at 60 Hz')
+        : meta.impact;
+    }
+    physEls.meterBars.forEach((bar, idx) => {
+      bar.classList.toggle('is-lit', idx < meta.id);
+    });
+
+    // Populate expandable More pane content for the active environment
+    const moreContent = meta.more;
+    if (physEls.morePane) physEls.morePane.dataset.tier = meta.tier;
+    if (physEls.moreBadge) physEls.moreBadge.textContent = `ENV ${meta.id}`;
+    if (physEls.moreTitle) physEls.moreTitle.textContent = meta.shortTitle;
+    if (moreContent) {
+      if (physEls.moreLook) physEls.moreLook.textContent = moreContent.look;
+      if (physEls.moreWhy) physEls.moreWhy.textContent = moreContent.why;
+      if (physEls.moreTakeaway) physEls.moreTakeaway.textContent = moreContent.takeaway;
+    }
+  }
+
+  let physMoreOpen = false;
+  function setPhysMoreOpen(open) {
+    const next = !!open;
+    if (physMoreOpen === next && physEls.morePane && physEls.morePane.classList.contains('is-open') === next) {
+      return;
+    }
+    physMoreOpen = next;
+    if (physEls.morePane) {
+      physEls.morePane.classList.toggle('is-open', next);
+      physEls.morePane.setAttribute('aria-hidden', next ? 'false' : 'true');
+    }
+    if (physEls.moreBackdrop) {
+      physEls.moreBackdrop.classList.toggle('is-open', next);
+    }
+    if (physEls.moreBtn) {
+      physEls.moreBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
+    }
+  }
+
+  if (physEls.moreBtn) {
+    physEls.moreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPhysMoreOpen(!physMoreOpen);
+    });
+  }
+
+  if (physEls.moreCloseBtn) {
+    physEls.moreCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPhysMoreOpen(false);
+    });
+  }
+
+  if (physEls.moreBackdrop) {
+    physEls.moreBackdrop.addEventListener('click', () => {
+      setPhysMoreOpen(false);
+    });
+  }
+
+  document.addEventListener('pointerdown', (e) => {
+    if (!physMoreOpen) return;
+    if (physEls.morePane && physEls.morePane.contains(e.target)) return;
+    if (physEls.moreBtn && physEls.moreBtn.contains(e.target)) return;
+    setPhysMoreOpen(false);
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && physMoreOpen) {
+      setPhysMoreOpen(false);
+    }
+  });
+
+  window.addEventListener('fpslab:section-changed', () => {
+    if (physMoreOpen) setPhysMoreOpen(false);
+  });
+
+  function setPhysicsEnv(id) {
+    setPhysMoreOpen(false);
+    physState.env = Math.max(1, Math.min(5, Number(id) || 1));
+    applyPhysicsEnvUI();
+    resetPhysicsChambers();
+    updatePhysicsReadouts();
+    requestCanvasRedraw();
+    scheduleUrlSync();
+  }
+
+  function onPhysicsSettingChanged(shouldReset) {
+    applyPhysicsEnvUI();
+    if (shouldReset) resetPhysicsChambers();
+    updatePhysicsReadouts();
+  }
+
+  physEls.envBtns.forEach((btn) => {
+    btn.addEventListener('click', () => setPhysicsEnv(Number(btn.dataset.physEnv)));
+  });
+
+  applyPhysicsEnvUI();
+  resetPhysicsChambers();
+
+  // ============================================================================
+  // SHAREABLE SCENARIOS & URL STATE SYNC
+  // ============================================================================
+  const SECTION_SLUG_TO_ID = {
+    motion: 'motionSection',
+    performance: 'simSection',
+    perf: 'simSection',
+    sim: 'simSection',
+    simulation: 'physicsSection',
+    physics: 'physicsSection',
+    input: 'inputSection',
+    pipeline: 'pipelineSection',
+    timeline: 'timelineSection',
+    reading: 'readingSection'
+  };
+
+  const SECTION_ID_TO_SLUG = {
+    motionSection: 'motion',
+    simSection: 'performance',
+    physicsSection: 'simulation',
+    inputSection: 'input',
+    pipelineSection: 'pipeline',
+    timelineSection: 'timeline',
+    readingSection: 'reading'
+  };
+
+  let urlSyncActive = false;
+  let isApplyingUrlParams = false;
+  let urlSyncTimer = null;
+
+  function getActiveSectionSlug() {
+    if (window.fpsLabNav && typeof window.fpsLabNav.getActiveSectionId === 'function') {
+      const id = window.fpsLabNav.getActiveSectionId();
+      if (id && SECTION_ID_TO_SLUG[id]) return SECTION_ID_TO_SLUG[id];
+    }
+    const activePill = document.querySelector('.step-pill.active');
+    if (activePill && activePill.dataset.target && SECTION_ID_TO_SLUG[activePill.dataset.target]) {
+      return SECTION_ID_TO_SLUG[activePill.dataset.target];
+    }
+    return 'motion';
+  }
+
+  function buildShareUrl(explicitSectionSlug) {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams();
+    const sectionSlug = explicitSectionSlug || getActiveSectionSlug();
+
+    // Always include section (bypasses first-visit Blind Test) and hz (prevents auto-detect mismatch across 60/120 Hz screens)
+    params.set('section', sectionSlug);
+    params.set('hz', String(state.displayHz));
+
+    // Omit default values so links stay clean and readable while capturing every modified control
+    if (state.speed !== 1) {
+      params.set('speed', String(state.speed));
+    }
+    if (Math.abs(state.load - 1.0) >= 0.05) {
+      params.set('load', state.load.toFixed(1));
+    }
+    if (activeMotionScenario !== 1) {
+      params.set('scenario', String(activeMotionScenario));
+    }
+    if (Math.abs(state.simLevel - 1.0) >= 0.05) {
+      params.set('sim', state.simLevel.toFixed(1));
+    }
+    if (physState.env !== 1) {
+      params.set('phys', String(physState.env));
+    }
+
+    const viewMode = motionSectionEl && motionSectionEl.dataset.motionView === 'detailed'
+      ? 'detailed'
+      : 'simplified';
+    if (viewMode === 'detailed') {
+      params.set('view', 'detailed');
+    }
+    if (state.panSpeed !== 420) {
+      params.set('vel', String(Math.round(state.panSpeed)));
+    }
+    if (!state.showTruePos) {
+      params.set('truepos', '0');
+    }
+    if (!state.showArtifacts) {
+      params.set('artifacts', '0');
+    }
+    if (state.arenaMode && state.arenaMode !== 'interp') {
+      params.set('arena', state.arenaMode);
+    }
+    if (!state.showGhostCursor) {
+      params.set('ghost', '0');
+    }
+    if (state.hideOSCursor) {
+      params.set('hidecursor', '1');
+    }
+    if (typeof pipeStage === 'number' && pipeStage > 0) {
+      params.set('pipe', String(pipeStage));
+    }
+    if (state.paused) {
+      params.set('paused', '1');
+    }
+
+    url.search = params.toString();
+    url.hash = '';
+    return url.toString();
+  }
+
+  function scheduleUrlSync() {
+    if (!urlSyncActive || isApplyingUrlParams || blindActive) return;
+    clearTimeout(urlSyncTimer);
+    urlSyncTimer = setTimeout(() => {
+      if (!urlSyncActive || isApplyingUrlParams || blindActive) return;
+      try {
+        window.history.replaceState(null, '', buildShareUrl());
+      } catch (_) {
+        // Ignore history errors on restricted origins
+      }
+    }, 200);
+  }
+
+  window.addEventListener('fpslab:section-changed', scheduleUrlSync);
+
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(text).catch(() => fallbackCopyText(text));
+    }
+    return Promise.resolve(fallbackCopyText(text));
+  }
+
+  function fallbackCopyText(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+    } catch (_) {
+      // Ignore copy errors in restricted contexts
+    }
+    document.body.removeChild(ta);
+  }
+
+  const shareToastEl = document.getElementById('shareToast');
+  let shareToastTimer = null;
+  let shareToastHideTimer = null;
+
+  function showShareToast() {
+    if (!shareToastEl) return;
+    clearTimeout(shareToastTimer);
+    clearTimeout(shareToastHideTimer);
+    shareToastEl.hidden = false;
+    // Force reflow so transition plays reliably on repeated clicks
+    void shareToastEl.offsetWidth;
+    shareToastEl.classList.add('is-visible');
+    shareToastTimer = setTimeout(() => {
+      shareToastEl.classList.remove('is-visible');
+      shareToastHideTimer = setTimeout(() => {
+        shareToastEl.hidden = true;
+      }, 220);
+    }, 2200);
+  }
+
+  const shareSetupBtn = document.getElementById('shareSetupBtn');
+  const mobShareBtn = document.getElementById('mobShareBtn');
+  const allShareBtns = [shareSetupBtn, mobShareBtn].filter(Boolean);
+  let shareCopiedTimer = null;
+
+  function handleGlobalShare() {
+    urlSyncActive = true;
+    clearTimeout(urlSyncTimer);
+    const shareUrl = buildShareUrl();
+    try {
+      window.history.replaceState(null, '', shareUrl);
+    } catch (_) {
+      // Ignore history errors on file:// origins
+    }
+    allShareBtns.forEach((b) => {
+      b.dataset.lastSharedUrl = shareUrl;
+      b.classList.add('is-copied');
+    });
+    copyTextToClipboard(shareUrl);
+    showShareToast();
+
+    clearTimeout(shareCopiedTimer);
+    shareCopiedTimer = setTimeout(() => {
+      allShareBtns.forEach((b) => b.classList.remove('is-copied'));
+    }, 2200);
+  }
+
+  allShareBtns.forEach((btn) => {
+    btn.addEventListener('click', handleGlobalShare);
+  });
+
+  function applySharedUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const result = { explicitHz: false };
+    const shareKeys = ['section', 'hz', 'speed', 'load', 'scenario', 'sim', 'phys', 'view', 'vel', 'truepos', 'artifacts', 'arena', 'ghost', 'hidecursor', 'pipe', 'paused'];
+    const hasAnyShareParam = shareKeys.some((k) => params.has(k));
+
+    isApplyingUrlParams = true;
+    try {
+      const hzParam = params.get('hz');
+      if (hzParam === '60' || hzParam === '120') {
+        result.explicitHz = true;
+        setDisplayHz(Number(hzParam));
+      }
+
+      const speedParam = params.get('speed');
+      if (speedParam !== null) {
+        const spd = parseFloat(speedParam);
+        if (spd === 0.25 || spd === 1) {
+          setSpeed(spd);
+        }
+      }
+
+      const viewParam = params.get('view');
+      if (viewParam === 'detailed' || viewParam === 'simplified') {
+        setMotionViewMode(viewParam);
+      }
+
+      const scenarioParam = params.get('scenario');
+      let parsedScenario = null;
+      if (scenarioParam !== null) {
+        const scId = parseInt(scenarioParam, 10);
+        if (scId >= 1 && scId <= 5) {
+          parsedScenario = scId;
+          setMotionScenario(scId);
+        }
+      }
+
+      const loadParam = params.get('load');
+      if (loadParam !== null) {
+        const loadVal = parseFloat(loadParam);
+        if (Number.isFinite(loadVal) && loadVal >= 1.0 && loadVal <= 5.0) {
+          const scObj = parsedScenario ? MOTION_SCENARIOS[parsedScenario - 1] : null;
+          const matchesScenarioLoad = scObj && Math.abs(loadVal - scObj.load) < 0.05;
+          if (!matchesScenarioLoad) {
+            if (dom.loadSlider) {
+              dom.loadSlider.value = String(loadVal);
+              syncRangeFill(dom.loadSlider);
+            }
+            setLoad(loadVal, false);
+          }
+        }
+      }
+
+      const velParam = params.get('vel');
+      if (velParam !== null) {
+        const velVal = parseInt(velParam, 10);
+        if (Number.isFinite(velVal) && velVal >= 160 && velVal <= 760) {
+          state.panSpeed = velVal;
+          if (dom.panSpeedSlider) {
+            dom.panSpeedSlider.value = String(velVal);
+            syncRangeFill(dom.panSpeedSlider);
+          }
+          if (dom.panSpeedLabel) {
+            dom.panSpeedLabel.textContent = `${velVal} px/s`;
+          }
+        }
+      }
+
+      if (params.get('truepos') === '0') {
+        state.showTruePos = false;
+        if (dom.toggleTruePos) dom.toggleTruePos.checked = false;
+      }
+
+      if (params.get('artifacts') === '0') {
+        state.showArtifacts = false;
+        if (dom.toggleArtifacts) dom.toggleArtifacts.checked = false;
+      }
+
+      const simParam = params.get('sim');
+      if (simParam !== null) {
+        const simVal = parseFloat(simParam);
+        if (Number.isFinite(simVal) && simVal >= 1.0 && simVal <= 5.0) {
+          setSimLevel(simVal);
+        }
+      }
+
+      const physParam = params.get('phys');
+      if (physParam !== null) {
+        const physId = parseInt(physParam, 10);
+        if (physId >= 1 && physId <= 5) {
+          physState.env = physId;
+        }
+        applyPhysicsEnvUI();
+        resetPhysicsChambers();
+        updatePhysicsReadouts();
+      }
+
+      const arenaParam = params.get('arena');
+      if (arenaParam && MODES.includes(arenaParam)) {
+        state.arenaMode = arenaParam;
+        document.querySelectorAll('.tab').forEach((b) => {
+          b.classList.toggle('active', b.dataset.arenaMode === arenaParam);
+        });
+        updateArenaStaticStats();
+      }
+
+      if (params.get('ghost') === '0') {
+        state.showGhostCursor = false;
+        if (dom.toggleGhostCursor) dom.toggleGhostCursor.checked = false;
+      }
+
+      if (params.get('hidecursor') === '1') {
+        state.hideOSCursor = true;
+        if (dom.toggleHideOSCursor) dom.toggleHideOSCursor.checked = true;
+        if (dom.arenaCanvas) dom.arenaCanvas.classList.add('hide-cursor');
+      }
+
+      const pipeParam = params.get('pipe');
+      if (pipeParam !== null) {
+        const pipeIdx = parseInt(pipeParam, 10);
+        if (Number.isFinite(pipeIdx) && pipeIdx >= 0 && pipeIdx <= 4 && typeof setPipelineStep === 'function') {
+          setPipelineStep(pipeIdx);
+        }
+      }
+
+      if (params.get('paused') === '1' && !state.paused) {
+        togglePause();
+      }
+
+      const sectionParam = params.get('section');
+      let targetId = null;
+      if (sectionParam && SECTION_SLUG_TO_ID[sectionParam]) {
+        targetId = SECTION_SLUG_TO_ID[sectionParam];
+      } else if (physParam !== null && scenarioParam === null) {
+        targetId = 'physicsSection';
+      } else if (simParam !== null && scenarioParam === null) {
+        targetId = 'simSection';
+      }
+
+      if (targetId && targetId !== 'motionSection' && !blindActive) {
+        window.__fpsLabPendingSection = targetId;
+        window.dispatchEvent(new CustomEvent('fpslab:navigate-section', {
+          detail: { target: targetId, instant: true }
+        }));
+      }
+    } finally {
+      isApplyingUrlParams = false;
+    }
+
+    if (hasAnyShareParam) {
+      urlSyncActive = true;
+    }
+    return result;
+  }
+
+  // ============================================================================
+  // POWER SAVING / THROTTLED REFRESH DETECTION (CHROME ENERGY SAVER / LOW POWER)
+  // ============================================================================
+  const powerSaveBanner = document.getElementById('powerSaveBanner');
+  const powerSaveText = document.getElementById('powerSaveText');
+  const powerSaveRecheckBtn = document.getElementById('powerSaveRecheckBtn');
+  const powerSaveDismissBtn = document.getElementById('powerSaveDismissBtn');
+  const detectorCardEl = document.getElementById('detectorCard');
+
+  const powerSaveTestForced = /[?&]power_save_test=1(?:&|$)/.test(window.location.search);
+  let powerSaveDismissed = false;
+  let batteryUnplugged = null; // null = unknown, true = on battery, false = plugged in
+  let liveRafWindow = [];
+  let lastPowerSaveAutoCheck = 0;
+
+  function updatePowerSaveNotice(hz) {
+    const throttled = powerSaveTestForced || (typeof hz === 'number' && hz > 0 && hz <= 45);
+    if (detectorCardEl) {
+      detectorCardEl.classList.toggle('is-power-save', throttled);
+    }
+    if (!powerSaveBanner) return;
+    if (!throttled) {
+      powerSaveBanner.hidden = true;
+      return;
+    }
+    if (powerSaveDismissed) return;
+    if (powerSaveText) {
+      const displayHz = powerSaveTestForced ? 30 : Math.round(hz);
+      const batteryHint = batteryUnplugged === true
+        ? 'Your device is on battery and your browser is throttling animations'
+        : 'Your browser is throttling animations';
+      powerSaveText.innerHTML =
+        `<strong>Power Saving Mode detected (~${displayHz} Hz):</strong> ${batteryHint} below 60 Hz (likely Chrome Energy Saver or OS Low Power Mode), so live motion and 40/60 FPS comparisons won't be precise.`;
+    }
+    powerSaveBanner.hidden = false;
+  }
+
+  function observeLivePowerSaveFrame(dtReal) {
+    if (powerSaveTestForced || document.hidden || state.paused) return;
+    if (dtReal < 3 || dtReal > 49.5) return;
+    liveRafWindow.push(dtReal);
+    if (liveRafWindow.length < 48) return;
+    const sorted = liveRafWindow.slice().sort((a, b) => a - b);
+    const medianDt = sorted[Math.floor(sorted.length / 2)];
+    liveRafWindow.length = 0;
+
+    const nowMs = performance.now();
+    if (nowMs - lastPowerSaveAutoCheck < 4000) return;
+
+    const estHz = 1000 / medianDt;
+    const currentlyThrottled = !!(detectorCardEl && detectorCardEl.classList.contains('is-power-save'));
+    if (!currentlyThrottled && estHz <= 38) {
+      lastPowerSaveAutoCheck = nowMs;
+      detectRefreshRate(false);
+    } else if (currentlyThrottled && estHz >= 52) {
+      lastPowerSaveAutoCheck = nowMs;
+      powerSaveDismissed = false;
+      detectRefreshRate(false);
+    }
+  }
+
+  if (powerSaveRecheckBtn) {
+    powerSaveRecheckBtn.addEventListener('click', () => {
+      powerSaveDismissed = false;
+      detectRefreshRate(false);
+    });
+  }
+
+  if (powerSaveDismissBtn) {
+    powerSaveDismissBtn.addEventListener('click', () => {
+      powerSaveDismissed = true;
+      if (powerSaveBanner) powerSaveBanner.hidden = true;
+    });
+  }
+
+  // Progressive enhancement in Chromium: detect battery unplugged state & auto-recheck when plugged back in
+  if (typeof navigator !== 'undefined' && typeof navigator.getBattery === 'function') {
+    navigator.getBattery().then((bat) => {
+      batteryUnplugged = !bat.charging;
+      if (powerSaveBanner && !powerSaveBanner.hidden) {
+        updatePowerSaveNotice(state.detectedHz || 30);
+      }
+      bat.addEventListener('chargingchange', () => {
+        batteryUnplugged = !bat.charging;
+        if (bat.charging) powerSaveDismissed = false;
+        setTimeout(() => detectRefreshRate(false), 600);
+      });
+    }).catch(() => {
+      // Ignore unsupported/restricted battery status
+    });
+  }
+
+  if (powerSaveTestForced) {
+    updatePowerSaveNotice(30);
+  }
+
+  // ============================================================================
   // INIT
   // ============================================================================
   const cookieBanner = document.getElementById('cookieBanner');
@@ -3932,9 +5324,10 @@
     });
   }
 
+  const sharedInit = applySharedUrlParams();
   syncVisibleSectionsNow();
   updateLoadDisplay();
-  detectRefreshRate(true);
+  detectRefreshRate(!sharedInit.explicitHz);
   if (blindActive) {
     enterBlindTest(false);
   } else {

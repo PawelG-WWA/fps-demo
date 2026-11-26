@@ -95,6 +95,7 @@
     (function () {
       var resetBlind = /[?&](blind|reset_blind)=1(?:&|$)/.test(location.search);
       var resetCookies = /[?&]reset_cookies=1(?:&|$)/.test(location.search);
+      var hasShareParams = /[?&](scenario|sim|section|load|hz|speed|view|vel|arena|pipe|phys)=/.test(location.search);
       if (resetBlind) {
         document.cookie = 'fps_lab_blind_seen=; path=/; max-age=0';
       }
@@ -102,7 +103,7 @@
         document.cookie = 'fps_lab_cookie_ok=; path=/; max-age=0';
       }
       var cookies = document.cookie.split(';');
-      if (resetBlind || !cookies.some(function (c) { return c.trim().indexOf('fps_lab_blind_seen=1') === 0; })) {
+      if (resetBlind || (!hasShareParams && !cookies.some(function (c) { return c.trim().indexOf('fps_lab_blind_seen=1') === 0; }))) {
         document.documentElement.classList.add('is-blind-test');
       }
       if (!resetCookies && cookies.some(function (c) { return c.trim().indexOf('fps_lab_cookie_ok=1') === 0; })) {
@@ -325,9 +326,9 @@
       }
     }
   </style>
-  <link rel="preload" href="styles.css?v=44" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="preload" href="styles.css?v=57" as="style" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
-    <link rel="stylesheet" href="styles.css?v=44">
+    <link rel="stylesheet" href="styles.css?v=57">
   </noscript>
 </head>
 
@@ -349,22 +350,26 @@
           </button>
           <button class="step-pill" type="button" data-target="simSection">
             <span class="step-idx">02</span>
+            <span>Performance</span>
+          </button>
+          <button class="step-pill" type="button" data-target="physicsSection">
+            <span class="step-idx">03</span>
             <span>Simulation</span>
           </button>
           <button class="step-pill" type="button" data-target="inputSection">
-            <span class="step-idx">03</span>
+            <span class="step-idx">04</span>
             <span>Latency</span>
           </button>
           <button class="step-pill" type="button" data-target="pipelineSection">
-            <span class="step-idx">04</span>
+            <span class="step-idx">05</span>
             <span>Pipeline</span>
           </button>
           <button class="step-pill" type="button" data-target="timelineSection">
-            <span class="step-idx">05</span>
+            <span class="step-idx">06</span>
             <span>Refresh Map</span>
           </button>
           <button class="step-pill" type="button" data-target="readingSection">
-            <span class="step-idx">06</span>
+            <span class="step-idx">07</span>
             <span>Reading</span>
           </button>
         </nav>
@@ -388,6 +393,23 @@
                 change your monitor's refresh rate. The simulated refresh setting controls the model.</p>
             </div>
           </div>
+
+          <button class="btn-share-top" id="shareSetupBtn" type="button"
+            title="Copy link to current section and lab setup" aria-label="Copy link to current setup">
+            <svg class="share-ico share-ico-link" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <svg class="share-ico share-ico-check" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span class="share-lbl-stack">
+              <span class="lbl-default">Share</span>
+              <span class="lbl-copied" aria-hidden="true">Copied</span>
+            </span>
+          </button>
         </div>
 
         <button class="mob-spike-btn" id="mobSpikeBtn" type="button"
@@ -480,6 +502,22 @@
               <circle cx="8" cy="8" r="2" />
             </svg>
             <span>Blind Test</span>
+          </button>
+          <button class="btn-mob-share" id="mobShareBtn" type="button"
+            title="Copy link to current section and lab setup" aria-label="Copy link to current setup">
+            <svg class="share-ico share-ico-link" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <svg class="share-ico share-ico-check" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span class="share-lbl-stack">
+              <span class="lbl-default">Share Setup</span>
+              <span class="lbl-copied" aria-hidden="true">Link Copied</span>
+            </span>
           </button>
           <button class="btn-explode" id="explodeBtn" type="button"
             title="Inject a sudden +17.5 ms transient load spike (Shortcut: S)">
@@ -833,11 +871,11 @@
           </div>
 
           <!-- RIGHT INTERACTIVE EXPONENTIAL LOAD CURVE PANEL -->
-          <aside class="sim-curve-card" aria-label="Exponential simulation load control">
+          <aside class="sim-curve-card" aria-label="Exponential performance load control">
             <div class="sim-curve-head">
               <div class="card-title-group">
                 <span class="view-kicker">02</span>
-                <h2>Simulation Level</h2>
+                <h2>Performance Level</h2>
               </div>
               <p class="sim-curve-sub">Swipe along the exponential curve to scale entity count and workload across 5
                 levels.</p>
@@ -859,11 +897,11 @@
             </div>
 
             <div class="exp-curve-wrap" id="expCurveWrap" role="slider" tabindex="0"
-              aria-label="Exponential simulation load level" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
+              aria-label="Exponential performance load level" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
               <canvas id="expCurveCanvas" width="280" height="220"></canvas>
             </div>
 
-            <div class="sim-level-btns" role="group" aria-label="Simulation load presets">
+            <div class="sim-level-btns" role="group" aria-label="Performance load presets">
               <button class="sim-lvl-btn active" type="button" data-sim-level="1">1</button>
               <button class="sim-lvl-btn" type="button" data-sim-level="2">2</button>
               <button class="sim-lvl-btn" type="button" data-sim-level="3">3</button>
@@ -897,14 +935,185 @@
       </div>
     </section>
 
-    <!-- VIEW 3: INPUT LATENCY & TRACKING -->
-    <section class="stage-slide" id="inputSection" data-slide-index="2">
+    <!-- VIEW 3: CONSTANT 30 HZ SIMULATION STEP ACROSS ENVIRONMENTS -->
+    <section class="stage-slide" id="physicsSection" data-slide-index="2" data-phys-env="1">
+      <div class="slide-inner motion-stack phys-stack">
+        <div class="stage-card phys-card">
+          <div class="card-head">
+            <div class="card-title-group">
+              <span class="view-kicker">03</span>
+              <h2>Constant 30 Hz Simulation Step</h2>
+            </div>
+          </div>
+
+          <div class="phys-body">
+            <div class="phys-tracks-col">
+              <!-- TRACK A: LOCKED IDEAL REFERENCE -->
+              <article class="phys-chamber" id="physTrackRef" data-tier="low">
+                <div class="phys-chamber-head">
+                  <div class="phys-chamber-title">
+                    <span class="swatch swatch-60"></span>
+                    <h3>Reference · Decoupled 30 Hz + State Interp</h3>
+                  </div>
+                  <span class="phys-pill mono good" id="physRefMeta">30.0 Hz · 1.00× · Δ 0.0 px</span>
+                </div>
+                <div class="phys-canvas-wrap">
+                  <canvas class="phys-canvas" id="physRefCanvas" width="760" height="220"></canvas>
+                </div>
+              </article>
+
+              <!-- TRACK B: ACTIVE SELECTED ENVIRONMENT -->
+              <article class="phys-chamber" id="physTrackTest" data-tier="low">
+                <div class="phys-chamber-head">
+                  <div class="phys-chamber-title">
+                    <span class="swatch swatch-60" id="physTestSwatch"></span>
+                    <h3 id="physTestTitle">Test · Decoupled 30 Hz + Smooth Blending</h3>
+                  </div>
+                  <span class="phys-pill mono good" id="physTestMeta">30.0 Hz · 1.00× · Δ 0.0 px</span>
+                </div>
+                <div class="phys-canvas-wrap">
+                  <canvas class="phys-canvas" id="physTestCanvas" width="760" height="220"></canvas>
+                </div>
+              </article>
+            </div>
+
+            <!-- RIGHT-HAND 30 HZ ENVIRONMENTS PANEL -->
+            <aside class="motion-scenarios-pane phys-env-pane" aria-label="30 Hz simulation environments">
+              <div class="motion-scenarios-head">
+                <span class="motion-scenarios-eyebrow mono">30 HZ ENVIRONMENTS</span>
+                <span class="motion-scenarios-hint">Compare vs. reference</span>
+              </div>
+              <div class="motion-scenarios-list" role="group" aria-label="Select 30 Hz simulation environment">
+                <button class="motion-scenario-btn phys-env-btn active" type="button" data-phys-env="1" data-tier="low">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">1</span>
+                    <span class="ms-title">Decoupled 30 Hz</span>
+                    <span class="ms-load mono">Smooth</span>
+                  </div>
+                  <span class="ms-summary">Steady 30 Hz clock · smooth &amp; exact</span>
+                </button>
+                <button class="motion-scenario-btn phys-env-btn" type="button" data-phys-env="2" data-tier="mid">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">2</span>
+                    <span class="ms-title">60/120 Hz · No Interp</span>
+                    <span class="ms-load mono">Repeats</span>
+                  </div>
+                  <span class="ms-summary">Exact landings · repeated display frames</span>
+                </button>
+                <button class="motion-scenario-btn phys-env-btn" type="button" data-phys-env="3" data-tier="warn">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">3</span>
+                    <span class="ms-title">Variable Frame Step</span>
+                    <span class="ms-load mono">Drifts</span>
+                  </div>
+                  <span class="ms-summary">FPS changes make jumps overshoot or miss</span>
+                </button>
+                <button class="motion-scenario-btn phys-env-btn" type="button" data-phys-env="4" data-tier="high">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">4</span>
+                    <span class="ms-title">Tied to Monitor Refresh</span>
+                    <span class="ms-load mono">2×–4×</span>
+                  </div>
+                  <span class="ms-summary">Runs 2× speed on 60 Hz, 4× on 120 Hz</span>
+                </button>
+                <button class="motion-scenario-btn phys-env-btn" type="button" data-phys-env="5" data-tier="high">
+                  <div class="ms-row-top">
+                    <span class="ms-idx mono">5</span>
+                    <span class="ms-title">Constant 30 Hz Limits</span>
+                    <span class="ms-load mono">Limits</span>
+                  </div>
+                  <span class="ms-summary">Fast falls can skip thin floors in 1 step</span>
+                </button>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <!-- COMPACT MOBILE 30 HZ ENVIRONMENT BAR (<= 820px) -->
+        <div class="motion-mob-scenarios phys-mob-envs" role="group" aria-label="Mobile 30 Hz simulation environments">
+          <button class="mob-scen-btn phys-env-btn active" type="button" data-phys-env="1">1 Fixed</button>
+          <button class="mob-scen-btn phys-env-btn" type="button" data-phys-env="2">2 No Interp</button>
+          <button class="mob-scen-btn phys-env-btn" type="button" data-phys-env="3">3 Var Step</button>
+          <button class="mob-scen-btn phys-env-btn" type="button" data-phys-env="4">4 2× Speed</button>
+          <button class="mob-scen-btn phys-env-btn" type="button" data-phys-env="5">5 Limits</button>
+        </div>
+
+        <!-- FLOATING 30 HZ SIMULATION EXPLANATION FOOTER + EXPANDABLE MORE PANE -->
+        <div class="phys-footer-anchor">
+          <div class="phys-more-backdrop" id="physMoreBackdrop" aria-hidden="true"></div>
+          <aside class="phys-more-pane" id="physMorePane" data-tier="low" role="dialog" aria-modal="false"
+            aria-labelledby="physMoreTitle" aria-hidden="true">
+            <div class="phys-more-head">
+              <div class="phys-more-title-group">
+                <span class="sim-footer-badge mono" id="physMoreBadge">ENV 1</span>
+                <h3 class="phys-more-title" id="physMoreTitle">Decoupled 30 Hz</h3>
+              </div>
+              <button class="phys-more-close" id="physMoreCloseBtn" type="button" aria-label="Close detailed explanation">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div class="phys-more-grid">
+              <div class="phys-more-block">
+                <span class="phys-more-kicker mono">WHAT TO LOOK AT</span>
+                <p id="physMoreLook"></p>
+              </div>
+              <div class="phys-more-block">
+                <span class="phys-more-kicker mono">WHY IT HAPPENS</span>
+                <p id="physMoreWhy"></p>
+              </div>
+              <div class="phys-more-block phys-more-takeaway">
+                <span class="phys-more-kicker mono">REAL-GAME TAKEAWAY</span>
+                <p id="physMoreTakeaway"></p>
+              </div>
+            </div>
+          </aside>
+
+          <div class="sim-footer-card phys-footer-card" id="physicsFooterCard" data-tier="low" aria-live="polite">
+            <div class="sim-footer-accent" aria-hidden="true"></div>
+            <div class="sim-footer-left">
+              <span class="sim-footer-badge mono" id="physFooterBadge">
+                <span class="sim-pulse-dot" aria-hidden="true"></span>
+                <span id="physFooterNum">ENV 1</span>
+              </span>
+              <div class="sim-footer-title-wrap">
+                <span class="sim-footer-title" id="physFooterTitle">Decoupled 30 Hz</span>
+                <div class="sim-meter" id="physFooterMeter" aria-hidden="true">
+                  <span class="is-lit"></span><span></span><span></span><span></span><span></span>
+                </div>
+              </div>
+            </div>
+            <p class="sim-footer-desc" id="physFooterDesc">
+              Both boxes follow the exact same dotted yellow path and land on the same spot every jump. Try dragging Load
+              or pressing Load Spike—even when frame rate drops, the jump stays rock-solid and smooth.
+            </p>
+            <div class="phys-footer-actions">
+              <span class="sim-impact-pill mono" id="physImpactTag">Same landing every time</span>
+              <button class="phys-more-btn" id="physMoreBtn" type="button" aria-expanded="false"
+                aria-controls="physMorePane">
+                <span>More</span>
+                <svg class="phys-more-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="18 15 12 9 6 15" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: INPUT LATENCY & TRACKING -->
+    <section class="stage-slide" id="inputSection" data-slide-index="3">
       <div class="slide-inner latency-stack">
         <!-- SEPARATED TOP INTERACTIVE BAR -->
         <div class="latency-card latency-top-card">
           <div class="card-head">
             <div class="card-title-group">
-              <span class="view-kicker">03</span>
+              <span class="view-kicker">04</span>
               <h2>Input Latency &amp; Tracking</h2>
             </div>
 
@@ -974,8 +1183,8 @@
       </div>
     </section>
 
-    <!-- VIEW 4: ANIMATED FRAME PIPELINE PRESENTATION -->
-    <section class="stage-slide" id="pipelineSection" data-slide-index="3">
+    <!-- VIEW 5: ANIMATED FRAME PIPELINE PRESENTATION -->
+    <section class="stage-slide" id="pipelineSection" data-slide-index="4">
       <div class="slide-inner pipe-stack">
         <!-- FIRST-VISIT / REPLAY PROGRESSIVE 5-SLIDE PRESENTATION (50vh x 70vw) -->
         <div class="pipe-intro-card" id="pipeIntroCard" data-stage="0" aria-label="Frame Pipeline Introduction">
@@ -1115,7 +1324,7 @@
           <!-- Presentation Header -->
           <div class="card-head pipe-head">
             <div class="card-title-group">
-              <span class="view-kicker">04</span>
+              <span class="view-kicker">05</span>
               <h2>A Simplified Input-to-Pixel Pipeline</h2>
             </div>
 
@@ -1274,15 +1483,15 @@
       </div>
     </section>
 
-    <!-- VIEW 5: REFRESH CYCLE MAPPING -->
-    <section class="stage-slide" id="timelineSection" data-slide-index="4">
+    <!-- VIEW 6: REFRESH CYCLE MAPPING -->
+    <section class="stage-slide" id="timelineSection" data-slide-index="5">
       <div class="slide-inner timeline-stack">
         <div class="timeline-row">
           <!-- SEPARATED FLOATING TIMELINE CARD (50vh) -->
           <div class="timeline-main-card">
             <div class="card-head">
               <div class="card-title-group">
-                <span class="view-kicker">05</span>
+                <span class="view-kicker">06</span>
                 <h2>Refresh Cycle Mapping (100 ms Window)</h2>
               </div>
               <span class="mono timeline-meta" id="timelineHzText">60 Hz = 16.67 ms</span>
@@ -1322,13 +1531,13 @@
       </div>
     </section>
 
-    <!-- VIEW 6: FURTHER READING & DEMO DISCLAIMER -->
-    <section class="stage-slide" id="readingSection" data-slide-index="5">
+    <!-- VIEW 7: FURTHER READING & DEMO DISCLAIMER -->
+    <section class="stage-slide" id="readingSection" data-slide-index="6">
       <div class="slide-inner reading-stack">
         <div class="stage-card reading-shell">
           <div class="card-head">
             <div class="card-title-group">
-              <span class="view-kicker">06</span>
+              <span class="view-kicker">07</span>
               <h2>Articles Worth Reading</h2>
             </div>
             <span class="mono reading-meta">3 curated references</span>
@@ -1466,20 +1675,23 @@
     <button class="rail-dot active" type="button" data-target="motionSection" aria-label="01 Motion">
       <span class="rail-tooltip">01 · Motion</span>
     </button>
-    <button class="rail-dot" type="button" data-target="simSection" aria-label="02 Simulation">
-      <span class="rail-tooltip">02 · Simulation</span>
+    <button class="rail-dot" type="button" data-target="simSection" aria-label="02 Performance">
+      <span class="rail-tooltip">02 · Performance</span>
     </button>
-    <button class="rail-dot" type="button" data-target="inputSection" aria-label="03 Latency">
-      <span class="rail-tooltip">03 · Latency</span>
+    <button class="rail-dot" type="button" data-target="physicsSection" aria-label="03 Simulation">
+      <span class="rail-tooltip">03 · Simulation</span>
     </button>
-    <button class="rail-dot" type="button" data-target="pipelineSection" aria-label="04 Pipeline">
-      <span class="rail-tooltip">04 · Pipeline</span>
+    <button class="rail-dot" type="button" data-target="inputSection" aria-label="04 Latency">
+      <span class="rail-tooltip">04 · Latency</span>
     </button>
-    <button class="rail-dot" type="button" data-target="timelineSection" aria-label="05 Refresh Map">
-      <span class="rail-tooltip">05 · Refresh Map</span>
+    <button class="rail-dot" type="button" data-target="pipelineSection" aria-label="05 Pipeline">
+      <span class="rail-tooltip">05 · Pipeline</span>
     </button>
-    <button class="rail-dot" type="button" data-target="readingSection" aria-label="06 Reading">
-      <span class="rail-tooltip">06 · Reading</span>
+    <button class="rail-dot" type="button" data-target="timelineSection" aria-label="06 Refresh Map">
+      <span class="rail-tooltip">06 · Refresh Map</span>
+    </button>
+    <button class="rail-dot" type="button" data-target="readingSection" aria-label="07 Reading">
+      <span class="rail-tooltip">07 · Reading</span>
     </button>
   </nav>
 
@@ -1505,18 +1717,18 @@
         <div class="model-assumptions-grid">
           <div class="model-assumption-item">
             <h3>1. Configured vs. Computed vs. Observed</h3>
-            <p><strong>Configured:</strong> Simulated refresh (60 / 120 Hz), Load (1.0–5.0), Simulation Level (1–5), and
-              0.25× playback speed. <strong>Computed:</strong> FPS, frame intervals, below-target %, and model latency.
-              <strong>Observed:</strong> Only the top-right browser cadence indicator samples
-              <code>requestAnimationFrame</code> callback deltas.
+            <p><strong>Configured:</strong> Simulated refresh (60 / 120 Hz), Load (1.0–5.0), Performance Level (1–5), 30
+              Hz Simulation environment (1–5), and 0.25× playback speed. <strong>Computed:</strong> FPS, frame
+              intervals, landing drift, and model latency. <strong>Observed:</strong> Only the top-right browser cadence
+              indicator samples <code>requestAnimationFrame</code> callback deltas.
             </p>
           </div>
           <div class="model-assumption-item">
-            <h3>2. Workload, Spikes &amp; Combined Cost</h3>
-            <p>Motion, Pipeline, and Refresh Map model one combined frame cost (<code>14.0 + (Load − 1) × 7.5 ms</code>,
-              split 30% CPU / 70% GPU in Pipeline for illustration), plus transient spikes (<code>+17.5 ms</code>
-              manual, <code>+15 ms</code> in Scenario 2). Simulation scales exponentially
-              (<code>12.0 × 1.52^(Level − 1)</code>) to illustrate heavier scenes.</p>
+            <h3>2. Workload, Spikes &amp; 30 Hz Integrator</h3>
+            <p>Motion, Pipeline, and Refresh Map model one combined frame cost (<code>14.0 + (Load − 1) × 7.5 ms</code>),
+              plus transient spikes (<code>+17.5 ms</code>). Performance scales exponentially
+              (<code>12.0 × 1.52^(Level − 1)</code>). Section 03 compares a fixed <code>1/30 s</code> accumulator
+              against naive variable-<code>dt</code> Euler + piecewise gravity integration and tick-locked stepping.</p>
           </div>
           <div class="model-assumption-item">
             <h3>3. Fixed-Refresh V-Sync Quantization</h3>
@@ -1561,8 +1773,44 @@
     </div>
   </noscript>
 
-  <script defer src="app.js?v=38"></script>
-  <script defer src="ui.js?v=27"></script>
+  <!-- POWER SAVING / THROTTLED REFRESH BOTTOM NOTIFICATION -->
+  <aside class="power-save-banner" id="powerSaveBanner" role="status" aria-live="polite" hidden>
+    <span class="power-save-ico" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="7" width="16" height="10" rx="2" />
+        <line x1="22" y1="11" x2="22" y2="13" />
+        <path d="M11 10l-2 2h3l-2 2" />
+      </svg>
+    </span>
+    <p class="power-save-text" id="powerSaveText">
+      <strong>Power Saving Mode detected (~30 Hz):</strong> Your browser is throttling animations below 60 Hz (likely
+      Chrome Energy Saver or OS Low Power Mode), so live motion and 40/60 FPS results won't be precise.
+    </p>
+    <div class="power-save-actions">
+      <button class="power-save-recheck" id="powerSaveRecheckBtn" type="button">Recheck</button>
+      <button class="power-save-close" id="powerSaveDismissBtn" type="button" aria-label="Dismiss power saving notice">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <div class="share-toast" id="shareToast" role="status" aria-live="polite" hidden>
+    <span class="share-toast-dot" aria-hidden="true">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    </span>
+    <span>Setup link copied to clipboard</span>
+  </div>
+
+  <script defer src="app.js?v=51"></script>
+  <script defer src="ui.js?v=30"></script>
 </body>
 
 </html>

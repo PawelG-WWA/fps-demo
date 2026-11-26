@@ -39,11 +39,40 @@
   }
 
   function setActiveIndicators(idx) {
+    const prevIdx = activeIndex;
     activeIndex = idx;
     const activeId = slides[idx] ? slides[idx].id : '';
     stepPills.forEach((el) => el.classList.toggle('active', el.dataset.target === activeId));
     railDots.forEach((el) => el.classList.toggle('active', el.dataset.target === activeId));
+    if (prevIdx !== idx && activeId) {
+      window.dispatchEvent(new CustomEvent('fpslab:section-changed', { detail: { id: activeId } }));
+    }
   }
+
+  function getActiveSectionId() {
+    if (!isStackedLayout()) {
+      return slides[activeIndex] ? slides[activeIndex].id : 'motionSection';
+    }
+    const midY = window.innerHeight * 0.42;
+    let bestId = slides[0] ? slides[0].id : 'motionSection';
+    let bestDist = Infinity;
+    slides.forEach((slide) => {
+      const rect = slide.getBoundingClientRect();
+      if (rect.height <= 0) return;
+      const dist = rect.top <= midY && rect.bottom >= midY
+        ? 0
+        : Math.min(Math.abs(rect.top - midY), Math.abs(rect.bottom - midY));
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestId = slide.id;
+      }
+    });
+    return bestId;
+  }
+
+  window.fpsLabNav = {
+    getActiveSectionId
+  };
 
   function updateScrollPresentation() {
     rafPending = false;
@@ -249,9 +278,21 @@
 
   // Handle manual scrollbar drag: settle cleanly to nearest slide when drag stops
   let scrollEndTimer = null;
+  let lastStackedSectionId = null;
   scroller.addEventListener('scroll', () => {
     scheduleUpdate();
-    if (isAnimating || isStackedLayout() || isFirstVisitLocked()) return;
+    if (isStackedLayout() && !isFirstVisitLocked()) {
+      clearTimeout(scrollEndTimer);
+      scrollEndTimer = setTimeout(() => {
+        const curId = getActiveSectionId();
+        if (curId && curId !== lastStackedSectionId) {
+          lastStackedSectionId = curId;
+          window.dispatchEvent(new CustomEvent('fpslab:section-changed', { detail: { id: curId } }));
+        }
+      }, 160);
+      return;
+    }
+    if (isAnimating || isFirstVisitLocked()) return;
     clearTimeout(scrollEndTimer);
     scrollEndTimer = setTimeout(() => {
       if (isAnimating || isStackedLayout() || isFirstVisitLocked()) return;
@@ -356,6 +397,31 @@
     updateScrollPresentation();
   });
 
+  // Programmatic section navigation (e.g. restoring a shared URL)
+  function navigateToTarget(targetId, instant) {
+    const idx = slides.findIndex((s) => s.id === targetId);
+    if (idx < 0) return;
+    const slide = slides[idx];
+    if (instant) {
+      if (isStackedLayout()) {
+        slide.scrollIntoView({ behavior: 'instant', block: 'start' });
+      } else {
+        scroller.scrollTop = slide.offsetTop;
+      }
+      setActiveIndicators(idx);
+      updateScrollPresentation();
+    } else {
+      goToSlide(idx);
+    }
+  }
+
+  window.addEventListener('fpslab:navigate-section', (e) => {
+    const detail = e && e.detail ? e.detail : {};
+    if (detail.target) {
+      navigateToTarget(detail.target, !!detail.instant);
+    }
+  });
+
   // Top bar stepper, right-edge dots, and scroll cues
   navButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -390,9 +456,19 @@
     }
   });
 
-  updateScrollPresentation();
-  window.addEventListener('load', () => {
+  const initialPendingSection = window.__fpsLabPendingSection || null;
+  if (initialPendingSection) {
+    delete window.__fpsLabPendingSection;
+    navigateToTarget(initialPendingSection, true);
+  } else {
     updateScrollPresentation();
+  }
+  window.addEventListener('load', () => {
+    if (initialPendingSection && !isFirstVisitLocked()) {
+      navigateToTarget(initialPendingSection, true);
+    } else {
+      updateScrollPresentation();
+    }
     window.dispatchEvent(new Event('resize'));
   });
 })();
