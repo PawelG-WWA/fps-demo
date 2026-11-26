@@ -83,6 +83,7 @@ html, body {
 
 .top-bar-shell {
   pointer-events: auto;
+  position: relative;
   width: var(--stage-w);
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(18px);
@@ -91,6 +92,137 @@ html, body {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-float);
   overflow: visible;
+}
+
+.desktop-console-tab,
+.desktop-console-close {
+  display: none;
+}
+
+@media (min-width: 821px) {
+  .top-bar-shell {
+    transition: border-bottom-left-radius 0.2s ease;
+  }
+
+  html:not(.is-console-open) .top-bar-shell {
+    border-bottom-left-radius: 0;
+  }
+
+  .topbar {
+    transition: border-color 0.22s ease;
+  }
+
+  html:not(.is-console-open) .topbar {
+    border-bottom-color: transparent;
+  }
+
+  .control-pane {
+    max-height: 84px;
+    opacity: 1;
+    transition: max-height 0.24s cubic-bezier(0.22, 1, 0.36, 1), padding 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+  }
+
+  html:not(.is-console-open) .control-pane {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .desktop-console-tab {
+    appearance: none;
+    position: absolute;
+    top: calc(100% - 1px);
+    left: -1px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px 6px 14px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(15, 23, 42, 0.11);
+    border-top: none;
+    border-radius: 0 0 14px var(--radius-xl);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: clamp(13px, 1.4vh, 15px);
+    line-height: 20px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.14s ease, background 0.14s ease, padding 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .desktop-console-tab::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.94);
+    pointer-events: none;
+  }
+
+  .desktop-console-tab:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.98);
+    padding-bottom: 8px;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.11);
+  }
+
+  .desktop-console-tab:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+  }
+
+  .desktop-console-tab .console-tab-chev {
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.14s ease, transform 0.16s ease;
+  }
+
+  .desktop-console-tab:hover .console-tab-chev {
+    opacity: 1;
+    transform: translateY(1px);
+  }
+
+  html.is-console-open .desktop-console-tab {
+    display: none;
+  }
+
+  .desktop-console-close {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+  }
+
+  .desktop-console-close:hover {
+    background: var(--surface-subtle);
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+
+  .desktop-console-close:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+  }
 }
 
 .topbar {
@@ -477,7 +609,7 @@ html, body {
   padding: 7px 10px;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   flex-wrap: nowrap;
 }
 
@@ -759,12 +891,12 @@ html, body {
 .load-readout {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   flex-shrink: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0 7px;
+  padding: 0 5px;
   height: calc(var(--lbl-h) - 4px);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
@@ -832,35 +964,6 @@ html, body {
 
 .dock-actions {
   gap: 8px;
-}
-
-.btn-blind {
-  appearance: none;
-  background: var(--surface-alt);
-  border: 1px solid var(--border-strong);
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: clamp(12.5px, 1.35vh, 14px);
-  line-height: var(--lbl-h);
-  font-weight: 650;
-  padding: 0 10px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
-}
-
-.btn-blind:hover {
-  background: var(--text);
-  border-color: var(--text);
-  color: #ffffff;
-}
-
-.blind-icon {
-  flex-shrink: 0;
 }
 
 /* Tactile hardware-style Load Spike trigger button with live decay bar & keycap */
@@ -1548,7 +1651,7 @@ h2 {
   background: var(--surface-alt);
 }
 
-html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .motion-body {
+#motionSection[data-motion-view="simplified"] .motion-body {
   grid-template-columns: minmax(0, 1fr) clamp(310px, 30vw, 415px);
 }
 
@@ -1563,7 +1666,7 @@ html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .motion-b
   background: var(--surface-alt);
 }
 
-html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lanes {
+#motionSection[data-motion-view="simplified"] .lanes {
   padding-right: 12px;
 }
 
@@ -1582,11 +1685,15 @@ html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lanes {
   gap: 10px;
 }
 
-html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-track-unit {
+#motionSection[data-motion-view="simplified"] .lane-track-unit {
   grid-template-columns: 1fr;
 }
 
-html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-telemetry-split {
+#motionSection[data-motion-view="simplified"] .lane-telemetry-split {
+  display: none;
+}
+
+#motionSection[data-motion-view="simplified"] .motion-card .view-controls {
   display: none;
 }
 
@@ -2061,12 +2168,12 @@ html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-tel
    ============================================================================ */
 .sim-stack {
   justify-content: center;
-  gap: clamp(12px, 2vh, 22px);
+  gap: 0;
 }
 
 .sim-row {
   width: 100%;
-  height: 50vh;
+  height: clamp(460px, 64vh, 600px);
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.85fr) minmax(240px, 1fr);
@@ -2301,6 +2408,202 @@ html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-tel
   background: var(--text);
   border-color: var(--text);
   color: #ffffff;
+}
+
+/* Performance Simplified ↔ Detailed view division */
+.sim-curve-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sim-curve-title-row .card-title-group {
+  gap: 8px;
+  min-width: 0;
+}
+
+.sim-curve-title-row h2 {
+  font-size: clamp(14.5px, 1.55vh, 17px);
+  white-space: nowrap;
+}
+
+.sim-view-switch {
+  flex-shrink: 0;
+}
+
+.sim-view-switch .seg-btn {
+  font-size: clamp(11px, 1.15vh, 12px);
+  line-height: 22px;
+  padding: 0 7px;
+}
+
+#simSection[data-sim-view="detailed"] .sim-scenarios-list {
+  display: none;
+}
+
+#simSection[data-sim-view="simplified"] .sim-curve-sub,
+#simSection[data-sim-view="simplified"] .sim-kpis,
+#simSection[data-sim-view="simplified"] .exp-curve-wrap,
+#simSection[data-sim-view="simplified"] .sim-level-btns {
+  display: none;
+}
+
+@media (min-width: 821px) {
+  #simSection .sim-footer-card {
+    max-height: 120px;
+    margin-top: clamp(12px, 1.8vh, 20px);
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    transition: max-height 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+      margin-top 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+      padding-top 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+      padding-bottom 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.26s ease 0.06s,
+      transform 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.24s ease,
+      visibility 0s linear 0s;
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-footer-card {
+    max-height: 0;
+    margin-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    box-shadow: none;
+    visibility: hidden;
+    transition: max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+      margin-top 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+      padding-top 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+      padding-bottom 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.2s ease,
+      transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.2s ease,
+      visibility 0s linear 0.34s;
+  }
+}
+
+@media (max-width: 820px) {
+  #simSection[data-sim-view="simplified"] .sim-footer-card {
+    display: none;
+  }
+}
+
+#simSection[data-sim-view="simplified"] .sim-curve-card {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.sim-scenarios-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.sim-scenario-btn {
+  appearance: none;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.12s ease;
+}
+
+.sim-scenario-btn:hover {
+  border-color: rgba(15, 23, 42, 0.28);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.sim-sc-desc {
+  padding-left: 25px;
+  font-size: clamp(10.5px, 1.15vh, 11.8px);
+  line-height: 1.32;
+  color: var(--text-dim);
+  white-space: normal;
+}
+
+.sim-scenario-btn.active .sim-sc-desc {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.sim-scenario-btn.active[data-tier="low"] {
+  background: #ecfdf5;
+  border-color: rgba(5, 150, 105, 0.55);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.16);
+}
+.sim-scenario-btn.active[data-tier="low"] .ms-idx {
+  background: #059669;
+  color: #ffffff;
+}
+.sim-scenario-btn.active[data-tier="low"] .ms-load {
+  background: rgba(5, 150, 105, 0.14);
+  color: #047857;
+}
+
+.sim-scenario-btn.active[data-tier="mid"] {
+  background: #fffbeb;
+  border-color: rgba(217, 119, 6, 0.55);
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.16);
+}
+.sim-scenario-btn.active[data-tier="mid"] .ms-idx {
+  background: #d97706;
+  color: #ffffff;
+}
+.sim-scenario-btn.active[data-tier="mid"] .ms-load {
+  background: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+}
+
+.sim-scenario-btn.active[data-tier="warn"] {
+  background: #fff7ed;
+  border-color: rgba(234, 88, 12, 0.58);
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.16);
+}
+.sim-scenario-btn.active[data-tier="warn"] .ms-idx {
+  background: #ea580c;
+  color: #ffffff;
+}
+.sim-scenario-btn.active[data-tier="warn"] .ms-load {
+  background: rgba(234, 88, 12, 0.15);
+  color: #c2410c;
+}
+
+.sim-scenario-btn.active[data-tier="high"] {
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, 0.58);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.16);
+}
+.sim-scenario-btn.active[data-tier="high"] .ms-idx {
+  background: #dc2626;
+  color: #ffffff;
+}
+.sim-scenario-btn.active[data-tier="high"] .ms-load {
+  background: rgba(220, 38, 38, 0.15);
+  color: #b91c1c;
 }
 
 /* Modern eye-catching floating scenario notification banner */
@@ -2935,7 +3238,7 @@ html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-tel
 
 .arena-wrap.latency-sight-card {
   flex: 0 0 auto;
-  height: 50vh;
+  height: 40vh;
   width: 100%;
   position: relative;
   overflow: hidden;
@@ -4216,7 +4519,7 @@ html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-tel
     height: 96px;
   }
   .arena-wrap {
-    height: 340px;
+    height: 272px;
   }
   .lanes {
     height: auto;
@@ -4679,272 +4982,6 @@ html.is-intro-revealed #motionSection .slide-inner {
 }
 
 /* ============================================================================
-   BLIND TEST CHALLENGE (FIRST-VISIT & ON-DEMAND FROM CONSOLE)
-   ============================================================================ */
-.blind-head {
-  display: none;
-  flex: 0 0 auto;
-  padding: clamp(12px, 1.5vh, 18px) 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  transition: background 0.25s ease, border-color 0.25s ease;
-}
-
-.blind-head[data-outcome="correct"] {
-  background: #ecfdf5;
-  border-bottom-color: rgba(5, 150, 105, 0.28);
-}
-
-.blind-head[data-outcome="interp"] {
-  background: #f5f3ff;
-  border-bottom-color: rgba(124, 58, 237, 0.28);
-}
-
-.blind-head[data-outcome="wrong"] {
-  background: #fffbeb;
-  border-bottom-color: rgba(217, 119, 6, 0.3);
-}
-
-.blind-head-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.blind-title-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.blind-kicker {
-  background: var(--text);
-  color: #ffffff;
-  font-size: 11px;
-  line-height: 22px;
-  padding: 0 8px;
-  letter-spacing: 0.05em;
-}
-
-.blind-head[data-outcome="correct"] .blind-kicker {
-  background: #059669;
-}
-
-.blind-head[data-outcome="interp"] .blind-kicker {
-  background: #7c3aed;
-}
-
-.blind-head[data-outcome="wrong"] .blind-kicker {
-  background: #d97706;
-}
-
-.blind-scope {
-  margin: 2px 0;
-  font-size: clamp(11.5px, 1.25vh, 13px);
-  line-height: 1.4;
-  color: var(--text);
-  font-weight: 550;
-}
-
-.blind-sub {
-  margin: 0;
-  font-size: clamp(12.5px, 1.4vh, 14px);
-  line-height: 1.45;
-  color: var(--text-muted);
-}
-
-.blind-head-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.blind-retry-btn[hidden] {
-  display: none;
-}
-
-.blind-skip-btn.is-primary {
-  background: var(--text);
-  border-color: var(--text);
-  color: #ffffff;
-}
-
-.blind-skip-btn.is-primary:hover {
-  opacity: 0.9;
-}
-
-/* Lock entire page to Motion section during Blind Test */
-html.is-blind-test .top-chrome,
-html.is-blind-test .rail-nav {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateY(-20px);
-}
-
-html.is-blind-test .top-bar-shell {
-  pointer-events: none;
-}
-
-html.is-blind-test .notice-host,
-html.is-blind-test .cookie-banner,
-html.is-blind-test .stage-slide:not(#motionSection),
-html.is-blind-test .motion-card .card-head,
-html.is-blind-test .motion-scenarios-pane,
-html.is-blind-test .motion-mob-scenarios,
-html.is-blind-test .motion-footer-card,
-html.is-blind-test .lane-sim-tag {
-  display: none !important;
-}
-
-html.is-blind-test .motion-body {
-  grid-template-columns: 1fr !important;
-  height: auto !important;
-}
-
-html.is-blind-test.is-blind-revealed .lanes {
-  height: 50vh;
-  padding: clamp(8px, 1vh, 12px) 16px clamp(10px, 1.1vh, 14px);
-}
-
-html.is-blind-test.is-blind-revealed .lane-track-unit {
-  grid-template-columns: minmax(0, 1fr) clamp(370px, 33vw, 490px);
-}
-
-html.is-blind-test.is-blind-revealed .lane-telemetry-split {
-  display: grid;
-}
-
-html.is-blind-test .blind-head {
-  display: flex;
-}
-
-html.is-blind-test #motionSection {
-  padding: 20px 0;
-}
-
-/* Guessing state: full-width unlabeled neutral tracks, clickable to pick */
-html.is-blind-test:not(.is-blind-revealed) .lanes {
-  height: clamp(420px, 62vh, 600px);
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane-track-unit {
-  grid-template-columns: 1fr;
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane-telemetry-split {
-  display: none;
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane {
-  cursor: pointer;
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane-badge .swatch {
-  background: #94a3b8;
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane-badge h3 {
-  font-size: 0;
-  line-height: 0;
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane-badge h3::after {
-  content: attr(data-blind-label);
-  font-size: clamp(12.5px, 1.45vh, 15px);
-  line-height: var(--lbl-h);
-  color: #f8fafc;
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane-canvas-wrap {
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.14s ease;
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane-canvas-wrap::after {
-  content: "Pick as 60 FPS →";
-  position: absolute;
-  top: 50%;
-  right: 14px;
-  transform: translateY(-50%);
-  z-index: 3;
-  padding: 4px 11px;
-  border-radius: 7px;
-  background: rgba(15, 23, 42, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  color: #f8fafc;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 700;
-  opacity: 0.78;
-  transition: background 0.14s ease, border-color 0.14s ease, opacity 0.14s ease, transform 0.14s ease;
-  pointer-events: none;
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane:hover .lane-canvas-wrap,
-html.is-blind-test:not(.is-blind-revealed) .lane:focus-visible .lane-canvas-wrap {
-  border-color: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.18), 0 8px 22px rgba(15, 23, 42, 0.2);
-}
-
-html.is-blind-test:not(.is-blind-revealed) .lane:hover .lane-canvas-wrap::after,
-html.is-blind-test:not(.is-blind-revealed) .lane:focus-visible .lane-canvas-wrap::after {
-  background: #ffffff;
-  border-color: #ffffff;
-  color: #0f172a;
-  opacity: 1;
-  transform: translateY(-50%) scale(1.03);
-}
-
-/* Reveal state: highlight True 60 FPS and user's pick */
-html.is-blind-test.is-blind-revealed .lane.is-blind-correct .lane-canvas-wrap {
-  border-color: #10b981;
-  box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.45);
-}
-
-html.is-blind-test.is-blind-revealed .lane.is-blind-picked:not(.is-blind-correct) .lane-canvas-wrap {
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 2.5px rgba(245, 158, 11, 0.45);
-}
-
-html.is-blind-test.is-blind-revealed .lane.is-blind-correct .lane-canvas-wrap::after,
-html.is-blind-test.is-blind-revealed .lane.is-blind-picked .lane-canvas-wrap::after {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  z-index: 3;
-  padding: 2px 9px;
-  border-radius: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 20px;
-  font-weight: 750;
-  pointer-events: none;
-}
-
-html.is-blind-test.is-blind-revealed .lane.is-blind-correct .lane-canvas-wrap::after {
-  content: "✓ True 60 FPS";
-  background: #059669;
-  color: #ffffff;
-}
-
-html.is-blind-test.is-blind-revealed .lane.is-blind-picked:not(.is-blind-correct) .lane-canvas-wrap::after {
-  content: "Your Pick";
-  background: #d97706;
-  color: #ffffff;
-}
-
-html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lane-canvas-wrap::after {
-  content: "✓ Your Pick · True 60 FPS";
-  background: #059669;
-  color: #ffffff;
-}
-
-/* ============================================================================
    VIEW 6: FURTHER READING & DEMO DISCLAIMER
    ============================================================================ */
 .reading-stack {
@@ -5255,7 +5292,6 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
     gap: 4px;
   }
 
-  .btn-blind,
   .btn-explode,
   .btn-pause {
     font-size: 11.5px;
@@ -5625,7 +5661,6 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
     display: none;
   }
 
-  .control-pane .btn-blind,
   .control-pane .btn-mob-share,
   .control-pane .btn-explode,
   .control-pane .btn-pause {
@@ -5638,6 +5673,10 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
     gap: 5px;
     font-size: 12px;
     border-radius: 10px;
+  }
+
+  .control-pane .btn-mob-share {
+    grid-column: 1 / -1;
   }
 
   .control-pane .btn-pause.is-paused,
@@ -5973,23 +6012,23 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
   }
 
   /* Mobile Motion Simplified view: hide 4 charts to give taller canvases + mobile scenarios + footer */
-  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lanes {
+  #motionSection[data-motion-view="simplified"] .lanes {
     padding: 7px 10px 8px;
     gap: 6px;
   }
 
-  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-track-unit {
+  #motionSection[data-motion-view="simplified"] .lane-track-unit {
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto minmax(60px, 1fr);
     gap: 3px 8px;
   }
 
-  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .ft-top,
-  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .ft-chart-card {
+  #motionSection[data-motion-view="simplified"] .ft-top,
+  #motionSection[data-motion-view="simplified"] .ft-chart-card {
     display: none;
   }
 
-  html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-sim-tag {
+  #motionSection[data-motion-view="simplified"] .lane-sim-tag {
     position: static;
     top: auto;
     right: auto;
@@ -6302,6 +6341,64 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
   #simSection .sim-lvl-btn {
     font-size: 12px;
     line-height: 26px;
+  }
+
+  /* Mobile Simplified Performance view: 2-row grid (quad + workload level pane), footer hidden */
+  #simSection[data-sim-view="simplified"] .sim-stack {
+    grid-template-rows: minmax(0, 50fr) minmax(0, 50fr);
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-row {
+    display: contents;
+    height: auto;
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-curve-card {
+    gap: 6px;
+  }
+
+  #simSection .sim-curve-title-row {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  #simSection .sim-view-switch .seg-btn {
+    font-size: 10.5px;
+    line-height: 20px;
+    padding: 0 6px;
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-scenarios-list {
+    gap: 4px;
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-scenario-btn {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    gap: 2px;
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-scenario-btn .ms-title {
+    font-size: 11.5px;
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-scenario-btn .ms-load {
+    font-size: 9.5px;
+    line-height: 15px;
+    padding: 0 5px;
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-scenario-btn:not(.active) .sim-sc-desc {
+    display: none;
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-scenario-btn.active {
+    flex: 1 1 auto;
+  }
+
+  #simSection[data-sim-view="simplified"] .sim-scenario-btn.active .sim-sc-desc {
+    font-size: 10.5px;
+    line-height: 1.28;
   }
 
   /* 2-row description container: Row 1 = LEVEL badge + title (+ impact pill), Row 2 = full-width description */
@@ -7180,168 +7277,6 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
     line-height: 1.35;
   }
 
-  /* Mobile Blind Test Challenge overrides */
-  html.is-blind-test .top-chrome {
-    transform: translateY(20px);
-  }
-
-  html.is-blind-test,
-  html.is-blind-test body,
-  html.is-blind-test .stage-scroller {
-    height: 100dvh;
-    overflow: hidden;
-  }
-
-  html.is-blind-test #motionSection {
-    height: 100dvh;
-    min-height: 100dvh;
-    padding: 12px 0 max(12px, env(safe-area-inset-bottom));
-  }
-
-  html.is-blind-test .blind-head {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 10px 12px;
-    gap: 8px;
-  }
-
-  html.is-blind-test .blind-title-row {
-    gap: 7px;
-  }
-
-  html.is-blind-test .blind-head h2 {
-    font-size: 15px;
-    line-height: 20px;
-  }
-
-  html.is-blind-test .blind-kicker {
-    font-size: 9.5px;
-    line-height: 18px;
-    padding: 0 6px;
-  }
-
-  html.is-blind-test .blind-scope {
-  margin: 2px 0;
-  font-size: clamp(11.5px, 1.25vh, 13px);
-  line-height: 1.4;
-  color: var(--text);
-  font-weight: 550;
-}
-
-.blind-sub {
-    font-size: 11.5px;
-    line-height: 1.35;
-  }
-
-  html.is-blind-test .blind-head-actions {
-    width: 100%;
-    justify-content: flex-end;
-    gap: 6px;
-  }
-
-  html.is-blind-test .blind-head-actions .pipe-btn {
-    font-size: 12px;
-    line-height: 28px;
-    padding: 0 11px;
-  }
-
-  html.is-blind-test:not(.is-blind-revealed) .lanes {
-    height: auto;
-    padding: 8px 10px;
-    gap: 8px;
-  }
-
-  html.is-blind-test:not(.is-blind-revealed) .lane-track-unit {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto minmax(80px, 1fr);
-    gap: 4px 8px;
-  }
-
-  html.is-blind-test:not(.is-blind-revealed) .ft-top,
-  html.is-blind-test:not(.is-blind-revealed) .ft-chart-card {
-    display: none;
-  }
-
-  html.is-blind-test:not(.is-blind-revealed) .lane-badge h3::after {
-    font-size: 11.5px;
-    line-height: 18px;
-    color: var(--text);
-  }
-
-  html.is-blind-test:not(.is-blind-revealed) .lane-canvas-wrap::after {
-    display: none;
-  }
-
-  html.is-blind-test:not(.is-blind-revealed) .lane-track-unit::after {
-    content: "Tap to pick →";
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
-    align-self: center;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    line-height: 18px;
-    font-weight: 700;
-    color: var(--text-dim);
-  }
-
-  html.is-blind-test.is-blind-revealed .lanes {
-    height: auto;
-    padding: 7px 10px 8px;
-    gap: 7px;
-  }
-
-  html.is-blind-test.is-blind-revealed .lane-track-unit {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto minmax(62px, 63fr) minmax(34px, 37fr);
-    gap: 3px 8px;
-  }
-
-  html.is-blind-test.is-blind-revealed .lane-telemetry-split {
-    display: contents;
-  }
-
-  html.is-blind-test.is-blind-revealed .ft-top,
-  html.is-blind-test.is-blind-revealed .ft-chart-card {
-    display: flex;
-  }
-
-  html.is-blind-test.is-blind-revealed .lane-badge {
-    grid-column: 1;
-    width: auto;
-  }
-
-  html.is-blind-test.is-blind-revealed .lane.is-blind-correct .ft-top,
-  html.is-blind-test.is-blind-revealed .lane.is-blind-picked .ft-top {
-    display: none;
-  }
-
-  html.is-blind-test.is-blind-revealed .lane.is-blind-correct .lane-canvas-wrap::after,
-  html.is-blind-test.is-blind-revealed .lane.is-blind-picked .lane-canvas-wrap::after {
-    position: static;
-    top: auto;
-    right: auto;
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
-    align-self: center;
-    padding: 0 7px;
-    font-size: 10px;
-    line-height: 18px;
-    border-radius: 5px;
-    white-space: nowrap;
-  }
-
-  html.is-blind-test.is-blind-revealed .lane.is-blind-correct .lane-canvas {
-    border: 2px solid #10b981;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
-  }
-
-  html.is-blind-test.is-blind-revealed .lane.is-blind-picked:not(.is-blind-correct) .lane-canvas {
-    border: 2px solid #f59e0b;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
-  }
-
   /* Mobile Section 06: Articles stacked as a vertical list (each card 50% image / 50% text) */
   #readingSection {
     height: auto;
@@ -7442,11 +7377,6 @@ html.is-blind-test.is-blind-revealed .lane.is-blind-picked.is-blind-correct .lan
   .model-q-dot {
     background: transparent;
     font-size: 12px;
-  }
-
-  .blind-scope {
-    font-size: 11px;
-    line-height: 1.32;
   }
 
   .model-modal-card {

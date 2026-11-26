@@ -12,7 +12,7 @@
 
   function isFirstVisitLocked() {
     const root = document.documentElement;
-    return root.classList.contains('is-blind-test') || root.classList.contains('is-intro-replay');
+    return root.classList.contains('is-intro-replay');
   }
 
   let activeIndex = (isFirstVisitLocked() && pipelineIdx >= 0) ? pipelineIdx : 0;
@@ -343,34 +343,6 @@
     scheduleUpdate();
   }, { passive: true });
 
-  // When Blind Test starts (from console), lock viewport onto 01 Motion
-  window.addEventListener('fpslab:blind-entered', () => {
-    const slide = slides[0];
-    if (!slide) return;
-    activeIndex = 0;
-    if (isStackedLayout()) {
-      scroller.scrollTop = 0;
-    } else {
-      scroller.scrollTop = slide.offsetTop;
-    }
-    setActiveIndicators(0);
-    updateScrollPresentation();
-  });
-
-  // When Blind Test exits (completed or skipped), unlock full lab at 01 Motion
-  window.addEventListener('fpslab:blind-exited', () => {
-    const slide = slides[0];
-    if (!slide) return;
-    activeIndex = 0;
-    if (isStackedLayout()) {
-      scroller.scrollTop = 0;
-    } else {
-      scroller.scrollTop = slide.offsetTop;
-    }
-    setActiveIndicators(0);
-    updateScrollPresentation();
-  });
-
   // When manual replay starts from 04 Pipeline, lock viewport onto the intro slide
   window.addEventListener('fpslab:intro-replay-started', () => {
     if (pipelineIdx < 0 || !slides[pipelineIdx]) return;
@@ -455,6 +427,23 @@
       handleDirectionalNavigation(-1);
     }
   });
+
+  const desktopConsoleToggle = document.getElementById('desktopConsoleToggle');
+  const desktopConsoleCloseBtn = document.getElementById('desktopConsoleCloseBtn');
+  if (desktopConsoleToggle) {
+    const setDesktopConsoleOpen = (open) => {
+      document.documentElement.classList.toggle('is-console-open', open);
+      desktopConsoleToggle.setAttribute('aria-expanded', String(open));
+    };
+    desktopConsoleToggle.addEventListener('click', () => {
+      setDesktopConsoleOpen(true);
+    });
+    if (desktopConsoleCloseBtn) {
+      desktopConsoleCloseBtn.addEventListener('click', () => {
+        setDesktopConsoleOpen(false);
+      });
+    }
+  }
 
   const initialPendingSection = window.__fpsLabPendingSection || null;
   if (initialPendingSection) {

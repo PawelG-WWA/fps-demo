@@ -199,7 +199,11 @@
     simStatEls[m] = document.getElementById(`sim-stat-${m}`);
     simAreaEls[m] = document.querySelector(`.sim-area[data-sim-mode="${m}"]`);
   });
+  const simSectionEl = document.getElementById('simSection');
   const simLevelBtns = Array.from(document.querySelectorAll('.sim-lvl-btn'));
+  const simScenarioBtns = Array.from(document.querySelectorAll('.sim-scenario-btn'));
+  const simViewBtns = Array.from(document.querySelectorAll('[data-sim-view-btn]'));
+  const simCostPills = Array.from(document.querySelectorAll('[data-sim-cost-pill]'));
 
   const laneCanvases = {};
   const ftCanvases = {};
@@ -818,8 +822,7 @@
     const canvas = laneCanvases[mode];
     const { ctx, w, h } = setupCanvas(canvas);
     const ls = laneState[mode];
-    const blindMask = isBlindGuessing();
-    const color = blindMask ? '#cbd5e1' : TRACK_COLORS[mode];
+    const color = TRACK_COLORS[mode];
 
     const tSec = ls.presentedTime / 1000;
     const trueSec = state.tSim / 1000;
@@ -866,14 +869,14 @@
 
     const hudW = 118;
     const hudH = 20;
-    const isNarrowInterp = !blindMask && mode === 'interp' && w < 540;
-    const isDesktopInterp = !blindMask && mode === 'interp' && w >= 540 && w < 720;
+    const isNarrowInterp = mode === 'interp' && w < 540;
+    const isDesktopInterp = mode === 'interp' && w >= 540 && w < 720;
     const hudX = isDesktopInterp
       ? Math.round(w * 0.59 - hudW / 2)
       : Math.round(w * 0.5 - hudW / 2);
     const hudY = isNarrowInterp ? Math.max(9, h - hudH - 6) : 9;
     const nearHud = Math.abs(blockX - (hudX + hudW / 2)) < 95;
-    const showArt = !blindMask && mode === 'interp' && state.showArtifacts;
+    const showArt = mode === 'interp' && state.showArtifacts;
 
     // Artifacts intensify as base 30 FPS drops under heavy load
     const loadSeverity = Math.max(0, (state.load - 1.5) / 3.5);
@@ -902,7 +905,7 @@
     ctx.fillText(showArt ? 'OVERLAY · HALO' : 'STATIC OVERLAY', hudX + hudW / 2, hudY + hudH / 2 + 0.5);
     ctx.restore();
 
-    if (!blindMask && state.showTruePos) {
+    if (state.showTruePos) {
       const trueX = ((trueSec * pxPerSec) % span) - 50;
       const leadX = trueX + 32;
       ctx.save();
@@ -1546,7 +1549,6 @@
   // Keyboard shortcuts: 'S' for Load Spike, 'P' for Pause / Resume
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (isBlindGuessing()) return;
     const tag = document.activeElement && document.activeElement.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (e.key === 's' || e.key === 'S') {
@@ -2362,6 +2364,15 @@
     simLevelBtns.forEach((btn) => {
       btn.classList.toggle('active', Number(btn.dataset.simLevel) === nearestLvl);
     });
+    simScenarioBtns.forEach((btn) => {
+      btn.classList.toggle('active', Number(btn.dataset.simLevel) === nearestLvl);
+    });
+    simCostPills.forEach((pill) => {
+      const pLvl = Number(pill.dataset.simCostPill);
+      if (pLvl >= 1 && pLvl <= 5) {
+        pill.textContent = `${getSimEntityCount(pLvl)} NPCs · ${getSimMeanRenderMs(pLvl).toFixed(1)} ms`;
+      }
+    });
 
     if (dom.simFooterCard && dom.simScenarioLvlTxt && dom.simScenarioTitle && dom.simScenarioDesc) {
       const sc = SIM_SCENARIOS[Math.max(0, Math.min(4, nearestLvl - 1))];
@@ -2675,9 +2686,34 @@
     });
   }
 
+  function setSimViewMode(mode) {
+    const next = mode === 'detailed' ? 'detailed' : 'simplified';
+    if (simSectionEl) simSectionEl.dataset.simView = next;
+    simViewBtns.forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.simViewBtn === next);
+    });
+    invalidateAllCanvases();
+    updateSimReadouts();
+    drawExpCurve();
+    requestCanvasRedraw();
+    scheduleUrlSync();
+  }
+
   simLevelBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       setSimLevel(Number(btn.dataset.simLevel));
+    });
+  });
+
+  simScenarioBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setSimLevel(Number(btn.dataset.simLevel));
+    });
+  });
+
+  simViewBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setSimViewMode(btn.dataset.simViewBtn);
     });
   });
 
@@ -3362,7 +3398,7 @@
       wasSimBlasting = simBlasting;
     }
 
-    const motionAutoSpiking = motionVisible && !blindActive && activeMotionScenario === 2;
+    const motionAutoSpiking = motionVisible && activeMotionScenario === 2;
     if ((!state.paused || isSpiking) && now - lastReadoutTime > (isSpiking || simBlasting || motionAutoSpiking ? 90 : 260)) {
       lastReadoutTime = now;
       if (motionVisible) {
@@ -3453,7 +3489,7 @@
   let motionFooterPulseTimer = null;
 
   function getMotionScenarioAutoSpikeMs(tMs) {
-    if (activeMotionScenario !== 2 || blindActive || !isSectionVisible('motionSection')) return 0;
+    if (activeMotionScenario !== 2 || !isSectionVisible('motionSection')) return 0;
     const cycleMs = 2400;
     const burstMs = 680;
     const phase = (((tMs - motionAutoSpikeAnchorMs) % cycleMs) + cycleMs) % cycleMs;
@@ -3548,276 +3584,12 @@
   applyMotionScenarioUI(1, false);
 
   // ============================================================================
-  // BLIND TEST CHALLENGE (FIRST-VISIT & ON-DEMAND FROM CONSOLE)
-  // ============================================================================
-  const BLIND_COOKIE_NAME = 'fps_lab_blind_seen';
-  const BLIND_TRACK_LABELS = ['Track A', 'Track B', 'Track C', 'Track D'];
-  const lanesContainer = document.getElementById('lanesContainer');
-  const laneElsByMode = {};
-  MODES.forEach((m) => {
-    laneElsByMode[m] = lanesContainer ? lanesContainer.querySelector(`.lane[data-mode="${m}"]`) : null;
-  });
-  const blindEls = {
-    head: document.getElementById('blindHead'),
-    title: document.getElementById('blindTitle'),
-    sub: document.getElementById('blindSub'),
-    retryBtn: document.getElementById('blindRetryBtn'),
-    skipBtn: document.getElementById('blindSkipBtn'),
-    triggerBtn: document.getElementById('blindTestBtn'),
-    mobToggle: document.getElementById('mobileConsoleToggle')
-  };
-
-  let blindActive = document.documentElement.classList.contains('is-blind-test');
-  let blindRevealed = false;
-  let blindSavedState = null;
-
-  function isBlindGuessing() {
-    return blindActive && !blindRevealed;
-  }
-
-  function setBlindSeenCookie() {
-    document.cookie = `${BLIND_COOKIE_NAME}=1; path=/; max-age=31536000; SameSite=Lax`;
-  }
-
-  function shuffleLanesForBlindTest() {
-    if (!lanesContainer) return;
-    const order = MODES.slice();
-    // Fisher-Yates shuffle, ensuring it doesn't stay identical to canonical order
-    for (let attempt = 0; attempt < 6; attempt++) {
-      for (let i = order.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        const tmp = order[i];
-        order[i] = order[j];
-        order[j] = tmp;
-      }
-      if (order.some((m, idx) => m !== MODES[idx])) break;
-    }
-    order.forEach((m, idx) => {
-      const el = laneElsByMode[m];
-      if (!el) return;
-      const lbl = BLIND_TRACK_LABELS[idx];
-      el.dataset.blindLabel = lbl;
-      const h3 = el.querySelector('.lane-badge h3');
-      if (h3) {
-        h3.dataset.blindLabel = lbl;
-        // Replace accessible text during guessing so screen readers / DOM tree don't leak real FPS labels
-        h3.textContent = lbl;
-      }
-      const split = el.querySelector('.lane-telemetry-split');
-      if (split) split.setAttribute('aria-hidden', 'true');
-      el.classList.remove('is-blind-picked', 'is-blind-correct');
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '0');
-      el.setAttribute('aria-label', `Pick ${lbl} as 60 FPS`);
-      lanesContainer.appendChild(el);
-    });
-  }
-
-  function restoreCanonicalLaneOrder() {
-    if (!lanesContainer) return;
-    MODES.forEach((m) => {
-      const el = laneElsByMode[m];
-      if (!el) return;
-      delete el.dataset.blindLabel;
-      const h3 = el.querySelector('.lane-badge h3');
-      if (h3) {
-        delete h3.dataset.blindLabel;
-        h3.textContent = MODE_META[m].name;
-      }
-      const split = el.querySelector('.lane-telemetry-split');
-      if (split) split.removeAttribute('aria-hidden');
-      el.classList.remove('is-blind-picked', 'is-blind-correct');
-      el.removeAttribute('role');
-      el.removeAttribute('tabindex');
-      el.removeAttribute('aria-label');
-      lanesContainer.appendChild(el);
-    });
-  }
-
-  function enterBlindTest(fromConsole = false) {
-    const root = document.documentElement;
-    if (fromConsole && !blindSavedState) {
-      blindSavedState = {
-        load: state.load,
-        speed: state.speed,
-        paused: state.paused
-      };
-    }
-    if (blindEls.mobToggle) blindEls.mobToggle.checked = false;
-
-    // Ensure clean, fair baseline conditions for the blind eye test
-    state.spikeStartSim = -1;
-    state.spikeStartReal = -1;
-    state.simSpikeMs = 0;
-    state.realSpikeMs = 0;
-    if (state.paused) togglePause();
-    if (state.speed !== 1) setSpeed(1);
-    if (Math.abs(state.load - 1.0) > 0.01) {
-      state.load = 1.0;
-      if (dom.loadSlider) {
-        dom.loadSlider.value = '1';
-        syncRangeFill(dom.loadSlider);
-      }
-      updateLoadDisplay();
-    }
-
-    blindActive = true;
-    blindRevealed = false;
-    root.classList.add('is-blind-test');
-    root.classList.remove('is-blind-revealed');
-
-    if (blindEls.head) blindEls.head.dataset.outcome = '';
-    if (blindEls.title) blindEls.title.textContent = 'Spot the 60 FPS Track';
-    if (blindEls.sub) {
-      blindEls.sub.textContent =
-        'Choose the track that looks like native 60 FPS in this simulation. Browser timing and your display can affect the comparison.';
-    }
-    if (blindEls.retryBtn) blindEls.retryBtn.hidden = true;
-    if (blindEls.skipBtn) {
-      blindEls.skipBtn.textContent = 'Skip →';
-      blindEls.skipBtn.classList.remove('is-primary');
-    }
-
-    shuffleLanesForBlindTest();
-    resetLaneSimulators();
-    window.dispatchEvent(new CustomEvent('fpslab:blind-entered'));
-    invalidateAllCanvases();
-    syncVisibleSectionsNow();
-    requestCanvasRedraw();
-  }
-
-  function handleBlindPick(mode) {
-    if (!isBlindGuessing()) return;
-    setBlindSeenCookie();
-    blindRevealed = true;
-
-    const root = document.documentElement;
-    root.classList.add('is-blind-revealed');
-
-    const pickedEl = laneElsByMode[mode];
-    const correctEl = laneElsByMode['60'];
-    if (pickedEl) pickedEl.classList.add('is-blind-picked');
-    if (correctEl) correctEl.classList.add('is-blind-correct');
-
-    let outcome = 'wrong';
-    let title = 'Track modeled at 30 FPS';
-    let sub = 'You selected the track modeled at 30 FPS. Compare it with the highlighted 60 FPS track.';
-
-    if (mode === '60') {
-      outcome = 'correct';
-      title = 'You selected the 60 FPS track';
-      sub = 'Even 16.7 ms frame pacing gives smoother motion clarity and lower model latency than the 30 FPS and 40 FPS tracks.';
-    } else if (mode === 'interp') {
-      outcome = 'interp';
-      title = 'Track modeled at 30 FPS + simulated interpolation';
-      sub = 'This interpolation example smooths motion by holding a ~67 ms model buffer, with illustrative artifacts where geometry crosses overlays.';
-    } else if (mode === '40') {
-      outcome = 'wrong';
-      title = 'Track modeled at 40 FPS';
-      sub = state.displayHz === 120
-        ? 'At a fixed 120 Hz, each 40 FPS frame can occupy three refreshes (25.0 ms). Compare it with the highlighted 60 FPS track.'
-        : 'At a fixed 60 Hz, the 40 FPS model alternates 2-refresh (33.3 ms) and 1-refresh (16.7 ms) holds (uneven 2–1 cadence). Compare it with the highlighted 60 FPS track.';
-    }
-
-    // Restore real track titles & telemetry visibility on reveal
-    MODES.forEach((m) => {
-      const el = laneElsByMode[m];
-      if (!el) return;
-      const h3 = el.querySelector('.lane-badge h3');
-      if (h3) h3.textContent = MODE_META[m].name;
-      const split = el.querySelector('.lane-telemetry-split');
-      if (split) split.removeAttribute('aria-hidden');
-      el.removeAttribute('role');
-      el.removeAttribute('tabindex');
-      el.removeAttribute('aria-label');
-    });
-
-    if (blindEls.head) blindEls.head.dataset.outcome = outcome;
-    if (blindEls.title) blindEls.title.textContent = title;
-    if (blindEls.sub) blindEls.sub.textContent = sub;
-    if (blindEls.retryBtn) blindEls.retryBtn.hidden = false;
-    if (blindEls.skipBtn) {
-      blindEls.skipBtn.textContent = 'Enter Full Lab →';
-      blindEls.skipBtn.classList.add('is-primary');
-    }
-
-    invalidateAllCanvases();
-    updateLaneReadouts();
-    requestCanvasRedraw();
-    scheduleUrlSync();
-  }
-
-  function exitBlindTest() {
-    setBlindSeenCookie();
-    blindActive = false;
-    blindRevealed = false;
-
-    const root = document.documentElement;
-    root.classList.remove('is-blind-test', 'is-blind-revealed');
-    root.classList.add('is-intro-revealed');
-
-    restoreCanonicalLaneOrder();
-    motionAutoSpikeAnchorMs = state.tSim;
-
-    if (blindSavedState) {
-      const prev = blindSavedState;
-      blindSavedState = null;
-      if (Math.abs(prev.load - state.load) > 0.01) {
-        state.load = prev.load;
-        if (dom.loadSlider) {
-          dom.loadSlider.value = String(prev.load);
-          syncRangeFill(dom.loadSlider);
-        }
-        updateLoadDisplay();
-      }
-      if (prev.speed !== state.speed) setSpeed(prev.speed);
-      if (prev.paused && !state.paused) togglePause();
-    }
-
-    window.dispatchEvent(new CustomEvent('fpslab:blind-exited'));
-    invalidateAllCanvases();
-    syncVisibleSectionsNow();
-    updateLaneReadouts();
-    requestCanvasRedraw();
-
-    setTimeout(() => {
-      root.classList.remove('is-intro-revealed');
-    }, 650);
-  }
-
-  MODES.forEach((m) => {
-    const el = laneElsByMode[m];
-    if (!el) return;
-    el.addEventListener('click', () => {
-      if (isBlindGuessing()) handleBlindPick(m);
-    });
-    el.addEventListener('keydown', (e) => {
-      if (!isBlindGuessing()) return;
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleBlindPick(m);
-      }
-    });
-  });
-
-  if (blindEls.skipBtn) {
-    blindEls.skipBtn.addEventListener('click', () => exitBlindTest());
-  }
-  if (blindEls.retryBtn) {
-    blindEls.retryBtn.addEventListener('click', () => enterBlindTest(false));
-  }
-  if (blindEls.triggerBtn) {
-    blindEls.triggerBtn.addEventListener('click', () => enterBlindTest(true));
-  }
-
-  // ============================================================================
   // HOW THIS MODEL WORKS MODAL
   // ============================================================================
   const modelModal = document.getElementById('modelModal');
   const modelModalBackdrop = document.getElementById('modelModalBackdrop');
   const modelModalCloseBtn = document.getElementById('modelModalCloseBtn');
   const modelGuideBtn = document.getElementById('modelGuideBtn');
-  const blindModelBtn = document.getElementById('blindModelBtn');
 
   function openModelModal() {
     if (!modelModal) return;
@@ -3830,7 +3602,6 @@
   }
 
   if (modelGuideBtn) modelGuideBtn.addEventListener('click', openModelModal);
-  if (blindModelBtn) blindModelBtn.addEventListener('click', openModelModal);
   if (modelModalBackdrop) modelModalBackdrop.addEventListener('click', closeModelModal);
   if (modelModalCloseBtn) modelModalCloseBtn.addEventListener('click', closeModelModal);
   window.addEventListener('keydown', (e) => {
@@ -3896,9 +3667,8 @@
 
   function canRunHeartbeats() {
     if (spikeHintDone) return false;
-    if (blindActive) return false;
     const root = document.documentElement;
-    if (root.classList.contains('is-blind-test') || root.classList.contains('is-intro-replay')) {
+    if (root.classList.contains('is-intro-replay')) {
       return false;
     }
     if (document.visibilityState === 'hidden') return false;
@@ -3961,15 +3731,6 @@
     setCookieFlag(LOAD_USED_COOKIE);
     clearHeartbeatVisuals(false, true);
   }
-
-  window.addEventListener('fpslab:blind-entered', () => {
-    stopHeartbeatTimer();
-    clearHeartbeatVisuals(true, true);
-  });
-
-  window.addEventListener('fpslab:blind-exited', () => {
-    scheduleNextHeartbeat();
-  });
 
   window.addEventListener('fpslab:intro-replay-started', () => {
     stopHeartbeatTimer();
@@ -4939,7 +4700,7 @@
     const params = new URLSearchParams();
     const sectionSlug = explicitSectionSlug || getActiveSectionSlug();
 
-    // Always include section (bypasses first-visit Blind Test) and hz (prevents auto-detect mismatch across 60/120 Hz screens)
+    // Always include section and hz (prevents auto-detect mismatch across 60/120 Hz screens)
     params.set('section', sectionSlug);
     params.set('hz', String(state.displayHz));
 
@@ -4965,6 +4726,12 @@
       : 'simplified';
     if (viewMode === 'detailed') {
       params.set('view', 'detailed');
+    }
+    const simViewMode = simSectionEl && simSectionEl.dataset.simView === 'detailed'
+      ? 'detailed'
+      : 'simplified';
+    if (simViewMode === 'detailed') {
+      params.set('simview', 'detailed');
     }
     if (state.panSpeed !== 420) {
       params.set('vel', String(Math.round(state.panSpeed)));
@@ -4997,10 +4764,10 @@
   }
 
   function scheduleUrlSync() {
-    if (!urlSyncActive || isApplyingUrlParams || blindActive) return;
+    if (!urlSyncActive || isApplyingUrlParams) return;
     clearTimeout(urlSyncTimer);
     urlSyncTimer = setTimeout(() => {
-      if (!urlSyncActive || isApplyingUrlParams || blindActive) return;
+      if (!urlSyncActive || isApplyingUrlParams) return;
       try {
         window.history.replaceState(null, '', buildShareUrl());
       } catch (_) {
@@ -5111,6 +4878,11 @@
       const viewParam = params.get('view');
       if (viewParam === 'detailed' || viewParam === 'simplified') {
         setMotionViewMode(viewParam);
+      }
+
+      const simViewParam = params.get('simview');
+      if (simViewParam === 'detailed' || simViewParam === 'simplified') {
+        setSimViewMode(simViewParam);
       }
 
       const scenarioParam = params.get('scenario');
@@ -5225,7 +4997,7 @@
         targetId = 'simSection';
       }
 
-      if (targetId && targetId !== 'motionSection' && !blindActive) {
+      if (targetId && targetId !== 'motionSection') {
         window.__fpsLabPendingSection = targetId;
         window.dispatchEvent(new CustomEvent('fpslab:navigate-section', {
           detail: { target: targetId, instant: true }
@@ -5356,10 +5128,6 @@
   syncVisibleSectionsNow();
   updateLoadDisplay();
   detectRefreshRate(!sharedInit.explicitHz);
-  if (blindActive) {
-    enterBlindTest(false);
-  } else {
-    ensureLoopRunning();
-    scheduleNextHeartbeat();
-  }
+  ensureLoopRunning();
+  scheduleNextHeartbeat();
 })();

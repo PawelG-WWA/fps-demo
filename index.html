@@ -93,19 +93,11 @@
 
   <script>
     (function () {
-      var resetBlind = /[?&](blind|reset_blind)=1(?:&|$)/.test(location.search);
       var resetCookies = /[?&]reset_cookies=1(?:&|$)/.test(location.search);
-      var hasShareParams = /[?&](scenario|sim|section|load|hz|speed|view|vel|arena|pipe|phys)=/.test(location.search);
-      if (resetBlind) {
-        document.cookie = 'fps_lab_blind_seen=; path=/; max-age=0';
-      }
       if (resetCookies) {
         document.cookie = 'fps_lab_cookie_ok=; path=/; max-age=0';
       }
       var cookies = document.cookie.split(';');
-      if (resetBlind || (!hasShareParams && !cookies.some(function (c) { return c.trim().indexOf('fps_lab_blind_seen=1') === 0; }))) {
-        document.documentElement.classList.add('is-blind-test');
-      }
       if (!resetCookies && cookies.some(function (c) { return c.trim().indexOf('fps_lab_cookie_ok=1') === 0; })) {
         document.documentElement.classList.add('is-cookie-ok');
       }
@@ -170,10 +162,30 @@
 
     .top-bar-shell {
       pointer-events: auto;
+      position: relative;
       width: var(--stage-w);
       background: rgba(255, 255, 255, .92);
       border: 1px solid rgba(15, 23, 42, .11);
       border-radius: var(--radius-xl)
+    }
+
+    @media (min-width:821px) {
+      html:not(.is-console-open) .top-bar-shell {
+        border-bottom-left-radius: 0
+      }
+
+      html:not(.is-console-open) .topbar {
+        border-bottom-color: transparent
+      }
+
+      html:not(.is-console-open) .control-pane {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none
+      }
     }
 
     .topbar {
@@ -242,7 +254,6 @@
 
     .notice[hidden],
     .pipe-intro-card,
-    .blind-head,
     .mob-console-toggle,
     .mob-spike-btn,
     .mob-pause-btn,
@@ -263,29 +274,6 @@
 
     html.is-intro-replay .top-chrome,
     html.is-intro-replay .rail-nav {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none
-    }
-
-    html.is-blind-test .blind-head {
-      display: flex
-    }
-
-    html.is-blind-test .motion-card .card-head,
-    html.is-blind-test .motion-scenarios-pane,
-    html.is-blind-test .motion-mob-scenarios,
-    html.is-blind-test .motion-footer-card,
-    html.is-blind-test .lane-sim-tag,
-    html.is-blind-test .notice-host,
-    html.is-blind-test .cookie-banner,
-    html.is-blind-test .stage-slide:not(#motionSection),
-    html.is-blind-test:not(.is-blind-revealed) .lane-telemetry-split {
-      display: none
-    }
-
-    html.is-blind-test .top-chrome,
-    html.is-blind-test .rail-nav {
       opacity: 0;
       visibility: hidden;
       pointer-events: none
@@ -326,9 +314,9 @@
       }
     }
   </style>
-  <link rel="preload" href="styles.css?v=58" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="preload" href="styles.css?v=68" as="style" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
-    <link rel="stylesheet" href="styles.css?v=58">
+    <link rel="stylesheet" href="styles.css?v=68">
   </noscript>
 </head>
 
@@ -443,7 +431,7 @@
         </label>
       </header>
 
-      <aside class="control-pane" aria-label="Persistent simulation controls">
+      <aside class="control-pane" id="desktopControlPane" aria-label="Persistent simulation controls">
         <div class="dock-group">
           <span class="dock-label" title="Simulated display refresh rate used by the model (60 Hz or 120 Hz)">Simulated Refresh</span>
           <div class="segmented" role="group" aria-label="Simulated refresh rate">
@@ -494,15 +482,6 @@
         <div class="dock-spacer" aria-hidden="true"></div>
 
         <div class="dock-group dock-actions">
-          <button class="btn-blind" id="blindTestBtn" type="button"
-            title="Start Blind Test Challenge: spot native 60 FPS with labels hidden">
-            <svg class="blind-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
-              stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M1.5 8s2.4-4.2 6.5-4.2S14.5 8 14.5 8s-2.4 4.2-6.5 4.2S1.5 8 1.5 8z" />
-              <circle cx="8" cy="8" r="2" />
-            </svg>
-            <span>Blind Test</span>
-          </button>
           <button class="btn-mob-share" id="mobShareBtn" type="button"
             title="Copy link to current section and lab setup" aria-label="Copy link to current setup">
             <svg class="share-ico share-ico-link" width="13" height="13" viewBox="0 0 24 24" fill="none"
@@ -532,8 +511,25 @@
             <span id="pauseLbl">Pause</span>
             <kbd class="pause-kbd">P</kbd>
           </button>
+          <button class="desktop-console-close" id="desktopConsoleCloseBtn" type="button"
+            title="Hide simulation controls" aria-label="Hide console">
+            <svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" aria-hidden="true">
+              <path d="M3.25 3.25l7.5 7.5M10.75 3.25l-7.5 7.5" />
+            </svg>
+          </button>
         </div>
       </aside>
+
+      <!-- DESKTOP BOOKMARK TAB TO OPEN CONSOLE -->
+      <button class="desktop-console-tab" id="desktopConsoleToggle" type="button" aria-expanded="false"
+        aria-controls="desktopControlPane" title="Open simulation controls">
+        <span class="console-tab-lbl">Open Console</span>
+        <svg class="console-tab-chev" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3.5 5.25L7 8.75l3.5-3.5" />
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -548,30 +544,6 @@
     <section class="stage-slide is-active" id="motionSection" data-slide-index="0" data-motion-view="simplified">
       <div class="slide-inner motion-stack">
         <div class="stage-card motion-card">
-          <!-- BLIND TEST CHALLENGE HEADER (VISIBLE ONLY IN html.is-blind-test) -->
-          <div class="blind-head" id="blindHead" data-outcome="">
-            <div class="blind-head-copy">
-              <div class="blind-title-row">
-                <span class="view-kicker mono blind-kicker">BLIND TEST</span>
-                <h2 id="blindTitle">Spot the 60 FPS Track</h2>
-              </div>
-              <p class="blind-scope" id="blindScope">
-                Explore frame rate, frame pacing, and response delay using a simplified interactive model. Timing values
-                describe the model unless marked as browser observations. This demo does not measure your system's
-                end-to-end input latency.
-              </p>
-              <p class="blind-sub" id="blindSub">
-                Choose the track that looks like native 60 FPS in this simulation. Browser timing and your display can
-                affect the comparison.
-              </p>
-            </div>
-            <div class="blind-head-actions">
-              <button class="pipe-btn blind-model-btn" id="blindModelBtn" type="button">How this model works</button>
-              <button class="pipe-btn blind-retry-btn" id="blindRetryBtn" type="button" hidden>↻ Try Again</button>
-              <button class="pipe-btn blind-skip-btn" id="blindSkipBtn" type="button">Skip →</button>
-            </div>
-          </div>
-
           <div class="card-head">
             <div class="card-title-row">
               <div class="card-title-group">
@@ -814,7 +786,7 @@
     </section>
 
     <!-- VIEW 2: EXPONENTIAL SIMULATION LOAD -->
-    <section class="stage-slide" id="simSection" data-slide-index="1">
+    <section class="stage-slide" id="simSection" data-slide-index="1" data-sim-view="simplified">
       <div class="slide-inner sim-stack">
         <div class="sim-row">
           <!-- 4 SIMULATION AREAS (2x2 GRID, SAME ENTITIES ON EACH) -->
@@ -876,12 +848,73 @@
           <!-- RIGHT INTERACTIVE EXPONENTIAL LOAD CURVE PANEL -->
           <aside class="sim-curve-card" aria-label="Exponential performance load control">
             <div class="sim-curve-head">
-              <div class="card-title-group">
-                <span class="view-kicker">02</span>
-                <h2>Performance Level</h2>
+              <div class="sim-curve-title-row">
+                <div class="card-title-group">
+                  <span class="view-kicker">02</span>
+                  <h2>Performance Level</h2>
+                </div>
+                <div class="segmented sim-view-switch" role="group" aria-label="Performance view detail level">
+                  <button class="seg-btn active" type="button" data-sim-view-btn="simplified"
+                    id="btnSimSimple">Simplified</button>
+                  <button class="seg-btn" type="button" data-sim-view-btn="detailed"
+                    id="btnSimDetailed">Detailed</button>
+                </div>
               </div>
               <p class="sim-curve-sub">Starts at a 12.0 ms baseline and scales with NPC count (top-bar Load adds extra
                 cost).</p>
+            </div>
+
+            <!-- SIMPLIFIED WORKLOAD LEVEL SELECTOR (SIMPLIFIED VIEW ONLY) -->
+            <div class="sim-scenarios-list" id="simScenariosList" role="group" aria-label="Performance workload levels">
+              <button class="sim-scenario-btn active" type="button" data-sim-level="1" data-tier="low">
+                <div class="ms-row-top">
+                  <span class="ms-idx mono">1</span>
+                  <span class="ms-title">Light Workload</span>
+                  <span class="ms-load mono" data-sim-cost-pill="1">8 NPCs · 12.0 ms</span>
+                </div>
+                <span class="sim-sc-desc">A light scene illustrates low frame cost—leaving headroom inside the 16.7 ms
+                  (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30 FPS) budgets.</span>
+              </button>
+
+              <button class="sim-scenario-btn" type="button" data-sim-level="2" data-tier="mid">
+                <div class="ms-row-top">
+                  <span class="ms-idx mono">2</span>
+                  <span class="ms-title">Moderate Workload</span>
+                  <span class="ms-load mono" data-sim-cost-pill="2">18 NPCs · 18.2 ms</span>
+                </div>
+                <span class="sim-sc-desc">Increased modeled cost pushes past 16.7 ms so 60 FPS falls below target, while
+                  40 FPS (25.0 ms) and 30 FPS (33.3 ms) remain within budget.</span>
+              </button>
+
+              <button class="sim-scenario-btn" type="button" data-sim-level="3" data-tier="warn">
+                <div class="ms-row-top">
+                  <span class="ms-idx mono">3</span>
+                  <span class="ms-title">Heavy Workload</span>
+                  <span class="ms-load mono" data-sim-cost-pill="3">40 NPCs · 27.7 ms</span>
+                </div>
+                <span class="sim-sc-desc">Heavier modeled cost crosses both 16.7 ms and 25.0 ms—leaving only the 30 FPS
+                  (33.3 ms) target within its frame budget.</span>
+              </button>
+
+              <button class="sim-scenario-btn" type="button" data-sim-level="4" data-tier="high">
+                <div class="ms-row-top">
+                  <span class="ms-idx mono">4</span>
+                  <span class="ms-title">Overloaded Workload</span>
+                  <span class="ms-load mono" data-sim-cost-pill="4">89 NPCs · 42.1 ms</span>
+                </div>
+                <span class="sim-sc-desc">Modeled frame cost exceeds 33.3 ms—so every native target falls below its rate
+                  while simulated interpolation latency climbs.</span>
+              </button>
+
+              <button class="sim-scenario-btn" type="button" data-sim-level="5" data-tier="high">
+                <div class="ms-row-top">
+                  <span class="ms-idx mono">5</span>
+                  <span class="ms-title">Dense Scene Overload</span>
+                  <span class="ms-load mono" data-sim-cost-pill="5">200 NPCs · 64.0 ms</span>
+                </div>
+                <span class="sim-sc-desc">A dense scene illustrates the effect of increased simulation workload; the
+                  displayed frame cost comes from the lab’s exponential workload model.</span>
+              </button>
             </div>
 
             <div class="sim-kpis">
@@ -1351,7 +1384,7 @@
               <span class="pipe-total mono" id="pipeTotalMs"
                 title="Input to bottom-of-screen pixel completion (full scanout + 2.5 ms assumed gray-to-gray pixel response)">Bottom-scan: ~35.8 ms</span>
               <button class="pipe-btn pipe-replay-btn" id="pipeReplayBtn" type="button"
-                title="Run the full step-by-step Pipeline presentation again">▶ Replay Intro</button>
+                title="Open the full-screen step-by-step Pipeline presentation">Full Screen</button>
               <div class="pipe-nav-btns">
                 <button class="pipe-btn" id="pipePrevBtn" type="button" aria-label="Previous step">← Prev</button>
                 <span class="pipe-step-counter mono" id="pipeStepCounter">1 / 5</span>
@@ -1759,9 +1792,9 @@
       <div class="cookie-title">🍪 Just a Few Tiny Local Cookies</div>
       <p class="cookie-text">
         We don't store your cookies on any server or run analytics — everything stays strictly in your browser. We only
-        save three things: <strong>(1)</strong> that you clicked OK on this box, <strong>(2)</strong> that you already
-        completed or skipped the Blind Test, and <strong>(3)</strong> whether you've tried the Load Spike button or Load
-        slider so we stop pulsing their hints on future visits. That's it. No spies, no ads.
+        save two things: <strong>(1)</strong> that you clicked OK on this box, and <strong>(2)</strong> whether you've
+        tried the Load Spike button or Load slider so we stop pulsing their hints on future visits. That's it. No spies,
+        no ads.
       </p>
     </div>
     <button class="cookie-ok-btn" id="cookieOkBtn" type="button">OK, cool</button>
@@ -1814,8 +1847,8 @@
     <span>Setup link copied to clipboard</span>
   </div>
 
-  <script defer src="app.js?v=53"></script>
-  <script defer src="ui.js?v=30"></script>
+  <script defer src="app.js?v=55"></script>
+  <script defer src="ui.js?v=33"></script>
 </body>
 
 </html>
