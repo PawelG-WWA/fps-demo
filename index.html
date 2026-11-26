@@ -326,9 +326,9 @@
       }
     }
   </style>
-  <link rel="preload" href="styles.css?v=57" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="preload" href="styles.css?v=58" as="style" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
-    <link rel="stylesheet" href="styles.css?v=57">
+    <link rel="stylesheet" href="styles.css?v=58">
   </noscript>
 </head>
 
@@ -381,14 +381,14 @@
             <span class="model-btn-lbl">Model</span>
           </button>
 
-          <div class="detector-pill" id="detectorCard" tabindex="0">
+          <div class="detector-pill" id="detectorCard" tabindex="0" aria-label="Browser animation cadence (observed)">
             <span class="detector-dot" aria-hidden="true"></span>
             <span class="hz-num" id="detectedHz">~60 Hz</span>
             <span class="hz-meta" id="detectedMeta"></span>
             <button class="btn-remeasure" id="remeasureBtn" type="button"
               title="Recheck browser animation callback cadence">Recheck</button>
             <div class="detector-popover" role="tooltip">
-              <p class="detector-note" id="detectorNote">Sampling browser animation cadence…</p>
+              <p class="detector-note" id="detectorNote">Browser animation cadence (observed): sampling…</p>
               <p class="detector-subnote">This estimate reflects browser animation timing during the check. It does not
                 change your monitor's refresh rate. The simulated refresh setting controls the model.</p>
             </div>
@@ -445,7 +445,7 @@
 
       <aside class="control-pane" aria-label="Persistent simulation controls">
         <div class="dock-group">
-          <span class="dock-label" title="Simulated fixed-refresh display rate used by the model">Simulated Refresh</span>
+          <span class="dock-label" title="Simulated display refresh rate used by the model (60 Hz or 120 Hz)">Simulated Refresh</span>
           <div class="segmented" role="group" aria-label="Simulated refresh rate">
             <button class="seg-btn active" data-display-hz="60" id="btn60Hz" type="button">60 Hz</button>
             <button class="seg-btn" data-display-hz="120" id="btn120Hz" type="button">120 Hz</button>
@@ -594,10 +594,11 @@
                 <span class="mono slider-readout" id="panSpeedLabel">420 px/s</span>
               </div>
 
-              <label class="switch-pill" title="Show a dashed line at the true real-time position">
+              <label class="switch-pill" title="Show where the object would be at the current model time.">
                 <input type="checkbox" id="toggleTruePos" checked />
                 <span class="switch-track" aria-hidden="true"></span>
-                <span>True-time</span>
+                <span class="lbl-wide">Reference position</span>
+                <span class="lbl-compact" aria-hidden="true">Ref. position</span>
               </label>
 
               <label class="switch-pill"
@@ -666,9 +667,10 @@
                   <div class="lane-canvas-wrap">
                     <div class="lane-badge">
                       <span class="swatch swatch-interp"></span>
-                      <h3>30 FPS + simulated interpolation</h3>
+                      <h3>30 FPS + simulated frame interpolation</h3>
                     </div>
-                    <span class="lane-sim-tag mono interp" id="lane-tag-interp">Model buffer: +67 ms</span>
+                    <span class="lane-sim-tag mono interp" id="lane-tag-interp"
+                      title="Added model buffer: about 67 ms at baseline (two 30 FPS source frames)">Added buffer: +67 ms</span>
                     <canvas class="lane-canvas" id="canvas-interp" width="900" height="128"></canvas>
                   </div>
                   <div class="lane-telemetry-split">
@@ -789,8 +791,8 @@
             </div>
           </div>
           <p class="sim-footer-desc" id="motionScenarioDesc">
-            At a modeled 14.0 ms per frame, workload sits inside the 16.7 ms (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30
-            FPS) budgets—so every target meets its rate and higher FPS wins on motion clarity and lower model latency.
+            At 14.0 ms per frame, all native targets meet their budgets. 60 FPS updates most often with the lowest
+            modeled latency; switch 60 ↔ 120 Hz to see 40 FPS shift from uneven 33/17 ms holds to even 25 ms holds.
           </p>
           <div class="motion-footer-right">
             <div class="motion-footer-btns" role="group" aria-label="Quick scenario selector">
@@ -849,7 +851,8 @@
                   <span class="swatch swatch-interp"></span>
                   <h3>30 FPS + Sim. Interp</h3>
                 </div>
-                <div class="sim-area-stat mono" id="sim-stat-interp">30 src → 60 visual · +67 ms</div>
+                <div class="sim-area-stat mono" id="sim-stat-interp"
+                  title="30 source FPS → 60 displayed FPS · Added model buffer: about 67 ms at baseline">30 → 60 FPS · +67 ms</div>
               </div>
               <div class="sim-canvas-wrap">
                 <canvas class="sim-canvas" id="sim-canvas-interp" width="440" height="220"></canvas>
@@ -877,8 +880,8 @@
                 <span class="view-kicker">02</span>
                 <h2>Performance Level</h2>
               </div>
-              <p class="sim-curve-sub">Swipe along the exponential curve to scale entity count and workload across 5
-                levels.</p>
+              <p class="sim-curve-sub">Starts at a 12.0 ms baseline and scales with NPC count (top-bar Load adds extra
+                cost).</p>
             </div>
 
             <div class="sim-kpis">
@@ -935,14 +938,14 @@
       </div>
     </section>
 
-    <!-- VIEW 3: CONSTANT 30 HZ SIMULATION STEP ACROSS ENVIRONMENTS -->
+    <!-- VIEW 3: PHYSICS UPDATE TIMING ACROSS ENVIRONMENTS -->
     <section class="stage-slide" id="physicsSection" data-slide-index="2" data-phys-env="1">
       <div class="slide-inner motion-stack phys-stack">
         <div class="stage-card phys-card">
           <div class="card-head">
             <div class="card-title-group">
               <span class="view-kicker">03</span>
-              <h2>Constant 30 Hz Simulation Step</h2>
+              <h2>Physics Update Timing</h2>
             </div>
           </div>
 
@@ -953,9 +956,9 @@
                 <div class="phys-chamber-head">
                   <div class="phys-chamber-title">
                     <span class="swatch swatch-60"></span>
-                    <h3>Reference · Decoupled 30 Hz + State Interp</h3>
+                    <h3>Reference · Fixed 30 Hz + Physics Interp</h3>
                   </div>
-                  <span class="phys-pill mono good" id="physRefMeta">30.0 Hz · 1.00× · Δ 0.0 px</span>
+                  <span class="phys-pill mono good" id="physRefMeta">30 Hz · 60 Hz smooth · Exact</span>
                 </div>
                 <div class="phys-canvas-wrap">
                   <canvas class="phys-canvas" id="physRefCanvas" width="760" height="220"></canvas>
@@ -967,9 +970,9 @@
                 <div class="phys-chamber-head">
                   <div class="phys-chamber-title">
                     <span class="swatch swatch-60" id="physTestSwatch"></span>
-                    <h3 id="physTestTitle">Test · Decoupled 30 Hz + Smooth Blending</h3>
+                    <h3 id="physTestTitle">Test · Fixed 30 Hz + Physics Interp</h3>
                   </div>
-                  <span class="phys-pill mono good" id="physTestMeta">30.0 Hz · 1.00× · Δ 0.0 px</span>
+                  <span class="phys-pill mono good" id="physTestMeta">30 Hz · 60 Hz smooth · Exact</span>
                 </div>
                 <div class="phys-canvas-wrap">
                   <canvas class="phys-canvas" id="physTestCanvas" width="760" height="220"></canvas>
@@ -990,7 +993,7 @@
                     <span class="ms-title">Decoupled 30 Hz</span>
                     <span class="ms-load mono">Smooth</span>
                   </div>
-                  <span class="ms-summary">Steady 30 Hz clock · smooth &amp; exact</span>
+                  <span class="ms-summary">Fixed 30 Hz step · physics interpolation</span>
                 </button>
                 <button class="motion-scenario-btn phys-env-btn" type="button" data-phys-env="2" data-tier="mid">
                   <div class="ms-row-top">
@@ -998,7 +1001,7 @@
                     <span class="ms-title">60/120 Hz · No Interp</span>
                     <span class="ms-load mono">Repeats</span>
                   </div>
-                  <span class="ms-summary">Exact landings · repeated display frames</span>
+                  <span class="ms-summary">Same landing · repeated display frames</span>
                 </button>
                 <button class="motion-scenario-btn phys-env-btn" type="button" data-phys-env="3" data-tier="warn">
                   <div class="ms-row-top">
@@ -1006,7 +1009,7 @@
                     <span class="ms-title">Variable Frame Step</span>
                     <span class="ms-load mono">Drifts</span>
                   </div>
-                  <span class="ms-summary">FPS changes make jumps overshoot or miss</span>
+                  <span class="ms-summary">One step per frame · path shifts with FPS</span>
                 </button>
                 <button class="motion-scenario-btn phys-env-btn" type="button" data-phys-env="4" data-tier="high">
                   <div class="ms-row-top">
@@ -1014,7 +1017,7 @@
                     <span class="ms-title">Tied to Monitor Refresh</span>
                     <span class="ms-load mono">2×–4×</span>
                   </div>
-                  <span class="ms-summary">Runs 2× speed on 60 Hz, 4× on 120 Hz</span>
+                  <span class="ms-summary">Advances 1/30 s per rendered frame</span>
                 </button>
                 <button class="motion-scenario-btn phys-env-btn" type="button" data-phys-env="5" data-tier="high">
                   <div class="ms-row-top">
@@ -1022,7 +1025,7 @@
                     <span class="ms-title">Constant 30 Hz Limits</span>
                     <span class="ms-load mono">Limits</span>
                   </div>
-                  <span class="ms-summary">Fast falls can skip thin floors in 1 step</span>
+                  <span class="ms-summary">End-of-step check · skips thin floor</span>
                 </button>
               </div>
             </aside>
@@ -1345,7 +1348,8 @@
 
             <div class="pipe-head-right">
               <span class="pipe-status mono" id="pipeTargetStatus">60.0 FPS · Target met</span>
-              <span class="pipe-total mono" id="pipeTotalMs">Model latency: ~35.8 ms</span>
+              <span class="pipe-total mono" id="pipeTotalMs"
+                title="Input to bottom-of-screen pixel completion (full scanout + 2.5 ms assumed gray-to-gray pixel response)">Bottom-scan: ~35.8 ms</span>
               <button class="pipe-btn pipe-replay-btn" id="pipeReplayBtn" type="button"
                 title="Run the full step-by-step Pipeline presentation again">▶ Replay Intro</button>
               <div class="pipe-nav-btns">
@@ -1538,7 +1542,7 @@
           <div class="card-head">
             <div class="card-title-group">
               <span class="view-kicker">07</span>
-              <h2>Articles Worth Reading</h2>
+              <h2>Further Reading and Watching</h2>
             </div>
             <span class="mono reading-meta">3 curated references</span>
           </div>
@@ -1546,9 +1550,8 @@
           <div class="reading-note" role="note">
             <span class="reading-note-badge mono">DEMO NOTE</span>
             <p>
-              This interactive lab is only a simplified demonstration. If you want a true deep dive into frames per
-              second, you need to study the underlying math—frame-time budgets, refresh-rate synchronization, queuing
-              latency—and evaluate the real-world engineering trade-offs behind each target.
+              This lab is a simplified visual model. For a deeper dive, use the resources below to study the math and
+              engineering trade-offs behind frame budgets, refresh timing, and latency.
             </p>
           </div>
 
@@ -1653,12 +1656,12 @@
               rel="noopener noreferrer">
               <div class="reading-card-media" data-theme="youtube">
                 <img class="reading-art" src="ytvidimg.png"
-                  alt="Why can't GTAVI deliver 60FPS? By DigitalFoundry video thumbnail" loading="lazy"
+                  alt="Why can't GTA VI deliver 60 FPS? By DigitalFoundry video thumbnail" loading="lazy"
                   decoding="async" />
                 <span class="reading-source-pill mono">YOUTUBE · VIDEO</span>
               </div>
               <div class="reading-card-body">
-                <h3>Why can't GTAVI deliver 60FPS? By @DigitalFoundry</h3>
+                <h3>Why can't GTA VI deliver 60 FPS? By @DigitalFoundry</h3>
                 <p>A visual deep dive showing how frame intervals, refresh cycles, and pacing differences behave in real
                   motion—helping connect the math to what your eyes actually perceive.</p>
                 <span class="reading-link-cta">Watch video <span aria-hidden="true">↗</span></span>
@@ -1738,11 +1741,12 @@
             </p>
           </div>
           <div class="model-assumption-item">
-            <h3>4. Simulated Interpolation &amp; Latency</h3>
-            <p>Interpolation runs a 30 FPS source and holds a chosen <code>2×</code> source-interval buffer
-              (<code>~66.7 ms</code> at baseline), outputting at the simulated refresh rate. Artifacts are illustrative
-              visual effects. Latency and Pipeline totals (including full-refresh scanout + <code>2.5 ms</code> GtG) are
-              simplified model estimates, not hardware measurements.</p>
+            <h3>4. Simulated Frame Interpolation &amp; Latency</h3>
+            <p>Simulated frame interpolation runs a 30 FPS source and holds a chosen <code>2×</code> source-interval
+              buffer (about <code>67 ms</code> at baseline), outputting at the simulated refresh rate. Artifacts are
+              illustrative. Motion reports <strong>mid-screen</strong> latency (½ scanout), while Pipeline reports
+              <strong>bottom-of-screen</strong> latency (full scanout + <code>2.5 ms</code> assumed gray-to-gray pixel
+              response).</p>
           </div>
         </div>
       </div>
@@ -1767,7 +1771,8 @@
     <div
       style="max-width:720px;margin:24px auto;padding:16px 20px;background:#fff;border:1px solid #cbd5e1;border-radius:12px;font-family:sans-serif;color:#0f172a;">
       <strong>JavaScript is required for interactive simulations.</strong>
-      This tool compares 30 FPS, 40 FPS, 60 FPS, and 30 FPS with motion interpolation across 60Hz and 120Hz displays,
+      This tool compares 30 FPS, 40 FPS, 60 FPS, and 30 FPS with simulated frame interpolation across 60 Hz and 120 Hz
+      displays,
       including live frame pacing, exponential workload scaling, input latency tracking, the CPU-to-display frame
       pipeline, and a 100 ms refresh cycle map.
     </div>
@@ -1809,7 +1814,7 @@
     <span>Setup link copied to clipboard</span>
   </div>
 
-  <script defer src="app.js?v=51"></script>
+  <script defer src="app.js?v=53"></script>
   <script defer src="ui.js?v=30"></script>
 </body>
 

@@ -23,7 +23,7 @@
   const MODE_META = {
     '30': { name: '30 FPS', gameFps: 30, periodMs: 1000 / 30 },
     '40': { name: '40 FPS', gameFps: 40, periodMs: 1000 / 40 },
-    'interp': { name: '30 FPS + simulated interpolation', gameFps: 30, periodMs: 1000 / 30 },
+    'interp': { name: '30 FPS + simulated frame interpolation', gameFps: 30, periodMs: 1000 / 30 },
     '60': { name: '60 FPS', gameFps: 60, periodMs: 1000 / 60 }
   };
 
@@ -71,6 +71,28 @@
 
   function getEfficiencyDropPct(actualFps, targetFps) {
     return Math.max(0, Math.min(100, (1 - actualFps / targetFps) * 100));
+  }
+
+  // Unified input-to-pixel latency estimator shared by 01 Motion (mid-screen: 0.5 scanout)
+  // and 05 Pipeline (bottom-of-screen: 1.0 scanout), +2.5 ms assumed gray-to-gray pixel response.
+  function computeModelLatencyMs(mode, hz, load, spikeMs = 0, scanFraction = 0.5) {
+    const dispPeriod = 1000 / hz;
+    const sceneMs = getMeanSceneRenderMs(load, spikeMs);
+    const budgetMs = MODE_META[mode].periodMs;
+    const missed = sceneMs > budgetMs + 0.5;
+    const pacedMs = Math.max(budgetMs, sceneMs);
+
+    let waitMs;
+    if (mode === '40' && hz === 60 && !missed) {
+      waitMs = 25.0 - sceneMs + 4.2;
+    } else {
+      const vSyncAlignedMs = Math.ceil((pacedMs - 0.01) / dispPeriod) * dispPeriod;
+      waitMs = Math.max(0.4, vSyncAlignedMs - sceneMs);
+    }
+    const interpBufMs = mode === 'interp' ? Math.max(33.33, sceneMs) * 2 : 0;
+    const scanMs = dispPeriod * scanFraction;
+    const gtgMs = 2.5;
+    return sceneMs + waitMs + interpBufMs + scanMs + gtgMs;
   }
 
   // ============================================================================
@@ -545,12 +567,13 @@
     const avg30 = 1000 / Math.max(1, fps30);
     const dropPct30 = getEfficiencyDropPct(fps30, 30);
     const drop30 = dropPct30 >= 3;
+    const midLat30 = Math.round(computeModelLatencyMs('30', hz, load, spikeMs, 0.5));
     setLaneBadges(
       '30',
       `${fps30.toFixed(1)} FPS`, drop30 ? 'warn' : '',
       dropPct30,
       `${avg30.toFixed(1)} ms`, drop30 ? 'warn' : '',
-      `Model latency: ~${Math.round(avg30 * 1.8)} ms`, ''
+      `Mid-screen: ~${midLat30} ms`, ''
     );
     setLaneCaption(
       '30',
@@ -571,12 +594,13 @@
     const avg40 = 1000 / Math.max(1, fps40);
     const dropPct40 = getEfficiencyDropPct(fps40, 40);
     const drop40 = dropPct40 >= 3;
+    const midLat40 = Math.round(computeModelLatencyMs('40', hz, load, spikeMs, 0.5));
     if (!drop40 && is120) {
-      setLaneBadges('40', '40.0 FPS', 'good', 0, '25.0 ms', 'good', 'Model latency: ~45 ms', '');
+      setLaneBadges('40', '40.0 FPS', 'good', 0, '25.0 ms', 'good', `Mid-screen: ~${midLat40} ms`, '');
       setLaneCaption('40', '25.0 ms', 'Even 3-refresh cadence', 'ft-note');
       setLaneTag('40', 'Within budget', 'good');
     } else if (!drop40 && !is120) {
-      setLaneBadges('40', '40.0 FPS (uneven)', 'warn', 0, '16.7 / 33.3 ms', 'warn', 'Model latency: ~50 ms', '');
+      setLaneBadges('40', '40.0 FPS (uneven)', 'warn', 0, '16.7 / 33.3 ms', 'warn', `Mid-screen: ~${midLat40} ms`, '');
       setLaneCaption('40', '16.7 / 33.3 ms', 'Uneven 2–1 cadence (60 Hz)', 'ft-note judder');
       setLaneTag('40', 'Uneven 2–1', 'judder');
     } else {
@@ -585,36 +609,36 @@
         `${fps40.toFixed(1)} FPS`, 'warn',
         dropPct40,
         `${avg40.toFixed(1)} ms`, 'warn',
-        `Model latency: ~${Math.round(avg40 * 1.85)} ms`, ''
+        `Mid-screen: ~${midLat40} ms`, ''
       );
       setLaneCaption('40', `${avg40.toFixed(1)} ms`, `${Math.round(dropPct40)}% below target · >25 ms`, 'ft-note judder');
       setLaneTag('40', spikeMs > 2 ? 'Spike hitch' : 'Over budget', 'warn');
     }
 
-    // 30 FPS + simulated interpolation (33.3 ms source budget)
+    // 30 FPS + simulated frame interpolation (33.3 ms source budget)
     const interpOutMs = (1000 / hz).toFixed(1);
     const bufLag = Math.round(laneState['interp'].currentLagMs || getInterpBufferLagMs(load));
     const srcFps = Math.min(30, 1000 / Math.max(33.33, laneState['interp'].avgSrcMs || getMeanFrameDurMs('interp', load)));
     const dropPctInterp = getEfficiencyDropPct(srcFps, 30);
-    const totalInterpLag = Math.round(bufLag + (1000 / srcFps) + 18);
+    const midLatInterp = Math.round(computeModelLatencyMs('interp', hz, load, spikeMs, 0.5));
     setLaneBadges(
       'interp',
-      `${srcFps.toFixed(0)} src → ${hz} vis`, '',
+      `${srcFps.toFixed(0)} → ${hz} FPS`, '',
       dropPctInterp,
-      `Buffer: +${bufLag} ms`, 'warn',
-      `Model latency: ~${totalInterpLag} ms`, 'warn'
+      `Added buffer: +${bufLag} ms`, 'warn',
+      `Mid-screen: ~${midLatInterp} ms`, 'warn'
     );
     setLaneCaption(
       'interp',
       `${interpOutMs} ms (+${bufLag} ms)`,
       dropPctInterp >= 3
         ? `Src ${Math.round(dropPctInterp)}% below target`
-        : `${hz} visual FPS · buffered delay`,
+        : `${hz} displayed FPS · buffered`,
       dropPctInterp >= 3 ? 'ft-note judder' : 'ft-note'
     );
     setLaneTag(
       'interp',
-      dropPctInterp >= 3 ? `Buffer +${bufLag} ms · Drops` : `Model buffer: +${bufLag} ms`,
+      dropPctInterp >= 3 ? `Added buffer: +${bufLag} ms · Drops` : `Added buffer: +${bufLag} ms`,
       dropPctInterp >= 3 ? 'warn' : 'interp'
     );
 
@@ -624,12 +648,13 @@
     const dropPct60 = getEfficiencyDropPct(fps60, 60);
     const drop60 = dropPct60 >= 3;
     const cls60 = drop60 ? 'warn' : 'good';
+    const midLat60 = Math.round(computeModelLatencyMs('60', hz, load, spikeMs, 0.5));
     setLaneBadges(
       '60',
       `${fps60.toFixed(1)} FPS`, cls60,
       dropPct60,
       `${avg60.toFixed(1)} ms`, cls60,
-      `Model latency: ~${Math.round(avg60 * 1.8)} ms`, cls60
+      `Mid-screen: ~${midLat60} ms`, cls60
     );
     setLaneCaption(
       '60',
@@ -1017,12 +1042,12 @@
       const srcFps = Math.min(30, 1000 / srcDur);
       const srcDropPct = Math.round(getEfficiencyDropPct(srcFps, 30));
       return {
-        label: '30 FPS + simulated interpolation',
+        label: '30 FPS + simulated frame interpolation',
         pipelineDelayMs: totalDelay,
         estLagText: `~${Math.round(totalDelay)}–${Math.round(totalDelay + 18)} ms`,
         visualText: srcDropPct > 0
-          ? `${srcFps.toFixed(0)} src → ${state.displayHz} vis (-${srcDropPct}%)`
-          : `30 source FPS → ${state.displayHz} visual FPS`,
+          ? `${srcFps.toFixed(0)} source FPS → ${state.displayHz} displayed FPS (-${srcDropPct}%)`
+          : `30 source FPS → ${state.displayHz} displayed FPS`,
         pacingText: srcDropPct > 0 ? 'Elevated buffer delay' : 'Smooth visual, buffered',
         status: 'warn'
       };
@@ -1342,16 +1367,16 @@
     const d60 = estDrop('60');
 
     const rows = [
-      { mode: '30', label: '30 FPS', sub: d30 > 0 ? `${d30}% below target (33.3 ms)` : 'Target met (33.3 ms)' },
+      { mode: '30', label: '30 FPS', sub: d30 > 0 ? `${d30}% below target (33.3 ms)` : 'Target met · 33.3 ms' },
       {
         mode: '40',
         label: '40 FPS',
         sub: d40 > 0
           ? `${d40}% below target (25.0 ms)`
-          : (hz === 120 ? 'Target met · even 25 ms' : 'Target met · uneven 2–1')
+          : (hz === 120 ? 'Target met · even 25.0 ms' : 'Uneven · 33.3 / 16.7 ms')
       },
-      { mode: 'interp', label: '30 + Interp', sub: `Buffer +${Math.round(bufLagMs)} ms${d30 > 0 ? ` (${d30}% below)` : ''}` },
-      { mode: '60', label: '60 FPS', sub: d60 > 0 ? `${d60}% below target (16.7 ms)` : 'Target met (16.7 ms)' }
+      { mode: 'interp', label: '30 + Interp', sub: `Added buffer +${Math.round(bufLagMs)} ms${d30 > 0 ? ` (${d30}% below)` : ''}` },
+      { mode: '60', label: '60 FPS', sub: d60 > 0 ? `${d60}% below target (16.7 ms)` : 'Target met · 16.7 ms' }
     ];
 
     let html = `
@@ -1432,12 +1457,12 @@
           else if (isJudderLong) cls = 'is-judder-long';
           else if (isJudderShort) cls = 'is-judder-short';
 
-          const isNarrow = widthPct < 22;
-          const innerHtml = widthPct >= 14
+          const isNarrow = widthPct < 24;
+          const innerHtml = widthPct >= 24
             ? `<span class="tl-txt">F${seg.frameNum}<span class="tl-dur"> (${durMs.toFixed(1)} ms)</span></span>`
             : (widthPct >= 7 ? `<span class="tl-txt">F${seg.frameNum}</span>` : '');
           const tip = `Frame F${seg.frameNum} · ${durMs.toFixed(1)} ms (${seg.ticks} refresh${seg.ticks === 1 ? '' : 'es'})`;
-          blocksHtml += `<div class="tl-block ${cls}${isNarrow ? ' is-narrow' : ''}" style="--p:${startPct.toFixed(3)}%;--s:${widthPct.toFixed(3)}%;left:calc(${startPct.toFixed(3)}% + 2px);width:calc(${widthPct.toFixed(3)}% - 4px)" title="${tip}">${innerHtml}</div>`;
+          blocksHtml += `<div class="tl-block ${cls}${isNarrow ? ' is-narrow' : ''}" tabindex="0" role="note" aria-label="${tip}" data-tip="${tip}" style="--p:${startPct.toFixed(3)}%;--s:${widthPct.toFixed(3)}%;left:calc(${startPct.toFixed(3)}% + 2px);width:calc(${widthPct.toFixed(3)}% - 4px)" title="${tip}">${innerHtml}</div>`;
         });
       }
 
@@ -2377,8 +2402,9 @@
         const dropPct = Math.round(getEfficiencyDropPct(srcFps, 30));
         const lag = Math.round(ss.currentLagMs);
         el.textContent = dropPct > 2
-          ? `${srcFps.toFixed(0)} src → ${state.displayHz} vis · +${lag} ms`
-          : `30 src → ${state.displayHz} vis · +${lag} ms`;
+          ? `${srcFps.toFixed(0)} → ${state.displayHz} FPS · +${lag} ms`
+          : `30 → ${state.displayHz} FPS · +${lag} ms`;
+        el.title = `${srcFps.toFixed(0)} source FPS → ${state.displayHz} displayed FPS · Added model buffer: about ${lag} ms`;
         el.className = 'sim-area-stat mono' + (dropPct > 2 ? ' warn' : '');
         if (areaEl) {
           areaEl.classList.toggle('is-blast-interp', inDetonation);
@@ -2809,8 +2835,8 @@
       };
     }
     return {
-      title: `5. Scanout and pixel transition (~2.5 ms assumed GtG)`,
-      desc: `In this display model, the image is scanned out progressively and pixel transitions (~2.5 ms assumed) occur as the scan reaches each region, completing bottom-of-screen model latency in ~${ctx.totalMs.toFixed(1)} ms.`
+      title: `5. Scanout & gray-to-gray pixel response (2.5 ms assumed)`,
+      desc: `In this display model, the image scans out top-to-bottom and gray-to-gray pixel response (2.5 ms assumed) completes as the scan reaches each region—reaching bottom-of-screen model latency in ~${ctx.totalMs.toFixed(1)} ms.`
     };
   }
 
@@ -2869,7 +2895,8 @@
       }
     }
 
-    pipeEls.totalMs.textContent = `Model latency: ~${totalMs.toFixed(1)} ms`;
+    pipeEls.totalMs.textContent = `Bottom-scan: ~${totalMs.toFixed(1)} ms`;
+    pipeEls.totalMs.title = `Input to bottom-of-screen pixel completion (full scanout + 2.5 ms assumed gray-to-gray pixel response). Motion shows mid-screen (~${(totalMs - dispPeriod * 0.5).toFixed(1)} ms).`;
     pipeEls.stepCounter.textContent = `${pipeStage + 1} / 5`;
     pipeEls.prevBtn.disabled = pipeStage <= 0;
     pipeEls.nextBtn.disabled = pipeStage >= 4;
@@ -2883,7 +2910,8 @@
     }
     pipeEls.msVsync.textContent = `+${gateTotalMs.toFixed(1)} ms`;
     pipeEls.msHdmi.textContent = `${hdmiMs.toFixed(1)} ms`;
-    pipeEls.msDisp.textContent = `${dispMs.toFixed(1)} ms GtG`;
+    pipeEls.msDisp.textContent = `${dispMs.toFixed(1)} ms pixel`;
+    pipeEls.msDisp.title = 'Assumed gray-to-gray pixel response: 2.5 ms';
 
     // Update proportional millisecond breakdown segments
     const vsyncSegLbl = pipeMode === 'interp' ? 'Interp Buf' : 'Pacer/V-Sync';
@@ -2892,7 +2920,7 @@
       { el: pipeEls.segGpu,   ms: gpuMs,       lbl: 'GPU',        idx: 1 },
       { el: pipeEls.segVsync, ms: gateTotalMs, lbl: vsyncSegLbl,  idx: 2 },
       { el: pipeEls.segHdmi,  ms: hdmiMs,      lbl: 'HDMI+Scan',  idx: 3 },
-      { el: pipeEls.segDisp,  ms: dispMs,      lbl: 'GtG',        idx: 4 }
+      { el: pipeEls.segDisp,  ms: dispMs,      lbl: 'Pixel',      idx: 4 }
     ];
     segs.forEach((s) => {
       s.el.style.flexGrow = String(Math.max(2.2, s.ms));
@@ -3373,7 +3401,7 @@
       load: 1.0,
       tier: 'low',
       impact: 'All targets within budget',
-      desc: 'At a modeled 14.0 ms per frame, workload sits inside the 16.7 ms (60 FPS), 25.0 ms (40 FPS), and 33.3 ms (30 FPS) budgets—so every target meets its rate and higher FPS wins on motion clarity and lower model latency.'
+      desc: 'At 14.0 ms per frame, all native targets meet their budgets. 60 FPS updates most often with the lowest modeled latency; switch 60 ↔ 120 Hz to see 40 FPS shift from uneven 33/17 ms holds to even 25 ms holds.'
     },
     {
       id: 2,
@@ -3980,14 +4008,14 @@
       tier: 'low',
       swatch: 'swatch-60',
       pillClass: 'good',
-      title: 'Decoupled 30 Hz + Smooth Blending',
+      title: 'Fixed 30 Hz + Physics Interp',
       shortTitle: 'Decoupled 30 Hz',
       impact: 'Same landing every time',
-      desc: 'Both boxes follow the exact same dotted yellow path and land on the same spot every jump. Try dragging Load or pressing Load Spike—even when frame rate drops, the jump stays rock-solid and smooth.',
+      desc: 'In this demo, both balls land in the same place when the rendering rate changes because physics uses a fixed 30 Hz step. Physics interpolation draws between the two most recent steps for smooth motion.',
       more: {
-        look: 'Both green landing dots stack on the exact same spot every cycle, and the ball glides smoothly between the green step ticks along the bottom strip.',
-        why: 'The game runs physics on its own steady 30-times-per-second clock, separate from how fast the screen draws. Between updates, the renderer blends the previous and next positions so motion stays fluid on 60 Hz and 120 Hz screens.',
-        takeaway: 'Every player gets identical, predictable physics on any hardware. The only trade-off is a tiny visual delay (one physics step) needed to blend between positions.'
+        look: 'Both green landing dots stack on the exact same spot every cycle, and the ball glides smoothly between the green 30 Hz step ticks along the bottom strip.',
+        why: 'The renderer draws the ball between its two most recent physics positions (physics interpolation). That makes movement look smooth at 60 Hz or 120 Hz and introduces a visual delay of one physics step (~33 ms here).',
+        takeaway: 'In this demo, the ball lands in the same place even when rendering rate or Load changes because physics uses a fixed 30 Hz step—separate from simulated frame interpolation used in Motion.'
       }
     },
     {
@@ -3995,14 +4023,14 @@
       tier: 'mid',
       swatch: 'swatch-40',
       pillClass: 'mid',
-      title: '30 Hz on 60/120 Hz · No Blending',
+      title: '30 Hz on 60/120 Hz · No Physics Interp',
       shortTitle: '60/120 Hz · No Interp',
-      impact: 'Exact landing · Choppy motion',
-      desc: 'The bottom ball still lands on the exact same spot every time, just like the top one—but watch it move: it stutters in small steps instead of gliding smoothly.',
+      impact: 'Exact landing · Repeated frames',
+      desc: 'The bottom ball still lands in the exact same place because physics uses a fixed 30 Hz step—but without physics interpolation, it repeats each position across display refreshes.',
       more: {
-        look: 'Compare the motion trail in the bottom box against the top box (try 0.25× Speed to see it clearly). The ball freezes in place for multiple screen refreshes before snapping forward.',
-        why: 'Physics still ticks steadily 30 times a second, so the jump never drifts. Without blending between updates, a 60 Hz screen shows every physics position twice in a row (and 120 Hz shows it four times)—and on monitors like 144 Hz, 30 does not divide evenly, creating uneven holds.',
-        takeaway: 'Gameplay stays fair and identical across devices, but camera and character movement look choppy on high-refresh monitors unless the engine blends between ticks.'
+        look: 'Compare the motion trail in the bottom box against the top box (try 0.25× Speed to see it clearly). The ball holds still for multiple screen refreshes before stepping forward.',
+        why: 'Physics ticks steadily at 30 Hz, so the jump never drifts. Without physics interpolation between the two most recent steps, 60 Hz shows every position twice (120 Hz four times), and rates like 144 Hz produce uneven holds.',
+        takeaway: 'Gameplay timing stays consistent across render rates, but movement looks stepped on high-refresh monitors unless the engine adds physics interpolation.'
       }
     },
     {
@@ -4013,11 +4041,11 @@
       title: 'Variable Frame Step',
       shortTitle: 'Variable Frame Step',
       impact: 'Jumps overshoot or miss',
-      desc: 'Watch the landing dots scatter in the bottom box: some jumps overshoot the yellow target line, while others fall short and drop straight into the red gap.',
+      desc: 'In this example, physics updates once per rendered frame. Changing the step size changes the calculated path, so some jumps overshoot and others fall short into the gap.',
       more: {
-        look: 'The top box lands on the yellow target every single jump. In the bottom box, faster frames make the ball overshoot, while frame hitches make it clip the edge and fall into the pit (red × marks).',
-        why: 'Here, physics updates once per rendered frame and tries to scale motion by how long the last frame took. Because real game jumps speed up, slow down, and change direction mid-air, bigger or smaller time slices actually bend the jump path itself.',
-        takeaway: 'This is why frame-rate-dependent physics breaks games: a jump that feels effortless on a fast PC can become impossible during lag—or on someone else’s monitor.'
+        look: 'The top box lands on the yellow target every jump. In the bottom box, shorter frame steps overshoot while frame hitches fall short into the gap (red × marks).',
+        why: 'Each rendered frame runs one simple Euler integration step—updating speed and position once using that frame’s duration. Because gravity and air drag change mid-flight, varying step size bends the calculated arc.',
+        takeaway: 'When physics depends on rendered frame duration, a jump that lands cleanly at one frame rate can miss during frame drops or on another refresh rate.'
       }
     },
     {
@@ -4028,11 +4056,11 @@
       title: 'Tied to Monitor Refresh (2× Speed on 60 Hz)',
       shortTitle: 'Tied to Monitor Refresh',
       impact: '2× speed at 60 Hz',
-      desc: 'The bottom ball moves through the exact same jump twice as fast as the top one at 60 Hz—flip Simulated Refresh to 120 Hz and it runs at four times the speed.',
+      desc: 'The test advances physics by 1/30 of a second on every rendered frame. At baseline load it runs 2× as fast at 60 Hz, 4× at 120 Hz, and slows down when frames drop.',
       more: {
-        look: 'Count how many times the bottom ball completes the jump while the top ball only finishes once. Now drag the Load slider up: as frame rate drops, the bottom game suddenly slows into slow-motion.',
-        why: 'The physics code assumes every screen refresh equals one fixed 30 Hz step without checking real wall-clock time. On a 60 Hz screen it advances 60 times a second (double speed), and on 120 Hz it advances 120 times a second (quadruple speed).',
-        takeaway: 'A classic bug when older 30 FPS console games are unlocked on PC: tying physics steps directly to display refreshes makes the whole game fast-forward on speedy monitors and crawl during lag.'
+        look: 'Count how many times the bottom ball completes the jump while the top ball finishes once. Then raise the top-bar Load slider: as frame rate drops, the bottom simulation slows down.',
+        why: 'Instead of tracking real elapsed time, the loop advances physics by a fixed 1/30 s on each rendered frame. At 60 Hz it steps twice as often as 30 Hz (four times at 120 Hz).',
+        takeaway: 'Tying fixed physics steps directly to rendered frames makes game speed depend on monitor refresh rate and frame drops—a classic issue in older 30 FPS games unlocked on PC.'
       }
     },
     {
@@ -4043,11 +4071,11 @@
       title: 'Constant 30 Hz Limits',
       shortTitle: '30 Hz Limit: Falling Through Floors',
       impact: 'Falls through floor',
-      desc: 'At 30 updates per second, a fast-falling ball jumps a big distance in a single step—from above the thin floor straight to underneath it. The bottom game only checks where the ball lands on each step, so it never notices the floor in between.',
+      desc: 'The test checks for overlap only at the end of each 30 Hz step. A fast-moving ball can cross the entire thin floor between checks. The reference checks the path traveled during the step.',
       more: {
-        look: 'Compare the two boxes as the ball drops onto the thin floor. In the bottom box, watch the two red circles: on Step 1 the ball is still above the floor, and on Step 2 it is already below it—falling straight through.',
-        why: 'Updating only 30 times a second leaves noticeable time gaps between checks. If something moves faster than a wall or floor is thick, it can jump from one side to the other in a single step—a classic bug called tunneling.',
-        takeaway: 'Games with a slow 30 Hz physics clock need extra safety checks—like tracing the entire path between two steps (as the top box does)—or fast bullets and falling players will clip through solid walls.'
+        look: 'Compare both boxes as the ball drops onto the thin floor. In the bottom box, Step 1 catches the ball above the floor and Step 2 lands below it—crossing right through.',
+        why: 'Checking overlap only at discrete 30 Hz positions leaves gaps between checks. When an object moves farther in one step than a floor is thick, it crosses without ever overlapping (tunneling).',
+        takeaway: 'Slow fixed timesteps need continuous path checks between steps (as the top box uses) or higher tick rates so fast objects do not clip through thin geometry.'
       }
     }
   ];
@@ -4743,7 +4771,7 @@
     if (physEls.refTitle) {
       physEls.refTitle.textContent = meta.id === 5
         ? 'Reference · 30 Hz (Checks Full Path)'
-        : 'Reference · Decoupled 30 Hz + State Interp';
+        : 'Reference · Fixed 30 Hz + Physics Interp';
     }
     if (physEls.testTrack) physEls.testTrack.dataset.tier = meta.tier;
     if (physEls.testSwatch) physEls.testSwatch.className = `swatch ${meta.swatch}`;

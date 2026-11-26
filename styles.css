@@ -3874,6 +3874,20 @@ html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-tel
   pointer-events: none;
 }
 
+.lbl-compact {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .lbl-wide {
+    display: none;
+  }
+
+  .lbl-compact {
+    display: inline;
+  }
+}
+
 .tl-block {
   position: absolute;
   top: 4px;
@@ -3887,9 +3901,40 @@ html:not(.is-blind-test) #motionSection[data-motion-view="simplified"] .lane-tel
   font-family: var(--font-mono);
   font-size: clamp(10px, 1.15vh, 12px);
   font-weight: 700;
-  overflow: hidden;
+  overflow: visible;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
   cursor: default;
+}
+
+.tl-block:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+  z-index: 8;
+}
+
+.tl-block[data-tip]:hover,
+.tl-block[data-tip]:focus-visible {
+  z-index: 9;
+}
+
+.tl-block[data-tip]:hover::after,
+.tl-block[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 15px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
 }
 
 .tl-txt {
