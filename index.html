@@ -94,12 +94,24 @@
   <script>
     (function () {
       var resetCookies = /[?&]reset_cookies=1(?:&|$)/.test(location.search);
+      var resetHints = /[?&]reset_hints=1(?:&|$)/.test(location.search);
       if (resetCookies) {
         document.cookie = 'fps_lab_cookie_ok=; path=/; max-age=0';
+      }
+      if (resetHints || resetCookies) {
+        document.cookie = 'fps_lab_hints=; path=/; max-age=0';
+        document.cookie = 'fps_lab_used_spike=; path=/; max-age=0';
+        document.cookie = 'fps_lab_used_load=; path=/; max-age=0';
       }
       var cookies = document.cookie.split(';');
       if (!resetCookies && cookies.some(function (c) { return c.trim().indexOf('fps_lab_cookie_ok=1') === 0; })) {
         document.documentElement.classList.add('is-cookie-ok');
+      }
+      if (!resetHints && !resetCookies) {
+        var hintsCookie = cookies.map(function (c) { return c.trim(); }).find(function (c) { return c.indexOf('fps_lab_hints=') === 0; });
+        if (hintsCookie && hintsCookie.slice(14).split(',').indexOf('scroll') !== -1) {
+          document.documentElement.classList.add('is-scroll-hint-done');
+        }
       }
     })();
   </script>
@@ -241,12 +253,19 @@
       overflow: hidden
     }
 
-    .rail-nav {
+    .rail-cluster {
       position: fixed;
-      right: clamp(10px, 2.2vw, 30px);
+      right: 24px;
       top: 50%;
       transform: translateY(-50%);
       z-index: 65;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px
+    }
+
+    .rail-nav {
       display: flex;
       flex-direction: column;
       gap: 8px
@@ -258,6 +277,7 @@
     .mob-spike-btn,
     .mob-pause-btn,
     .mob-console-btn,
+    .scroll-next-hint,
     html.is-cookie-ok .cookie-banner {
       display: none
     }
@@ -273,7 +293,7 @@
     }
 
     html.is-intro-replay .top-chrome,
-    html.is-intro-replay .rail-nav {
+    html.is-intro-replay .rail-cluster {
       opacity: 0;
       visibility: hidden;
       pointer-events: none
@@ -290,7 +310,7 @@
       }
 
       .step-nav,
-      .rail-nav,
+      .rail-cluster,
       .pipe-card,
       .lane-meta,
       .motion-scenarios-pane {
@@ -314,9 +334,9 @@
       }
     }
   </style>
-  <link rel="preload" href="styles.css?v=68" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="preload" href="styles.css?v=71" as="style" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
-    <link rel="stylesheet" href="styles.css?v=68">
+    <link rel="stylesheet" href="styles.css?v=71">
   </noscript>
 </head>
 
@@ -1706,30 +1726,48 @@
     </section>
   </main>
 
-  <!-- FLOATING RIGHT-MARGIN PROGRESS RAIL (OUTSIDE 70vw STAGE) -->
-  <nav class="rail-nav" aria-label="Section progress">
-    <button class="rail-dot active" type="button" data-target="motionSection" aria-label="01 Motion">
-      <span class="rail-tooltip">01 · Motion</span>
+  <!-- FLOATING RIGHT-MARGIN PROGRESS RAIL + FIRST-VISIT SCROLL CAPSULE (OUTSIDE 70vw STAGE) -->
+  <div class="rail-cluster">
+    <nav class="rail-nav" aria-label="Section progress">
+      <button class="rail-dot active" type="button" data-target="motionSection" aria-label="01 Motion">
+        <span class="rail-tooltip">01 · Motion</span>
+      </button>
+      <button class="rail-dot" type="button" data-target="simSection" aria-label="02 Performance">
+        <span class="rail-tooltip">02 · Performance</span>
+      </button>
+      <button class="rail-dot" type="button" data-target="physicsSection" aria-label="03 Simulation">
+        <span class="rail-tooltip">03 · Simulation</span>
+      </button>
+      <button class="rail-dot" type="button" data-target="inputSection" aria-label="04 Latency">
+        <span class="rail-tooltip">04 · Latency</span>
+      </button>
+      <button class="rail-dot" type="button" data-target="pipelineSection" aria-label="05 Pipeline">
+        <span class="rail-tooltip">05 · Pipeline</span>
+      </button>
+      <button class="rail-dot" type="button" data-target="timelineSection" aria-label="06 Refresh Map">
+        <span class="rail-tooltip">06 · Refresh Map</span>
+      </button>
+      <button class="rail-dot" type="button" data-target="readingSection" aria-label="07 Reading">
+        <span class="rail-tooltip">07 · Reading</span>
+      </button>
+    </nav>
+
+    <button class="scroll-next-hint" id="scrollNextHint" type="button" aria-label="Scroll down to next section"
+      title="Scroll down to explore more sections">
+      <span class="scroll-next-step mono" id="scrollNextStep">1/7</span>
+      <span class="scroll-next-chevrons" aria-hidden="true">
+        <svg class="scroll-chev scroll-chev-1" viewBox="0 0 14 8" width="11" height="6" fill="none" stroke="currentColor"
+          stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1.5 1.5L7 6.5L12.5 1.5" />
+        </svg>
+        <svg class="scroll-chev scroll-chev-2" viewBox="0 0 14 8" width="11" height="6" fill="none" stroke="currentColor"
+          stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1.5 1.5L7 6.5L12.5 1.5" />
+        </svg>
+      </span>
+      <span class="scroll-next-callout mono" id="scrollNextCallout">Scroll down</span>
     </button>
-    <button class="rail-dot" type="button" data-target="simSection" aria-label="02 Performance">
-      <span class="rail-tooltip">02 · Performance</span>
-    </button>
-    <button class="rail-dot" type="button" data-target="physicsSection" aria-label="03 Simulation">
-      <span class="rail-tooltip">03 · Simulation</span>
-    </button>
-    <button class="rail-dot" type="button" data-target="inputSection" aria-label="04 Latency">
-      <span class="rail-tooltip">04 · Latency</span>
-    </button>
-    <button class="rail-dot" type="button" data-target="pipelineSection" aria-label="05 Pipeline">
-      <span class="rail-tooltip">05 · Pipeline</span>
-    </button>
-    <button class="rail-dot" type="button" data-target="timelineSection" aria-label="06 Refresh Map">
-      <span class="rail-tooltip">06 · Refresh Map</span>
-    </button>
-    <button class="rail-dot" type="button" data-target="readingSection" aria-label="07 Reading">
-      <span class="rail-tooltip">07 · Reading</span>
-    </button>
-  </nav>
+  </div>
 
   <!-- HOW THIS MODEL WORKS DIALOG -->
   <div class="model-modal" id="modelModal" hidden role="dialog" aria-modal="true" aria-labelledby="modelModalTitle">
@@ -1792,9 +1830,9 @@
       <div class="cookie-title">🍪 Just a Few Tiny Local Cookies</div>
       <p class="cookie-text">
         We don't store your cookies on any server or run analytics — everything stays strictly in your browser. We only
-        save two things: <strong>(1)</strong> that you clicked OK on this box, and <strong>(2)</strong> whether you've
-        tried the Load Spike button or Load slider so we stop pulsing their hints on future visits. That's it. No spies,
-        no ads.
+        save two things: <strong>(1)</strong> that you clicked OK on this box, and <strong>(2)</strong> which
+        first-visit hints you've already completed (scrolling to the end, Load Spike, or Load slider) so we stop showing
+        them on future visits. That's it. No spies, no ads.
       </p>
     </div>
     <button class="cookie-ok-btn" id="cookieOkBtn" type="button">OK, cool</button>
@@ -1847,8 +1885,8 @@
     <span>Setup link copied to clipboard</span>
   </div>
 
-  <script defer src="app.js?v=55"></script>
-  <script defer src="ui.js?v=33"></script>
+  <script defer src="app.js?v=56"></script>
+  <script defer src="ui.js?v=35"></script>
 </body>
 
 </html>

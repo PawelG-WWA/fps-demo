@@ -38,12 +38,63 @@
     return 1 - Math.pow(1 - t, 3);
   }
 
+  const scrollNextHint = document.getElementById('scrollNextHint');
+  const scrollNextStep = document.getElementById('scrollNextStep');
+  const scrollNextCallout = document.getElementById('scrollNextCallout');
+  const RAIL_SECTION_LABELS = [
+    '01 · Motion',
+    '02 · Performance',
+    '03 · Simulation',
+    '04 · Latency',
+    '05 · Pipeline',
+    '06 · Refresh Map',
+    '07 · Reading'
+  ];
+
+  function markScrollHintDone() {
+    if (document.documentElement.classList.contains('is-scroll-hint-done')) return;
+    document.documentElement.classList.add('is-scroll-hint-done');
+    if (window.fpsLabHints && typeof window.fpsLabHints.mark === 'function') {
+      window.fpsLabHints.mark('scroll');
+      return;
+    }
+    const flags = new Set();
+    const match = document.cookie.match(/(?:^|;\s*)fps_lab_hints=([^;]*)/);
+    if (match && match[1]) {
+      match[1].split(',').forEach((f) => {
+        const clean = f.trim();
+        if (clean) flags.add(clean);
+      });
+    }
+    flags.add('scroll');
+    document.cookie = `fps_lab_hints=${Array.from(flags).join(',')}; path=/; max-age=31536000; SameSite=Lax`;
+  }
+
+  function updateScrollHintCopy(idx) {
+    if (scrollNextStep) {
+      scrollNextStep.textContent = `${idx + 1}/${slides.length}`;
+    }
+    if (scrollNextCallout) {
+      const nextLabel = RAIL_SECTION_LABELS[idx + 1];
+      scrollNextCallout.textContent = idx === 0 && !document.documentElement.classList.contains('has-scrolled-once')
+        ? 'Scroll down'
+        : (nextLabel ? `Next · ${nextLabel}` : 'Scroll down');
+    }
+  }
+
   function setActiveIndicators(idx) {
     const prevIdx = activeIndex;
     activeIndex = idx;
     const activeId = slides[idx] ? slides[idx].id : '';
     stepPills.forEach((el) => el.classList.toggle('active', el.dataset.target === activeId));
     railDots.forEach((el) => el.classList.toggle('active', el.dataset.target === activeId));
+    if (idx > 0) {
+      document.documentElement.classList.add('has-scrolled-once');
+    }
+    updateScrollHintCopy(idx);
+    if (idx === slides.length - 1 && window.innerWidth > 1180) {
+      markScrollHintDone();
+    }
     if (prevIdx !== idx && activeId) {
       window.dispatchEvent(new CustomEvent('fpslab:section-changed', { detail: { id: activeId } }));
     }
@@ -427,6 +478,13 @@
       handleDirectionalNavigation(-1);
     }
   });
+
+  if (scrollNextHint) {
+    scrollNextHint.addEventListener('click', () => {
+      if (isFirstVisitLocked()) return;
+      handleDirectionalNavigation(1);
+    });
+  }
 
   const desktopConsoleToggle = document.getElementById('desktopConsoleToggle');
   const desktopConsoleCloseBtn = document.getElementById('desktopConsoleCloseBtn');

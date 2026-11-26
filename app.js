@@ -3611,29 +3611,57 @@
   });
 
   // ============================================================================
-  // DISCOVERY HEARTBEAT NUDGES (LOAD SPIKE BUTTON + LOAD SLIDER)
+  // DISCOVERY HEARTBEAT NUDGES (LOAD SPIKE BUTTON + LOAD SLIDER + UNIFIED HINTS COOKIE)
   // ============================================================================
-  const SPIKE_USED_COOKIE = 'fps_lab_used_spike';
-  const LOAD_USED_COOKIE = 'fps_lab_used_load';
+  const HINTS_COOKIE = 'fps_lab_hints';
+  const LEGACY_SPIKE_COOKIE = 'fps_lab_used_spike';
+  const LEGACY_LOAD_COOKIE = 'fps_lab_used_load';
   const HEARTBEAT_FIRST_MS = 7200;
   const HEARTBEAT_MIN_MS = 7000;
   const HEARTBEAT_MAX_MS = 10000;
 
-  function hasCookieFlag(name) {
-    return new RegExp(`(?:^|;\\s*)${name}=1(?:;|$)`).test(document.cookie);
+  function readHintsSet() {
+    const flags = new Set();
+    const match = document.cookie.match(/(?:^|;\s*)fps_lab_hints=([^;]*)/);
+    if (match && match[1]) {
+      match[1].split(',').forEach((f) => {
+        const clean = f.trim();
+        if (clean) flags.add(clean);
+      });
+    }
+    // Backward compatibility with previous separate hint cookies
+    if (new RegExp(`(?:^|;\\s*)${LEGACY_SPIKE_COOKIE}=1(?:;|$)`).test(document.cookie)) {
+      flags.add('spike');
+    }
+    if (new RegExp(`(?:^|;\\s*)${LEGACY_LOAD_COOKIE}=1(?:;|$)`).test(document.cookie)) {
+      flags.add('load');
+    }
+    return flags;
   }
 
-  function setCookieFlag(name) {
-    document.cookie = `${name}=1; path=/; max-age=31536000; SameSite=Lax`;
+  function hasHintFlag(flag) {
+    return readHintsSet().has(flag);
   }
+
+  function setHintFlag(flag) {
+    const flags = readHintsSet();
+    flags.add(flag);
+    document.cookie = `${HINTS_COOKIE}=${Array.from(flags).join(',')}; path=/; max-age=31536000; SameSite=Lax`;
+  }
+
+  window.fpsLabHints = {
+    has: hasHintFlag,
+    mark: setHintFlag
+  };
 
   if (/[?&]reset_hints=1(?:&|$)/.test(window.location.search)) {
-    document.cookie = `${SPIKE_USED_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
-    document.cookie = `${LOAD_USED_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+    document.cookie = `${HINTS_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+    document.cookie = `${LEGACY_SPIKE_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+    document.cookie = `${LEGACY_LOAD_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
   }
 
-  let spikeHintDone = hasCookieFlag(SPIKE_USED_COOKIE);
-  let loadHintDone = spikeHintDone || hasCookieFlag(LOAD_USED_COOKIE);
+  let spikeHintDone = hasHintFlag('spike');
+  let loadHintDone = spikeHintDone || hasHintFlag('load');
   let heartbeatTimerId = null;
   let heartbeatClearSpikeId = null;
   let heartbeatClearLoadId = null;
@@ -3720,7 +3748,7 @@
   function markSpikeInteracted() {
     spikeHintDone = true;
     loadHintDone = true;
-    setCookieFlag(SPIKE_USED_COOKIE);
+    setHintFlag('spike');
     stopHeartbeatTimer();
     clearHeartbeatVisuals(true, true);
   }
@@ -3728,7 +3756,7 @@
   function markLoadInteracted() {
     if (loadHintDone) return;
     loadHintDone = true;
-    setCookieFlag(LOAD_USED_COOKIE);
+    setHintFlag('load');
     clearHeartbeatVisuals(false, true);
   }
 
