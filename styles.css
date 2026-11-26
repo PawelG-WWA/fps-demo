@@ -6397,30 +6397,33 @@ html.is-intro-revealed #motionSection .slide-inner {
   }
 
   #simSection .sim-area-head {
-    padding: 3px 5px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 5px 7px;
     gap: 3px;
   }
 
   #simSection .sim-area-title {
-    gap: 4px;
+    gap: 5px;
   }
 
   #simSection .sim-area-title .swatch {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
 
   #simSection .sim-area-title h3 {
-    font-size: 9px;
+    font-size: 12px;
     line-height: 16px;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
 
   #simSection .sim-area-stat {
-    font-size: 8px;
-    line-height: 14px;
-    padding: 1px 3.5px;
-    letter-spacing: -0.02em;
+    font-size: 10px;
+    line-height: 16px;
+    padding: 1px 6px;
+    letter-spacing: -0.01em;
+    text-align: center;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -6512,9 +6515,9 @@ html.is-intro-revealed #motionSection .slide-inner {
     line-height: 26px;
   }
 
-  /* Mobile Simplified Performance view: 2-row grid (quad + workload level pane), footer hidden */
+  /* Mobile Simplified Performance view: 2-row grid (quad expands + snug workload level pane), footer hidden */
   #simSection[data-sim-view="simplified"] .sim-stack {
-    grid-template-rows: minmax(0, 50fr) minmax(0, 50fr);
+    grid-template-rows: minmax(0, 1fr) auto;
   }
 
   #simSection[data-sim-view="simplified"] .sim-row {
@@ -6523,7 +6526,9 @@ html.is-intro-revealed #motionSection .slide-inner {
   }
 
   #simSection[data-sim-view="simplified"] .sim-curve-card {
-    gap: 6px;
+    height: auto;
+    padding: 9px 10px;
+    gap: 7px;
   }
 
   #simSection .sim-curve-title-row {
@@ -6538,23 +6543,25 @@ html.is-intro-revealed #motionSection .slide-inner {
   }
 
   #simSection[data-sim-view="simplified"] .sim-scenarios-list {
-    gap: 4px;
+    gap: 5px;
+    overflow-y: visible;
   }
 
   #simSection[data-sim-view="simplified"] .sim-scenario-btn {
     flex: 0 0 auto;
-    padding: 5px 8px;
-    gap: 2px;
+    min-height: 38px;
+    padding: 8px 10px;
+    gap: 4px;
   }
 
   #simSection[data-sim-view="simplified"] .sim-scenario-btn .ms-title {
-    font-size: 11.5px;
+    font-size: 12px;
   }
 
   #simSection[data-sim-view="simplified"] .sim-scenario-btn .ms-load {
-    font-size: 9.5px;
-    line-height: 15px;
-    padding: 0 5px;
+    font-size: 10px;
+    line-height: 16px;
+    padding: 0 6px;
   }
 
   #simSection[data-sim-view="simplified"] .sim-scenario-btn:not(.active) .sim-sc-desc {
@@ -6562,12 +6569,13 @@ html.is-intro-revealed #motionSection .slide-inner {
   }
 
   #simSection[data-sim-view="simplified"] .sim-scenario-btn.active {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
+    padding: 9px 10px;
   }
 
   #simSection[data-sim-view="simplified"] .sim-scenario-btn.active .sim-sc-desc {
-    font-size: 10.5px;
-    line-height: 1.28;
+    font-size: 11px;
+    line-height: 1.32;
   }
 
   /* 2-row description container: Row 1 = LEVEL badge + title (+ impact pill), Row 2 = full-width description */
