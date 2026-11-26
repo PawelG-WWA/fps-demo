@@ -245,31 +245,42 @@
     });
   }
 
+  function getCanvasHiResScale() {
+    const vw = window.innerWidth || 1440;
+    const vh = window.innerHeight || 900;
+    if (vw < 2200 || vh < 1120) return 1;
+    return Math.min(2.6, Math.max(1, Math.min(vw / 1920, vh / 1040)));
+  }
+
   function setupCanvas(canvas) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const uiScale = getCanvasHiResScale();
     let cached = canvasCache.get(canvas);
     if (!cached) {
-      cached = { ctx: canvas.getContext('2d'), w: 1, h: 1, dpr: 0, dirty: true };
+      cached = { ctx: canvas.getContext('2d'), w: 1, h: 1, dpr: 0, uiScale: 0, dirty: true };
       canvasCache.set(canvas, cached);
       trackedCanvases.add(canvas);
       if (canvasResizeObserver) canvasResizeObserver.observe(canvas);
     }
-    if (cached.dirty || cached.dpr !== dpr || !canvasResizeObserver) {
+    if (cached.dirty || cached.dpr !== dpr || cached.uiScale !== uiScale || !canvasResizeObserver) {
       const rect = canvas.getBoundingClientRect();
-      const w = Math.max(1, Math.round(rect.width));
-      const h = Math.max(1, Math.round(rect.height));
-      const pw = Math.round(w * dpr);
-      const ph = Math.round(h * dpr);
+      const cssW = Math.max(1, rect.width);
+      const cssH = Math.max(1, rect.height);
+      const pw = Math.max(1, Math.round(cssW * dpr));
+      const ph = Math.max(1, Math.round(cssH * dpr));
       if (canvas.width !== pw || canvas.height !== ph) {
         canvas.width = pw;
         canvas.height = ph;
       }
-      cached.w = w;
-      cached.h = h;
+      cached.w = Math.max(1, Math.round(cssW / uiScale));
+      cached.h = Math.max(1, Math.round(cssH / uiScale));
       cached.dpr = dpr;
+      cached.uiScale = uiScale;
       cached.dirty = false;
     }
-    cached.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const sx = canvas.width / cached.w;
+    const sy = canvas.height / cached.h;
+    cached.ctx.setTransform(sx, 0, 0, sy, 0, 0);
     return cached;
   }
 
@@ -1614,8 +1625,9 @@
 
   function recordPointer(clientX, clientY) {
     const rect = dom.arenaCanvas.getBoundingClientRect();
-    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
-    const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+    const uiScale = getCanvasHiResScale();
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left)) / uiScale;
+    const y = Math.max(0, Math.min(rect.height, clientY - rect.top)) / uiScale;
     arena.trueX = x;
     arena.trueY = y;
     arena.pointerActive = true;
@@ -2651,7 +2663,7 @@
 
     const updateFromPointer = (clientX) => {
       const rect = dom.expCurveWrap.getBoundingClientRect();
-      const pad = 16;
+      const pad = 16 * getCanvasHiResScale();
       const ratio = Math.max(0, Math.min(1, (clientX - rect.left - pad) / Math.max(1, rect.width - pad * 2)));
       setSimLevel(1 + ratio * 4);
     };

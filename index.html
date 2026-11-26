@@ -334,9 +334,9 @@
       }
     }
   </style>
-  <link rel="preload" href="styles.css?v=72" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="preload" href="styles.css?v=75" as="style" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
-    <link rel="stylesheet" href="styles.css?v=72">
+    <link rel="stylesheet" href="styles.css?v=75">
   </noscript>
 </head>
 
@@ -1783,41 +1783,49 @@
       </div>
       <div class="model-modal-body">
         <p class="model-modal-lead">
-          The lab compares target FPS rates using a simplified deterministic simulation, a selected workload, and a
-          simulated fixed-refresh display. Real engines and monitors behave differently due to CPU/GPU overlap, render
-          queues, variable refresh rate (VRR), and display processing.
+          FPS Lab is an interactive software model comparing <strong>30, 40, and 60 FPS</strong>,
+          <strong>interpolation</strong>, and <strong>physics timing</strong> across simulated <strong>60 Hz</strong>
+          and <strong>120 Hz</strong> fixed-refresh displays. Timing and latency readouts come from the model (not
+          hardware measurements of your mouse or monitor), while real engines vary with CPU/GPU overlap, render queues,
+          variable refresh rate (VRR), and display processing.
         </p>
 
         <div class="model-assumptions-grid">
           <div class="model-assumption-item">
-            <h3>1. Configured vs. Computed vs. Observed</h3>
-            <p><strong>Configured:</strong> Simulated refresh (60 / 120 Hz), Load (1.0–5.0), Performance Level (1–5), 30
-              Hz Simulation environment (1–5), and 0.25× playback speed. <strong>Computed:</strong> FPS, frame
-              intervals, landing drift, and model latency. <strong>Observed:</strong> Only the top-right browser cadence
-              indicator samples <code>requestAnimationFrame</code> callback deltas.
+            <h3>1. Configured, Computed &amp; Observed</h3>
+            <p><strong>Configured:</strong> Scenario presets in <strong>Simplified</strong> view plus global controls in
+              <strong>Open Console</strong> (<code>60 / 120 Hz</code> simulated refresh, <code>Load 1.0–5.0</code>,
+              <code>Load Spike</code>, <code>0.25×</code> speed). <strong>Computed:</strong> Effective FPS, frame holds,
+              landing drift, and model latency. <strong>Observed:</strong> Only the top-bar Hz badge samples live
+              <code>requestAnimationFrame</code> cadence (and warns if power saving throttles below <code>45 Hz</code>).
             </p>
           </div>
           <div class="model-assumption-item">
-            <h3>2. Workload, Spikes &amp; 30 Hz Integrator</h3>
-            <p>Motion, Pipeline, and Refresh Map model one combined frame cost (<code>14.0 + (Load − 1) × 7.5 ms</code>),
-              plus transient spikes (<code>+17.5 ms</code>). Performance scales exponentially
-              (<code>12.0 × 1.52^(Level − 1)</code>). Section 03 compares a fixed <code>1/30 s</code> accumulator
-              against naive variable-<code>dt</code> Euler + piecewise gravity integration and tick-locked stepping.</p>
+            <h3>2. Workload &amp; Physics Timing (01–03)</h3>
+            <p><strong>Motion</strong>, <strong>Pipeline</strong>, and <strong>Refresh Map</strong> share a combined
+              frame cost (<code>14.0 + (Load − 1) × 7.5 ms</code>, plus <code>+17.5 ms</code> spikes).
+              <strong>Performance</strong> scales exponentially with NPCs (<code>12.0 × 1.52^(Level − 1) ms</code>) plus
+              extra top-bar <code>Load</code>. <strong>Simulation (03)</strong> compares a fixed <code>30 Hz</code>
+              physics step against variable frame steps, refresh-locked speedups (<code>2×–4×</code>), and thin-floor
+              skipping.</p>
           </div>
           <div class="model-assumption-item">
-            <h3>3. Fixed-Refresh V-Sync Quantization</h3>
-            <p>Completed frames snap to discrete simulated refresh ticks (<code>16.67 ms</code> at 60 Hz,
-              <code>8.33 ms</code> at 120 Hz). V-Sync is assumed; VRR and screen tearing are not modeled. Quarter-speed
-              (<code>0.25×</code>) stretches playback time only and does not alter reported statistics.
-            </p>
+            <h3>3. Fixed Refresh &amp; Frame Pacing (01, 06)</h3>
+            <p>Completed frames snap to fixed V-Sync ticks (<code>16.67 ms</code> at 60 Hz, <code>8.33 ms</code> at
+              120 Hz); VRR and tearing are not modeled. That is why <strong>40 FPS</strong> alternates uneven
+              <code>33.3 / 16.7 ms</code> (<code>2–1</code>) holds at 60 Hz, yet locks to even <code>25.0 ms</code>
+              (<code>3-refresh</code>) holds at 120 Hz. Quarter-speed (<code>0.25×</code>) stretches playback for
+              inspection without altering reported stats.</p>
           </div>
           <div class="model-assumption-item">
-            <h3>4. Simulated Frame Interpolation &amp; Latency</h3>
-            <p>Simulated frame interpolation runs a 30 FPS source and holds a chosen <code>2×</code> source-interval
-              buffer (about <code>67 ms</code> at baseline), outputting at the simulated refresh rate. Artifacts are
-              illustrative. Motion reports <strong>mid-screen</strong> latency (½ scanout), while Pipeline reports
-              <strong>bottom-of-screen</strong> latency (full scanout + <code>2.5 ms</code> assumed gray-to-gray pixel
-              response).</p>
+            <h3>4. Two Interpolations &amp; Latency (01, 03–05)</h3>
+            <p><strong>Simulated frame interpolation</strong> (<code>01</code>, <code>02</code>, <code>04</code>)
+              buffers <code>2</code> rendered 30 FPS frames (<code>+67 ms</code> at baseline) with illustrative HUD
+              halos, while <strong>physics interpolation</strong> (<code>03</code>) blends two <code>30 Hz</code>
+              physics states (<code>~33 ms</code> delay, no image halos). <strong>Motion</strong> reports
+              <strong>mid-screen</strong> latency (½ scanout), <strong>Pipeline</strong> reports
+              <strong>bottom-scan</strong> latency (full scanout + <code>2.5 ms</code> assumed GtG), and
+              <strong>Latency (04)</strong> adds modeled delay to your pointer.</p>
           </div>
         </div>
       </div>
@@ -1885,7 +1893,7 @@
     <span>Setup link copied to clipboard</span>
   </div>
 
-  <script defer src="app.js?v=56"></script>
+  <script defer src="app.js?v=57"></script>
   <script defer src="ui.js?v=35"></script>
 </body>
 

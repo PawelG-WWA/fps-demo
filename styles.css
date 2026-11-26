@@ -7616,6 +7616,11 @@ html.is-intro-revealed #motionSection .slide-inner {
   border-bottom: 1px solid var(--border);
 }
 
+.model-modal-head .pipe-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .model-modal-body {
   display: flex;
   flex-direction: column;
@@ -7705,8 +7710,894 @@ html.is-intro-revealed #motionSection .slide-inner {
     border-radius: 14px;
   }
 
+  .model-modal-head h2 {
+    font-size: 16.5px;
+  }
+
   .model-assumptions-grid {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+}
+
+/* ============================================================================
+   HIGH-RESOLUTION DISPLAY SCALING (1440p QHD, > 1440p, 4K UHD 2160p & 5K)
+   ============================================================================ */
+@media (min-width: 2200px) and (min-height: 1120px) {
+  :root {
+    --s: 1.32;
+    --stage-w: min(72vw, 158vh);
+    --top-offset: calc(12px * var(--s));
+    --lbl-h: calc(32px * var(--s));
+    --top-clearance: calc(138px * var(--s));
+    --radius-xl: calc(18px * var(--s));
+    --radius-lg: calc(12px * var(--s));
+    --radius-md: calc(10px * var(--s));
+    --radius-sm: calc(8px * var(--s));
+  }
+}
+
+@media (min-width: 2800px) and (min-height: 1440px) {
+  :root {
+    --s: 1.62;
+  }
+}
+
+@media (min-width: 3500px) and (min-height: 1820px) {
+  :root {
+    --s: 1.98;
+  }
+}
+
+@media (min-width: 4500px) and (min-height: 2350px) {
+  :root {
+    --s: 2.55;
+  }
+}
+
+@media (min-width: 2200px) and (min-height: 1120px) {
+  /* Top Chrome, Navigation & Console */
+  .topbar {
+    padding: calc(8px * var(--s)) calc(16px * var(--s));
+    gap: calc(12px * var(--s));
+  }
+
+  .brand {
+    gap: calc(10px * var(--s));
+  }
+
+  .brand-mark {
+    width: calc(11px * var(--s));
+    height: calc(11px * var(--s));
+    border-radius: calc(3px * var(--s));
+  }
+
+  .brand h1 {
+    font-size: calc(15.5px * var(--s));
+    line-height: calc(28px * var(--s));
+  }
+
+  .step-nav {
+    padding: calc(3px * var(--s));
+    gap: calc(3px * var(--s));
+  }
+
+  .step-pill {
+    font-size: calc(13px * var(--s));
+    line-height: calc(28px * var(--s));
+    padding: 0 calc(11px * var(--s));
+    gap: calc(5px * var(--s));
+    border-radius: calc(8px * var(--s));
+  }
+
+  .step-idx {
+    font-size: calc(10.5px * var(--s));
+  }
+
+  .topbar-right-tools {
+    gap: calc(8px * var(--s));
+  }
+
+  .btn-model-guide,
+  .detector-pill,
+  .btn-share-top {
+    height: calc(34px * var(--s));
+    padding: 0 calc(11px * var(--s));
+    gap: calc(6px * var(--s));
+    font-size: calc(12.5px * var(--s));
+    border-radius: calc(9px * var(--s));
+  }
+
+  .detector-pill {
+    padding: 0 calc(5px * var(--s)) 0 calc(11px * var(--s));
+  }
+
+  .model-q-dot {
+    width: calc(17px * var(--s));
+    height: calc(17px * var(--s));
+    font-size: calc(11px * var(--s));
+  }
+
+  .detector-dot {
+    width: calc(7px * var(--s));
+    height: calc(7px * var(--s));
+  }
+
+  .hz-num,
+  .btn-remeasure {
+    font-size: calc(12px * var(--s));
+    line-height: 1;
+  }
+
+  .btn-remeasure {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: calc(24px * var(--s));
+    padding: 0 calc(9px * var(--s));
+    border-radius: calc(6px * var(--s));
+  }
+
+  .detector-popover {
+    width: calc(310px * var(--s));
+    padding: calc(12px * var(--s)) calc(14px * var(--s));
+    font-size: calc(12px * var(--s));
+  }
+
+  .detector-note {
+    font-size: calc(12.5px * var(--s));
+  }
+
+  .detector-subnote {
+    font-size: calc(11.5px * var(--s));
+  }
+
+  .share-ico,
+  .spike-icon,
+  .load-icon,
+  .console-tab-chev {
+    width: calc(13px * var(--s));
+    height: calc(13px * var(--s));
+  }
+
+  .desktop-console-tab {
+    padding: calc(6px * var(--s)) calc(15px * var(--s)) calc(7px * var(--s));
+    gap: calc(6px * var(--s));
+    font-size: calc(13.5px * var(--s));
+    line-height: calc(20px * var(--s));
+    border-radius: 0 0 calc(14px * var(--s)) var(--radius-xl);
+  }
+
+  .desktop-console-tab:hover {
+    padding-bottom: calc(9px * var(--s));
+  }
+
+  .control-pane {
+    max-height: calc(92px * var(--s));
+    padding: calc(8px * var(--s)) calc(12px * var(--s));
+    gap: calc(8px * var(--s));
+  }
+
+  .dock-group {
+    gap: calc(6px * var(--s));
+  }
+
+  .dock-label,
+  .seg-btn,
+  .load-pod-lbl,
+  .load-val,
+  .load-ms,
+  .btn-explode,
+  .btn-pause {
+    font-size: calc(13.5px * var(--s));
+  }
+
+  .seg-btn {
+    padding: 0 calc(11px * var(--s));
+  }
+
+  .load-pod {
+    padding: calc(3px * var(--s)) calc(7px * var(--s)) calc(3px * var(--s)) calc(9px * var(--s));
+    gap: calc(7px * var(--s));
+  }
+
+  .load-readout {
+    padding: 0 calc(7px * var(--s));
+    gap: calc(4px * var(--s));
+  }
+
+  .btn-explode,
+  .btn-pause {
+    padding: 0 calc(12px * var(--s));
+    gap: calc(7px * var(--s));
+  }
+
+  .spike-kbd,
+  .pause-kbd {
+    font-size: calc(11px * var(--s));
+    line-height: calc(18px * var(--s));
+    padding: 0 calc(5px * var(--s));
+  }
+
+  .desktop-console-close {
+    width: calc(28px * var(--s));
+    height: calc(28px * var(--s));
+  }
+
+  .desktop-console-close svg {
+    width: calc(12px * var(--s));
+    height: calc(12px * var(--s));
+  }
+
+  /* Shared Card Chrome & Footers */
+  .card-head {
+    padding: calc(11px * var(--s)) calc(20px * var(--s));
+    gap: calc(12px * var(--s));
+  }
+
+  .card-title-group {
+    gap: calc(10px * var(--s));
+  }
+
+  .view-kicker {
+    font-size: calc(13px * var(--s));
+    padding: 0 calc(9px * var(--s));
+    border-radius: calc(6px * var(--s));
+  }
+
+  h2 {
+    font-size: calc(20px * var(--s));
+  }
+
+  .swatch {
+    width: calc(9px * var(--s));
+    height: calc(9px * var(--s));
+  }
+
+  .motion-view-switch .seg-btn,
+  .sim-view-switch .seg-btn {
+    font-size: calc(12px * var(--s));
+    line-height: calc(24px * var(--s));
+    padding: 0 calc(9px * var(--s));
+  }
+
+  .slider-pill,
+  .switch-pill {
+    font-size: calc(12.5px * var(--s));
+    padding: calc(3px * var(--s)) calc(11px * var(--s));
+    gap: calc(7px * var(--s));
+  }
+
+  .slider-readout {
+    font-size: calc(12px * var(--s));
+  }
+
+  .switch-track {
+    width: calc(28px * var(--s));
+    height: calc(16px * var(--s));
+  }
+
+  .switch-track::after {
+    width: calc(12px * var(--s));
+    height: calc(12px * var(--s));
+  }
+
+  .switch-pill input:checked + .switch-track::after {
+    transform: translateX(calc(12px * var(--s)));
+  }
+
+  .sim-footer-card {
+    padding: calc(13px * var(--s)) calc(20px * var(--s)) calc(13px * var(--s)) calc(22px * var(--s));
+    gap: calc(16px * var(--s));
+  }
+
+  #simSection .sim-footer-card {
+    max-height: calc(130px * var(--s));
+    margin-top: calc(16px * var(--s));
+  }
+
+  .sim-footer-left {
+    gap: calc(12px * var(--s));
+    padding-right: calc(16px * var(--s));
+  }
+
+  .sim-footer-badge {
+    font-size: calc(11.5px * var(--s));
+    line-height: calc(24px * var(--s));
+    padding: calc(2px * var(--s)) calc(11px * var(--s));
+    gap: calc(6px * var(--s));
+  }
+
+  .sim-pulse-dot {
+    width: calc(6px * var(--s));
+    height: calc(6px * var(--s));
+  }
+
+  .sim-footer-title {
+    font-size: calc(15px * var(--s));
+    line-height: calc(21px * var(--s));
+  }
+
+  .sim-meter span {
+    width: calc(14px * var(--s));
+    height: calc(4px * var(--s));
+  }
+
+  .sim-footer-desc {
+    font-size: calc(13.5px * var(--s));
+    line-height: 1.46;
+  }
+
+  .sim-impact-pill {
+    font-size: calc(12px * var(--s));
+    line-height: calc(25px * var(--s));
+    padding: calc(2px * var(--s)) calc(11px * var(--s));
+    border-radius: calc(7px * var(--s));
+  }
+
+  .mf-btn {
+    width: calc(26px * var(--s));
+    height: calc(26px * var(--s));
+    font-size: calc(12px * var(--s));
+  }
+
+  /* 01 Motion */
+  .motion-body {
+    height: 48vh;
+  }
+
+  #motionSection[data-motion-view="simplified"] .motion-body {
+    grid-template-columns: minmax(0, 1fr) calc(380px * var(--s));
+  }
+
+  .lanes {
+    padding: calc(11px * var(--s)) calc(16px * var(--s));
+    gap: calc(9px * var(--s));
+  }
+
+  #motionSection[data-motion-view="simplified"] .lanes {
+    padding-right: calc(12px * var(--s));
+  }
+
+  .lane-track-unit {
+    grid-template-columns: minmax(0, 1fr) calc(450px * var(--s));
+    gap: calc(10px * var(--s));
+  }
+
+  .lane-badge {
+    top: calc(8px * var(--s));
+    left: calc(10px * var(--s));
+    padding: calc(2px * var(--s)) calc(10px * var(--s));
+    gap: calc(7px * var(--s));
+    border-radius: calc(7px * var(--s));
+  }
+
+  .lane-badge h3 {
+    font-size: calc(13.5px * var(--s));
+    line-height: calc(22px * var(--s));
+  }
+
+  .lane-sim-tag {
+    top: calc(8px * var(--s));
+    right: calc(10px * var(--s));
+    font-size: calc(11.5px * var(--s));
+    line-height: calc(22px * var(--s));
+    padding: calc(2px * var(--s)) calc(9px * var(--s));
+    border-radius: calc(6px * var(--s));
+  }
+
+  .ft-info-card {
+    padding: calc(8px * var(--s)) calc(11px * var(--s));
+    gap: calc(5px * var(--s));
+  }
+
+  .lane-meta .chip {
+    font-size: calc(11px * var(--s));
+    line-height: calc(18px * var(--s));
+    padding: calc(1px * var(--s)) calc(7px * var(--s));
+  }
+
+  .ft-top {
+    font-size: calc(11.5px * var(--s));
+  }
+
+  .motion-scenarios-pane {
+    padding: calc(11px * var(--s)) calc(16px * var(--s)) calc(12px * var(--s)) 0;
+    gap: calc(6px * var(--s));
+  }
+
+  .motion-scenarios-eyebrow,
+  .motion-scenarios-hint {
+    font-size: calc(11px * var(--s));
+    line-height: calc(16px * var(--s));
+  }
+
+  .motion-scenario-btn,
+  .sim-scenario-btn {
+    padding: calc(7px * var(--s)) calc(11px * var(--s));
+    gap: calc(3px * var(--s));
+  }
+
+  .ms-row-top {
+    gap: calc(7px * var(--s));
+  }
+
+  .ms-idx {
+    width: calc(19px * var(--s));
+    height: calc(19px * var(--s));
+    font-size: calc(11px * var(--s));
+    border-radius: calc(5px * var(--s));
+  }
+
+  .ms-title {
+    font-size: calc(13.5px * var(--s));
+  }
+
+  .ms-load {
+    font-size: calc(11px * var(--s));
+    line-height: calc(18px * var(--s));
+    padding: 0 calc(7px * var(--s));
+    border-radius: calc(4px * var(--s));
+  }
+
+  .ms-summary,
+  .sim-sc-desc {
+    padding-left: calc(26px * var(--s));
+    font-size: calc(11.5px * var(--s));
+    line-height: 1.34;
+  }
+
+  /* 02 Performance */
+  .sim-row {
+    height: 62vh;
+    grid-template-columns: minmax(0, 1.82fr) minmax(calc(320px * var(--s)), 1fr);
+    gap: calc(16px * var(--s));
+  }
+
+  .sim-quad {
+    gap: calc(12px * var(--s));
+  }
+
+  .sim-area-head {
+    padding: calc(7px * var(--s)) calc(13px * var(--s));
+  }
+
+  .sim-area-title h3 {
+    font-size: calc(14px * var(--s));
+    line-height: calc(22px * var(--s));
+  }
+
+  .sim-area-stat {
+    font-size: calc(12px * var(--s));
+    line-height: calc(20px * var(--s));
+    padding: calc(2px * var(--s)) calc(8px * var(--s));
+  }
+
+  .sim-curve-card {
+    padding: calc(14px * var(--s));
+    gap: calc(10px * var(--s));
+  }
+
+  .sim-curve-title-row h2 {
+    font-size: calc(16.5px * var(--s));
+  }
+
+  .sim-curve-sub {
+    font-size: calc(12.5px * var(--s));
+  }
+
+  .sim-kpis {
+    gap: calc(7px * var(--s));
+  }
+
+  .sim-kpi {
+    padding: calc(6px * var(--s)) calc(8px * var(--s));
+  }
+
+  .sim-kpi-lbl {
+    font-size: calc(10.5px * var(--s));
+    line-height: calc(15px * var(--s));
+  }
+
+  .sim-kpi-val {
+    font-size: calc(14.5px * var(--s));
+    line-height: calc(22px * var(--s));
+  }
+
+  .sim-lvl-btn {
+    font-size: calc(14px * var(--s));
+    line-height: calc(30px * var(--s));
+  }
+
+  /* 03 Simulation (Physics Update Timing) */
+  .phys-body {
+    grid-template-columns: minmax(0, 1.44fr) minmax(calc(320px * var(--s)), 0.84fr);
+  }
+
+  .phys-tracks-col {
+    padding: calc(11px * var(--s)) calc(16px * var(--s));
+    gap: calc(11px * var(--s));
+  }
+
+  .phys-chamber-head {
+    padding: calc(7px * var(--s)) calc(12px * var(--s));
+  }
+
+  .phys-chamber-title h3 {
+    font-size: calc(13.5px * var(--s));
+    line-height: calc(22px * var(--s));
+  }
+
+  .phys-pill {
+    font-size: calc(11.5px * var(--s));
+    line-height: calc(20px * var(--s));
+    padding: calc(2px * var(--s)) calc(9px * var(--s));
+  }
+
+  .phys-more-btn {
+    height: calc(32px * var(--s));
+    padding: 0 calc(11px * var(--s)) 0 calc(13px * var(--s));
+    font-size: calc(12.5px * var(--s));
+    gap: calc(5px * var(--s));
+  }
+
+  .phys-more-pane {
+    padding: calc(15px * var(--s)) calc(18px * var(--s));
+    gap: calc(12px * var(--s));
+  }
+
+  .phys-more-title {
+    font-size: calc(15px * var(--s));
+  }
+
+  .phys-more-col {
+    padding: calc(11px * var(--s)) calc(13px * var(--s));
+    gap: calc(5px * var(--s));
+  }
+
+  .phys-more-col h4 {
+    font-size: calc(10.5px * var(--s));
+  }
+
+  .phys-more-col p {
+    font-size: calc(12.5px * var(--s));
+    line-height: 1.45;
+  }
+
+  .phys-more-close {
+    width: calc(28px * var(--s));
+    height: calc(28px * var(--s));
+    font-size: calc(13px * var(--s));
+  }
+
+  /* 04 Latency */
+  .tabs-bar {
+    padding: calc(9px * var(--s)) calc(18px * var(--s));
+  }
+
+  .tab,
+  .inline-tip,
+  .arena-hint {
+    font-size: calc(14px * var(--s));
+  }
+
+  .tab {
+    padding: calc(2px * var(--s)) calc(13px * var(--s));
+    gap: calc(7px * var(--s));
+  }
+
+  .tab-dot {
+    width: calc(8px * var(--s));
+    height: calc(8px * var(--s));
+  }
+
+  .arena-hint {
+    bottom: calc(16px * var(--s));
+    padding: calc(4px * var(--s)) calc(18px * var(--s));
+  }
+
+  .metric-cell {
+    padding: calc(11px * var(--s)) calc(16px * var(--s));
+    gap: calc(4px * var(--s));
+  }
+
+  .metric-cell .label {
+    font-size: calc(10.5px * var(--s));
+    line-height: calc(15px * var(--s));
+  }
+
+  .metric-val {
+    font-size: calc(14.5px * var(--s));
+    line-height: calc(21px * var(--s));
+  }
+
+  /* 05 Pipeline */
+  .pipe-card {
+    height: 60vh;
+  }
+
+  .pipe-mode-tab,
+  .pipe-status,
+  .pipe-total,
+  .pipe-btn,
+  .pipe-step-counter,
+  .pipe-step-pill,
+  .pipe-scroll-hint {
+    font-size: calc(13px * var(--s));
+  }
+
+  .pipe-mode-tab,
+  .pipe-btn,
+  .pipe-step-pill {
+    padding: 0 calc(11px * var(--s));
+  }
+
+  .pipe-stage-area {
+    padding: calc(20px * var(--s)) calc(24px * var(--s));
+    gap: calc(18px * var(--s));
+  }
+
+  .pipe-node {
+    height: 20vh;
+    padding: calc(11px * var(--s));
+  }
+
+  .pipe-node-badge,
+  .pipe-node-ms {
+    font-size: calc(11.5px * var(--s));
+    line-height: calc(19px * var(--s));
+  }
+
+  .pipe-node-lbl {
+    font-size: calc(13px * var(--s));
+    line-height: calc(19px * var(--s));
+  }
+
+  .pipe-timeline-bar {
+    height: calc(32px * var(--s));
+    gap: calc(4px * var(--s));
+  }
+
+  .pipe-seg {
+    font-size: calc(11.5px * var(--s));
+  }
+
+  .pipe-footer {
+    padding: calc(14px * var(--s)) calc(20px * var(--s));
+    gap: calc(10px * var(--s));
+  }
+
+  .pipe-stage-title {
+    font-size: calc(16.5px * var(--s));
+    line-height: calc(24px * var(--s));
+  }
+
+  .pipe-stage-desc {
+    font-size: calc(14px * var(--s));
+    line-height: calc(22px * var(--s));
+  }
+
+  /* 06 Refresh Map */
+  .timeline-row {
+    height: 54vh;
+    grid-template-columns: minmax(0, 1.85fr) minmax(calc(300px * var(--s)), 1fr);
+    gap: calc(16px * var(--s));
+  }
+
+  .timeline-meta {
+    font-size: calc(13.5px * var(--s));
+  }
+
+  .timeline-wrap {
+    padding: calc(12px * var(--s)) calc(18px * var(--s)) calc(14px * var(--s));
+  }
+
+  .tl-axis-row,
+  .tl-row {
+    grid-template-columns: calc(172px * var(--s)) minmax(0, 1fr);
+    gap: calc(12px * var(--s));
+  }
+
+  .tl-axis-ticks {
+    height: calc(20px * var(--s));
+  }
+
+  .tl-axis-label,
+  .tl-tick-lbl {
+    font-size: calc(11.5px * var(--s));
+    line-height: calc(20px * var(--s));
+  }
+
+  .tl-row-title {
+    font-size: calc(14px * var(--s));
+    line-height: calc(22px * var(--s));
+  }
+
+  .tl-row-sub,
+  .tl-block {
+    font-size: calc(11.5px * var(--s));
+    line-height: calc(18px * var(--s));
+  }
+
+  .tl-block[data-tip]:hover::after,
+  .tl-block[data-tip]:focus-visible::after {
+    font-size: calc(11.5px * var(--s));
+    line-height: calc(16px * var(--s));
+    padding: calc(5px * var(--s)) calc(9px * var(--s));
+  }
+
+  .notes-strip {
+    gap: calc(10px * var(--s));
+  }
+
+  .note-item {
+    padding: calc(10px * var(--s)) calc(16px * var(--s));
+    gap: calc(4px * var(--s));
+  }
+
+  .note-tag {
+    font-size: calc(12px * var(--s));
+    line-height: calc(20px * var(--s));
+  }
+
+  .note-item p {
+    font-size: calc(13px * var(--s));
+    line-height: calc(20px * var(--s));
+  }
+
+  /* 07 Reading */
+  .reading-meta {
+    font-size: calc(12.5px * var(--s));
+  }
+
+  .reading-note {
+    padding: calc(12px * var(--s)) calc(20px * var(--s));
+    gap: calc(12px * var(--s));
+  }
+
+  .reading-note-badge {
+    font-size: calc(11px * var(--s));
+    line-height: calc(22px * var(--s));
+    padding: 0 calc(9px * var(--s));
+  }
+
+  .reading-note p {
+    font-size: calc(13.5px * var(--s));
+  }
+
+  .reading-grid {
+    gap: calc(16px * var(--s));
+    padding: calc(18px * var(--s)) calc(20px * var(--s)) calc(20px * var(--s));
+  }
+
+  .reading-card {
+    height: 46vh;
+  }
+
+  .reading-source-pill {
+    top: calc(11px * var(--s));
+    left: calc(11px * var(--s));
+    font-size: calc(10.5px * var(--s));
+    line-height: calc(20px * var(--s));
+    padding: 0 calc(8px * var(--s));
+  }
+
+  .reading-card-body {
+    padding: calc(14px * var(--s)) calc(16px * var(--s));
+    gap: calc(7px * var(--s));
+  }
+
+  .reading-card-body h3 {
+    font-size: calc(15.5px * var(--s));
+  }
+
+  .reading-card-body p {
+    font-size: calc(13px * var(--s));
+  }
+
+  .reading-link-cta {
+    font-size: calc(12.5px * var(--s));
+    line-height: calc(18px * var(--s));
+  }
+
+  /* Right Rail, Scroll Capsule, Modals & Banners */
+  .rail-cluster {
+    right: calc(24px * var(--s));
+    gap: calc(10px * var(--s));
+  }
+
+  .rail-nav {
+    padding: calc(10px * var(--s)) calc(6px * var(--s));
+    gap: calc(10px * var(--s));
+  }
+
+  .rail-dot {
+    width: calc(8px * var(--s));
+    height: calc(8px * var(--s));
+  }
+
+  .rail-dot.active {
+    height: calc(22px * var(--s));
+  }
+
+  .scroll-next-hint {
+    width: calc(32px * var(--s));
+    max-height: calc(68px * var(--s));
+    padding: calc(7px * var(--s)) 0 calc(8px * var(--s));
+    gap: calc(4px * var(--s));
+  }
+
+  .scroll-next-step {
+    font-size: calc(9.5px * var(--s));
+    line-height: calc(12px * var(--s));
+  }
+
+  .scroll-chev {
+    width: calc(11px * var(--s));
+    height: calc(6px * var(--s));
+  }
+
+  .rail-tooltip,
+  .scroll-next-callout {
+    font-size: calc(11.5px * var(--s));
+    line-height: calc(22px * var(--s));
+    padding: calc(3px * var(--s)) calc(10px * var(--s));
+    border-radius: calc(6px * var(--s));
+  }
+
+  .model-modal-card {
+    width: min(calc(760px * var(--s)), 92vw);
+    padding: calc(20px * var(--s)) calc(22px * var(--s));
+    gap: calc(14px * var(--s));
+  }
+
+  .model-modal-lead {
+    font-size: calc(13.5px * var(--s));
+  }
+
+  .model-assumptions-grid {
+    gap: calc(12px * var(--s));
+  }
+
+  .model-assumption-item {
+    padding: calc(12px * var(--s)) calc(14px * var(--s));
+    gap: calc(6px * var(--s));
+  }
+
+  .model-assumption-item h3 {
+    font-size: calc(13.5px * var(--s));
+  }
+
+  .model-assumption-item p {
+    font-size: calc(12.5px * var(--s));
+  }
+
+  .model-assumption-item code {
+    font-size: calc(11.5px * var(--s));
+  }
+
+  .share-toast,
+  .power-save-banner,
+  .cookie-banner {
+    font-size: calc(13px * var(--s));
+  }
+
+  .cookie-banner {
+    max-width: calc(460px * var(--s));
+    padding: calc(13px * var(--s)) calc(16px * var(--s));
+    gap: calc(14px * var(--s));
+  }
+
+  .cookie-title {
+    font-size: calc(13.5px * var(--s));
+  }
+
+  .cookie-text {
+    font-size: calc(12px * var(--s));
+  }
+
+  .cookie-ok-btn {
+    font-size: calc(12.5px * var(--s));
+    padding: calc(8px * var(--s)) calc(14px * var(--s));
   }
 }
