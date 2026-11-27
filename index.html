@@ -109,8 +109,14 @@
       }
       if (!resetHints && !resetCookies) {
         var hintsCookie = cookies.map(function (c) { return c.trim(); }).find(function (c) { return c.indexOf('fps_lab_hints=') === 0; });
-        if (hintsCookie && hintsCookie.slice(14).split(',').indexOf('scroll') !== -1) {
-          document.documentElement.classList.add('is-scroll-hint-done');
+        if (hintsCookie) {
+          var hintFlags = hintsCookie.slice(14).split(',');
+          if (hintFlags.indexOf('scroll') !== -1) {
+            document.documentElement.classList.add('is-scroll-hint-done');
+          }
+          if (hintFlags.indexOf('mobmenu') !== -1) {
+            document.documentElement.classList.add('is-mob-menu-seen');
+          }
         }
       }
     })();
@@ -276,7 +282,10 @@
     .mob-console-toggle,
     .mob-spike-btn,
     .mob-pause-btn,
+    .mob-bar-sep,
     .mob-console-btn,
+    .mob-menu-btn,
+    .mob-nav-menu,
     .scroll-next-hint,
     html.is-cookie-ok .cookie-banner {
       display: none
@@ -334,9 +343,9 @@
       }
     }
   </style>
-  <link rel="preload" href="styles.css?v=76" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="preload" href="styles.css?v=82" as="style" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
-    <link rel="stylesheet" href="styles.css?v=76">
+    <link rel="stylesheet" href="styles.css?v=82">
   </noscript>
 </head>
 
@@ -394,7 +403,14 @@
             <span class="hz-num" id="detectedHz">~60 Hz</span>
             <span class="hz-meta" id="detectedMeta"></span>
             <button class="btn-remeasure" id="remeasureBtn" type="button"
-              title="Recheck browser animation callback cadence">Recheck</button>
+              title="Recheck browser animation callback cadence" aria-label="Recheck refresh rate">
+              <svg class="remeasure-ico" viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M13.5 8a5.5 5.5 0 1 1-1.3-3.55" />
+                <polyline points="13.5 2.5 13.5 5.5 10.5 5.5" />
+              </svg>
+              <span class="remeasure-lbl">Recheck</span>
+            </button>
             <div class="detector-popover" role="tooltip">
               <p class="detector-note" id="detectorNote">Browser animation cadence (observed): sampling…</p>
               <p class="detector-subnote">This estimate reflects browser animation timing during the check. It does not
@@ -442,13 +458,32 @@
           </svg>
         </button>
 
-        <label for="mobileConsoleToggle" class="mob-console-btn" role="button" aria-label="Toggle console controls"
-          title="Expand or collapse controls">
-          <svg class="mob-console-chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
+        <span class="mob-bar-sep" aria-hidden="true"></span>
+
+        <label for="mobileConsoleToggle" class="mob-console-btn" role="button" aria-label="Toggle simulation controls"
+          title="Simulation controls (Refresh, Speed, Load, Share)">
+          <svg class="mob-console-sliders" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
+            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="2.5" y1="5" x2="13.5" y2="5" />
+            <circle cx="6" cy="5" r="1.7" fill="var(--surface)" />
+            <line x1="2.5" y1="11" x2="13.5" y2="11" />
+            <circle cx="10.5" cy="11" r="1.7" fill="var(--surface)" />
+          </svg>
+          <svg class="mob-console-chevron" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M4 10l4-4 4 4" />
+            <path d="M4 6l4 4 4-4" />
           </svg>
         </label>
+
+        <button class="mob-menu-btn" id="mobMenuBtn" type="button" aria-label="Open sections menu"
+          aria-expanded="false" aria-controls="mobNavMenu" title="Sections menu">
+          <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9"
+            stroke-linecap="round" aria-hidden="true">
+            <line x1="2.5" y1="4.5" x2="13.5" y2="4.5" />
+            <line x1="2.5" y1="8" x2="13.5" y2="8" />
+            <line x1="2.5" y1="11.5" x2="13.5" y2="11.5" />
+          </svg>
+        </button>
       </header>
 
       <aside class="control-pane" id="desktopControlPane" aria-label="Persistent simulation controls">
@@ -1096,7 +1131,6 @@
 
         <!-- FLOATING 30 HZ SIMULATION EXPLANATION FOOTER + EXPANDABLE MORE PANE -->
         <div class="phys-footer-anchor">
-          <div class="phys-more-backdrop" id="physMoreBackdrop" aria-hidden="true"></div>
           <aside class="phys-more-pane" id="physMorePane" data-tier="low" role="dialog" aria-modal="false"
             aria-labelledby="physMoreTitle" aria-hidden="true">
             <div class="phys-more-head">
@@ -1246,7 +1280,7 @@
         <div class="pipe-intro-card" id="pipeIntroCard" data-stage="0" aria-label="Frame Pipeline Introduction">
           <div class="intro-head">
             <div class="card-title-group">
-              <span class="view-kicker mono">PIPELINE</span>
+              <span class="view-kicker mono"><span class="kicker-desk">PIPELINE</span><span class="kicker-mob">05</span></span>
               <h2>From Input to Pixel</h2>
             </div>
 
@@ -1769,6 +1803,85 @@
     </button>
   </div>
 
+  <!-- FULL-SCREEN MOBILE SECTIONS MENU -->
+  <div class="mob-nav-menu" id="mobNavMenu" hidden role="dialog" aria-modal="true" aria-labelledby="mobNavTitle">
+    <div class="mob-nav-inner">
+      <div class="mob-nav-head">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <h2 id="mobNavTitle">FPS Lab · Sections</h2>
+        </div>
+        <button class="mob-nav-close" id="mobNavCloseBtn" type="button" aria-label="Close sections menu">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" aria-hidden="true">
+            <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" />
+          </svg>
+        </button>
+      </div>
+      <nav class="mob-nav-list" aria-label="Lab sections">
+        <button class="mob-nav-item active" type="button" data-mob-target="motionSection">
+          <span class="mob-nav-idx mono">01</span>
+          <span class="mob-nav-copy">
+            <span class="mob-nav-title">Motion &amp; Frame Pacing</span>
+            <span class="mob-nav-sub">30, 40, 60 FPS &amp; simulated interpolation</span>
+          </span>
+          <span class="mob-nav-arrow" aria-hidden="true">→</span>
+        </button>
+        <button class="mob-nav-item" type="button" data-mob-target="simSection">
+          <span class="mob-nav-idx mono">02</span>
+          <span class="mob-nav-copy">
+            <span class="mob-nav-title">Performance</span>
+            <span class="mob-nav-sub">Exponential NPC workload scaling</span>
+          </span>
+          <span class="mob-nav-arrow" aria-hidden="true">→</span>
+        </button>
+        <button class="mob-nav-item" type="button" data-mob-target="physicsSection">
+          <span class="mob-nav-idx mono">03</span>
+          <span class="mob-nav-copy">
+            <span class="mob-nav-title">Simulation</span>
+            <span class="mob-nav-sub">Physics update timing at 30 Hz</span>
+          </span>
+          <span class="mob-nav-arrow" aria-hidden="true">→</span>
+        </button>
+        <button class="mob-nav-item" type="button" data-mob-target="inputSection">
+          <span class="mob-nav-idx mono">04</span>
+          <span class="mob-nav-copy">
+            <span class="mob-nav-title">Latency</span>
+            <span class="mob-nav-sub">Interactive pointer delay &amp; tracking</span>
+          </span>
+          <span class="mob-nav-arrow" aria-hidden="true">→</span>
+        </button>
+        <button class="mob-nav-item" type="button" data-mob-target="pipelineSection">
+          <span class="mob-nav-idx mono">05</span>
+          <span class="mob-nav-copy">
+            <span class="mob-nav-title">Pipeline</span>
+            <span class="mob-nav-sub">CPU, GPU, V-Sync &amp; display scanout</span>
+          </span>
+          <span class="mob-nav-arrow" aria-hidden="true">→</span>
+        </button>
+        <button class="mob-nav-item" type="button" data-mob-target="timelineSection">
+          <span class="mob-nav-idx mono">06</span>
+          <span class="mob-nav-copy">
+            <span class="mob-nav-title">Refresh Map</span>
+            <span class="mob-nav-sub">100 ms refresh cycle breakdown</span>
+          </span>
+          <span class="mob-nav-arrow" aria-hidden="true">→</span>
+        </button>
+        <button class="mob-nav-item" type="button" data-mob-target="readingSection">
+          <span class="mob-nav-idx mono">07</span>
+          <span class="mob-nav-copy">
+            <span class="mob-nav-title">Further Reading</span>
+            <span class="mob-nav-sub">Articles, videos &amp; demo notes</span>
+          </span>
+          <span class="mob-nav-arrow" aria-hidden="true">→</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- FULL-VIEWPORT MOBILE BACKDROP FOR SIMULATION MORE POPUP -->
+  <div class="phys-more-backdrop" id="physMoreBackdrop" aria-hidden="true"></div>
+
   <!-- HOW THIS MODEL WORKS DIALOG -->
   <div class="model-modal" id="modelModal" hidden role="dialog" aria-modal="true" aria-labelledby="modelModalTitle">
     <div class="model-modal-backdrop" id="modelModalBackdrop"></div>
@@ -1804,10 +1917,11 @@
             <h3>2. Workload &amp; Physics Timing (01–03)</h3>
             <p><strong>Motion</strong>, <strong>Pipeline</strong>, and <strong>Refresh Map</strong> share a combined
               frame cost (<code>14.0 + (Load − 1) × 7.5 ms</code>, plus <code>+17.5 ms</code> spikes).
-              <strong>Performance</strong> scales exponentially with NPCs (<code>12.0 × 1.52^(Level − 1) ms</code>) plus
-              extra top-bar <code>Load</code>. <strong>Simulation (03)</strong> compares a fixed <code>30 Hz</code>
-              physics step against variable frame steps, refresh-locked speedups (<code>2×–4×</code>), and thin-floor
-              skipping.</p>
+              <strong>Performance (02)</strong>, <strong>Simulation (03)</strong>, and <strong>Latency (04)</strong> each
+              keep their own independent console <code>Load</code> setting (unaffected by Motion scenarios): Performance
+              scales exponentially with NPCs (<code>12.0 × 1.52^(Level − 1) ms</code>) plus optional extra
+              <code>Load</code>, while Simulation compares a fixed <code>30 Hz</code> physics step against variable
+              frame steps, refresh-locked speedups (<code>2×–4×</code>), and thin-floor skipping.</p>
           </div>
           <div class="model-assumption-item">
             <h3>3. Fixed Refresh &amp; Frame Pacing (01, 06)</h3>
@@ -1893,8 +2007,8 @@
     <span>Setup link copied to clipboard</span>
   </div>
 
-  <script defer src="app.js?v=57"></script>
-  <script defer src="ui.js?v=35"></script>
+  <script defer src="app.js?v=61"></script>
+  <script defer src="ui.js?v=37"></script>
 </body>
 
 </html>

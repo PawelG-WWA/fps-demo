@@ -104,6 +104,9 @@
     displayHz: 60,
     speed: 1,
     load: 1.0,
+    simLoad: 1.0,
+    physLoad: 1.0,
+    inputLoad: 1.0,
     simLevel: 1.0,
     spikeStartSim: -1,
     spikeStartReal: -1,
@@ -400,9 +403,29 @@
     scheduleUrlSync();
   }
 
-  function updateLoadDisplay() {
-    const onSim = isSectionVisible('simSection');
-    const onMotion = isSectionVisible('motionSection');
+  let activeSectionId = 'motionSection';
+
+  function getCurrentSectionId() {
+    if (window.fpsLabNav && typeof window.fpsLabNav.getActiveSectionId === 'function') {
+      return window.fpsLabNav.getActiveSectionId();
+    }
+    return activeSectionId;
+  }
+
+  function getLoadForSection(secId) {
+    if (secId === 'physicsSection') return state.physLoad;
+    if (secId === 'simSection') return state.simLoad;
+    if (secId === 'inputSection') return state.inputLoad;
+    return state.load;
+  }
+
+  function updateLoadDisplay(explicitSectionId = null) {
+    const secId = explicitSectionId || getCurrentSectionId();
+    const onPhys = secId === 'physicsSection';
+    const onSim = secId === 'simSection';
+    const onInput = secId === 'inputSection';
+    const onMotion = secId === 'motionSection';
+    const activeLoad = getLoadForSection(secId);
     const simUi = (onSim && typeof getSimBlastUiState === 'function')
       ? getSimBlastUiState(state.tSim)
       : { active: false, charging: 0, bursting: 0, burstMs: 0 };
@@ -412,13 +435,25 @@
     const effectiveSpikeMs = onSim
       ? Math.max(state.simSpikeMs, simUi.burstMs)
       : Math.max(state.simSpikeMs, autoMotionSpikeMs);
-    const sceneMs = getMeanSceneRenderMs(state.load, effectiveSpikeMs);
-    const tier = (state.load >= 3.0 || effectiveSpikeMs > 8) ? 'high' : (state.load >= 1.5 || effectiveSpikeMs > 1) ? 'mid' : 'low';
-    if (dom.loadPod) dom.loadPod.dataset.tier = tier;
-    if (dom.loadResetBtn) dom.loadResetBtn.hidden = state.load <= 1.01;
-    dom.loadVal.textContent = `${state.load.toFixed(1)}`;
-    dom.loadVal.className = 'load-val mono' + (state.load >= 3.0 ? ' high' : state.load >= 1.5 ? ' mid' : '');
-    dom.loadMs.textContent = `${sceneMs.toFixed(1)} ms`;
+    const extraSimMs = (activeLoad - 1.0) * 7.5 + effectiveSpikeMs;
+    const sceneMs = getMeanSceneRenderMs(activeLoad, effectiveSpikeMs);
+    const tier = (activeLoad >= 3.0 || effectiveSpikeMs > 8) ? 'high' : (activeLoad >= 1.5 || effectiveSpikeMs > 1) ? 'mid' : 'low';
+    if (dom.loadPod) {
+      dom.loadPod.dataset.tier = tier;
+      dom.loadPod.title = onPhys
+        ? 'Simulation Load (independent of Motion, Performance & Latency): drag from 1.0 (14 ms) to 5.0 (44 ms). Double-click slider to reset.'
+        : onSim
+          ? 'Performance Extra Load (independent of Motion, Simulation & Latency): adds +0.0 ms (1.0) to +30.0 ms (5.0) on top of NPC workload. Double-click slider to reset.'
+          : onInput
+            ? 'Latency Load (independent of Motion, Performance & Simulation): drag from 1.0 (14 ms) to 5.0 (44 ms). Double-click slider to reset.'
+            : 'Drag to scale GPU/CPU workload from Load level 1.0 (14 ms) to 5.0 (44 ms). Double-click slider to reset.';
+    }
+    if (dom.loadResetBtn) dom.loadResetBtn.hidden = activeLoad <= 1.01;
+    dom.loadVal.textContent = `${activeLoad.toFixed(1)}`;
+    dom.loadVal.className = 'load-val mono' + (activeLoad >= 3.0 ? ' high' : activeLoad >= 1.5 ? ' mid' : '');
+    dom.loadMs.textContent = onSim
+      ? `+${extraSimMs.toFixed(1)} ms`
+      : `${sceneMs.toFixed(1)} ms`;
     dom.loadMs.className = 'load-ms mono' + (effectiveSpikeMs > 0.5 ? ' spike' : '');
     const motionPct = Math.max(0, Math.min(100, (state.simSpikeMs / SPIKE_PEAK_MS) * 100));
     const simPct = simUi.bursting > 0.01 ? simUi.bursting * 100 : simUi.charging * 100;
@@ -427,30 +462,102 @@
     dom.explodeBtn.classList.toggle('active', state.simSpikeMs > 2.0 || simUi.bursting > 0.08);
   }
 
+  function syncLoadSliderToActiveSection(explicitSectionId = null) {
+    const secId = explicitSectionId || getCurrentSectionId();
+    const activeLoad = getLoadForSection(secId);
+    if (dom.loadSlider) {
+      const targetStr = String(activeLoad);
+      if (dom.loadSlider.value !== targetStr) {
+        dom.loadSlider.value = targetStr;
+      }
+      syncRangeFill(dom.loadSlider);
+    }
+    updateLoadDisplay(secId);
+  }
+
   function setLoad(val, fromScenario = false) {
     state.load = Math.max(1, Math.min(5, val));
     if (!fromScenario && typeof syncMotionScenarioFromLoad === 'function') {
       syncMotionScenarioFromLoad(state.load);
     }
-    updateLoadDisplay();
-    if (isSectionVisible('motionSection')) updateLaneReadouts();
-    if (isSectionVisible('simSection')) {
-      updateSimReadouts();
-      drawExpCurve();
+    const secId = getCurrentSectionId();
+    if (secId !== 'physicsSection' && secId !== 'simSection' && secId !== 'inputSection') {
+      if (dom.loadSlider) {
+        dom.loadSlider.value = String(state.load);
+        syncRangeFill(dom.loadSlider);
+      }
+      updateLoadDisplay(secId);
     }
-    if (isSectionVisible('inputSection')) updateArenaStaticStats();
+    if (isSectionVisible('motionSection')) updateLaneReadouts();
     if (isSectionVisible('timelineSection')) drawTimeline();
     if (isSectionVisible('pipelineSection')) updatePipelineView();
-    if (isSectionVisible('physicsSection') && typeof onPhysicsSettingChanged === 'function') {
+    requestCanvasRedraw();
+    scheduleUrlSync();
+  }
+
+  function setSimLoad(val) {
+    state.simLoad = Math.max(1, Math.min(5, val));
+    if (getCurrentSectionId() === 'simSection') {
+      if (dom.loadSlider) {
+        dom.loadSlider.value = String(state.simLoad);
+        syncRangeFill(dom.loadSlider);
+      }
+      updateLoadDisplay('simSection');
+    }
+    if (typeof updateSimReadouts === 'function') updateSimReadouts();
+    if (isSectionVisible('simSection') && typeof drawExpCurve === 'function') drawExpCurve();
+    requestCanvasRedraw();
+    scheduleUrlSync();
+  }
+
+  function setPhysLoad(val) {
+    state.physLoad = Math.max(1, Math.min(5, val));
+    if (getCurrentSectionId() === 'physicsSection') {
+      if (dom.loadSlider) {
+        dom.loadSlider.value = String(state.physLoad);
+        syncRangeFill(dom.loadSlider);
+      }
+      updateLoadDisplay('physicsSection');
+    }
+    if (typeof onPhysicsSettingChanged === 'function') {
       onPhysicsSettingChanged(false);
     }
     requestCanvasRedraw();
     scheduleUrlSync();
   }
 
+  function setInputLoad(val) {
+    state.inputLoad = Math.max(1, Math.min(5, val));
+    if (getCurrentSectionId() === 'inputSection') {
+      if (dom.loadSlider) {
+        dom.loadSlider.value = String(state.inputLoad);
+        syncRangeFill(dom.loadSlider);
+      }
+      updateLoadDisplay('inputSection');
+    }
+    if (typeof updateArenaStaticStats === 'function') {
+      updateArenaStaticStats();
+    }
+    requestCanvasRedraw();
+    scheduleUrlSync();
+  }
+
+  function setActiveSectionLoad(val) {
+    const secId = getCurrentSectionId();
+    if (secId === 'physicsSection') {
+      setPhysLoad(val);
+    } else if (secId === 'simSection') {
+      setSimLoad(val);
+    } else if (secId === 'inputSection') {
+      setInputLoad(val);
+    } else {
+      setLoad(val, false);
+    }
+  }
+
   function triggerExplode() {
     if (typeof markSpikeInteracted === 'function') markSpikeInteracted();
-    if (isSectionVisible('simSection') && typeof triggerSimNpcExplosion === 'function') {
+    if (getCurrentSectionId() === 'simSection' && typeof triggerSimNpcExplosion === 'function') {
       // On 02 Simulation, sync the workload spike strictly to the NPC detonation burst (0–950ms charge -> 950–2050ms blast)
       triggerSimNpcExplosion();
       updateLoadDisplay();
@@ -1041,7 +1148,7 @@
 
   function getArenaLagConfig(mode) {
     const is120 = state.displayHz === 120;
-    const load = state.load;
+    const load = state.inputLoad;
     const spikeMs = state.realSpikeMs;
     const meanDur = getMeanFrameDurMs(mode, load, spikeMs);
     const effFps = Math.min(MODE_META[mode].gameFps, 1000 / meanDur);
@@ -1139,7 +1246,7 @@
       const tTick = tick * dispPeriod;
 
       if (mode === 'interp') {
-        const srcPeriod = getMeanFrameDurMs('interp', state.load);
+        const srcPeriod = getMeanFrameDurMs('interp', state.inputLoad);
         const delayedT = tNow - cfg.pipelineDelayMs;
         const kIdx = Math.floor(delayedT / srcPeriod);
         const tK0 = kIdx * srcPeriod;
@@ -1169,7 +1276,7 @@
           arena.targetX = tp.x;
           arena.targetY = tp.y;
 
-          const dur = Math.max(gamePeriod, getRenderTimeMs(mode, state.load, arena.frameSeq, state.realSpikeMs));
+          const dur = Math.max(gamePeriod, getRenderTimeMs(mode, state.inputLoad, arena.frameSeq, state.realSpikeMs));
           arena.nextFrameReadyTime += dur;
           if (arena.nextFrameReadyTime < tTick) {
             arena.nextFrameReadyTime = tTick + dur;
@@ -1522,14 +1629,14 @@
   dom.loadSlider.addEventListener('input', (e) => {
     if (typeof markLoadInteracted === 'function') markLoadInteracted();
     syncRangeFill(dom.loadSlider);
-    setLoad(parseFloat(e.target.value));
+    setActiveSectionLoad(parseFloat(e.target.value));
   });
 
   dom.loadSlider.addEventListener('dblclick', () => {
     if (typeof markLoadInteracted === 'function') markLoadInteracted();
     dom.loadSlider.value = '1';
     syncRangeFill(dom.loadSlider);
-    setLoad(1.0);
+    setActiveSectionLoad(1.0);
   });
 
   if (dom.loadResetBtn) {
@@ -1537,7 +1644,26 @@
       if (typeof markLoadInteracted === 'function') markLoadInteracted();
       dom.loadSlider.value = '1';
       syncRangeFill(dom.loadSlider);
-      setLoad(1.0);
+      setActiveSectionLoad(1.0);
+    });
+  }
+
+  window.addEventListener('fpslab:section-changed', (e) => {
+    const nextId = e && e.detail && e.detail.id ? e.detail.id : null;
+    if (nextId) activeSectionId = nextId;
+    syncLoadSliderToActiveSection(nextId);
+  });
+
+  const mobConsoleToggleEl = document.getElementById('mobileConsoleToggle');
+  if (mobConsoleToggleEl) {
+    mobConsoleToggleEl.addEventListener('change', () => {
+      if (mobConsoleToggleEl.checked) syncLoadSliderToActiveSection();
+    });
+  }
+  const deskConsoleToggleEl = document.getElementById('desktopConsoleToggle');
+  if (deskConsoleToggleEl) {
+    deskConsoleToggleEl.addEventListener('click', () => {
+      syncLoadSliderToActiveSection();
     });
   }
 
@@ -1859,20 +1985,20 @@
     return Math.min(SIM_MAX_NPCS, Math.max(8, Math.round(8 * Math.pow(2.236, level - 1))));
   }
 
-  // Extra GPU/CPU cost from the top-bar Load level slider (0 ms at 1.0 → +30 ms at 5.0)
+  // Extra GPU/CPU cost from the Performance console Load level slider (0 ms at 1.0 → +30 ms at 5.0)
   function getTopBarExtraLoadMs() {
-    return (state.load - 1.0) * 7.5;
+    return (state.simLoad - 1.0) * 7.5;
   }
 
-  // Exponential frame cost + top-bar Load level + Explode spike
+  // Exponential frame cost + Performance console Load level + Explode spike
   function getSimMeanRenderMs(level, spikeMs = 0) {
     return 12.0 * Math.pow(1.52, level - 1) + getTopBarExtraLoadMs() + spikeMs;
   }
 
   function getSimRenderTimeMs(level, frameSeq, spikeMs = 0) {
     const base = 12.0 * Math.pow(1.52, level - 1) + getTopBarExtraLoadMs();
-    if (level <= 1.01 && state.load <= 1.001 && spikeMs <= 0.01) return base;
-    const varAmp = Math.min(0.07, Math.max(0, (Math.max(level, state.load) - 1) * 0.03));
+    if (level <= 1.01 && state.simLoad <= 1.001 && spikeMs <= 0.01) return base;
+    const varAmp = Math.min(0.07, Math.max(0, (Math.max(level, state.simLoad) - 1) * 0.03));
     const wave = 0.65 * Math.sin(frameSeq * 1.73) + 0.35 * Math.cos(frameSeq * 0.61);
     return base * (1 + varAmp * wave) + spikeMs;
   }
@@ -2394,7 +2520,7 @@
       dom.simScenarioLvlTxt.textContent = `LEVEL ${nearestLvl}`;
       dom.simScenarioTitle.textContent = sc.title;
       dom.simScenarioDesc.textContent = extraTop > 0.5
-        ? `${sc.desc} (+${extraTop.toFixed(1)} ms added from top-bar Load ${state.load.toFixed(1)}.)`
+        ? `${sc.desc} (+${extraTop.toFixed(1)} ms added from console Load ${state.simLoad.toFixed(1)}.)`
         : sc.desc;
       if (dom.simImpactTag) {
         dom.simImpactTag.textContent = cost > 33.3
@@ -3552,10 +3678,6 @@
       // Fire first periodic spike almost immediately so user sees 60/40 hitch vs 30 absorb right away
       motionAutoSpikeAnchorMs = state.tSim - 60;
     }
-    if (dom.loadSlider) {
-      dom.loadSlider.value = String(sc.load);
-      syncRangeFill(dom.loadSlider);
-    }
     setLoad(sc.load, true);
   }
 
@@ -4103,15 +4225,15 @@
   function getPhysRenderFrameSec(ch, displayHz, envMode) {
     const refreshPeriodMs = 1000 / displayHz;
     if (envMode === 4) {
-      // Lightweight 30 FPS game running unlocked on 60/120 Hz hardware: renders in ~6.5 ms at Load 1.0 -> 2x at 60 Hz, 4x at 120 Hz, slows down under Load
-      const renderMs = 6.5 + (state.load - 1.0) * 8.5 + state.simSpikeMs;
+      // Lightweight 30 FPS game running unlocked on 60/120 Hz hardware: renders in ~6.5 ms at Load 1.0 -> 2x at 60 Hz, 4x at 120 Hz, slows down under Simulation Load
+      const renderMs = 6.5 + (state.physLoad - 1.0) * 8.5 + state.simSpikeMs;
       const ticksHeld = Math.max(1, Math.ceil(renderMs / refreshPeriodMs));
       return (ticksHeld * refreshPeriodMs) / 1000;
     }
-    let renderMs = getRenderTimeMs('60', state.load, ch.frameSeq, state.simSpikeMs);
+    let renderMs = getRenderTimeMs('60', state.physLoad, ch.frameSeq, state.simSpikeMs);
     if (envMode === 3) {
       // Env 3 (Bad Variable Δt): alternate clean high-FPS jumps (overshoot) with hitched jumps (65–90 ms drops that fall into the gap!)
-      const isHitchJump = (ch.totalJumps % 2 === 1) || state.load > 1.25;
+      const isHitchJump = (ch.totalJumps % 2 === 1) || state.physLoad > 1.25;
       if (isHitchJump) {
         const phase = ch.frameSeq % 9;
         if (phase === 2 || phase === 6) {
@@ -4615,13 +4737,36 @@
   }
 
   let physMoreOpen = false;
+  const physMoreHome = physEls.morePane ? physEls.morePane.parentElement : null;
+
+  function syncPhysMorePortal() {
+    if (!physEls.morePane || !physMoreHome) return;
+    const isMobile = window.innerWidth <= 820;
+    if (isMobile) {
+      if (physEls.morePane.parentElement !== document.body) {
+        document.body.appendChild(physEls.morePane);
+      }
+      physEls.morePane.setAttribute('aria-modal', 'true');
+    } else {
+      if (physEls.morePane.parentElement !== physMoreHome) {
+        physMoreHome.insertBefore(physEls.morePane, physMoreHome.firstChild);
+      }
+      physEls.morePane.setAttribute('aria-modal', 'false');
+    }
+  }
+
+  syncPhysMorePortal();
+  window.addEventListener('resize', syncPhysMorePortal, { passive: true });
+
   function setPhysMoreOpen(open) {
     const next = !!open;
     if (physMoreOpen === next && physEls.morePane && physEls.morePane.classList.contains('is-open') === next) {
       return;
     }
+    syncPhysMorePortal();
     physMoreOpen = next;
     if (physEls.morePane) {
+      if (next) void physEls.morePane.offsetWidth;
       physEls.morePane.classList.toggle('is-open', next);
       physEls.morePane.setAttribute('aria-hidden', next ? 'false' : 'true');
     }
@@ -4750,6 +4895,15 @@
     }
     if (Math.abs(state.load - 1.0) >= 0.05) {
       params.set('load', state.load.toFixed(1));
+    }
+    if (Math.abs(state.simLoad - 1.0) >= 0.05) {
+      params.set('simload', state.simLoad.toFixed(1));
+    }
+    if (Math.abs(state.physLoad - 1.0) >= 0.05) {
+      params.set('physload', state.physLoad.toFixed(1));
+    }
+    if (Math.abs(state.inputLoad - 1.0) >= 0.05) {
+      params.set('inputload', state.inputLoad.toFixed(1));
     }
     if (activeMotionScenario !== 1) {
       params.set('scenario', String(activeMotionScenario));
@@ -4896,7 +5050,7 @@
   function applySharedUrlParams() {
     const params = new URLSearchParams(window.location.search);
     const result = { explicitHz: false };
-    const shareKeys = ['section', 'hz', 'speed', 'load', 'scenario', 'sim', 'phys', 'view', 'vel', 'truepos', 'artifacts', 'arena', 'ghost', 'hidecursor', 'pipe', 'paused'];
+    const shareKeys = ['section', 'hz', 'speed', 'load', 'simload', 'physload', 'inputload', 'scenario', 'sim', 'phys', 'view', 'vel', 'truepos', 'artifacts', 'arena', 'ghost', 'hidecursor', 'pipe', 'paused'];
     const hasAnyShareParam = shareKeys.some((k) => params.has(k));
 
     isApplyingUrlParams = true;
@@ -4935,19 +5089,60 @@
         }
       }
 
+      const sectionParamEarly = params.get('section');
+      const physParamEarly = params.get('phys');
+      const simParamEarly = params.get('sim');
+      const isLegacyPhysLoadLink = (sectionParamEarly === 'simulation' || sectionParamEarly === 'physics' || (sectionParamEarly === null && physParamEarly !== null))
+        && params.get('physload') === null
+        && scenarioParam === null;
+      const isLegacySimLoadLink = (sectionParamEarly === 'performance' || sectionParamEarly === 'perf' || sectionParamEarly === 'sim' || (sectionParamEarly === null && simParamEarly !== null && physParamEarly === null))
+        && params.get('simload') === null
+        && scenarioParam === null;
+      const isLegacyInputLoadLink = sectionParamEarly === 'input'
+        && params.get('inputload') === null
+        && scenarioParam === null;
+
       const loadParam = params.get('load');
       if (loadParam !== null) {
         const loadVal = parseFloat(loadParam);
         if (Number.isFinite(loadVal) && loadVal >= 1.0 && loadVal <= 5.0) {
-          const scObj = parsedScenario ? MOTION_SCENARIOS[parsedScenario - 1] : null;
-          const matchesScenarioLoad = scObj && Math.abs(loadVal - scObj.load) < 0.05;
-          if (!matchesScenarioLoad) {
-            if (dom.loadSlider) {
-              dom.loadSlider.value = String(loadVal);
-              syncRangeFill(dom.loadSlider);
+          if (isLegacyPhysLoadLink) {
+            setPhysLoad(loadVal);
+          } else if (isLegacySimLoadLink) {
+            setSimLoad(loadVal);
+          } else if (isLegacyInputLoadLink) {
+            setInputLoad(loadVal);
+          } else {
+            const scObj = parsedScenario ? MOTION_SCENARIOS[parsedScenario - 1] : null;
+            const matchesScenarioLoad = scObj && Math.abs(loadVal - scObj.load) < 0.05;
+            if (!matchesScenarioLoad) {
+              setLoad(loadVal, false);
             }
-            setLoad(loadVal, false);
           }
+        }
+      }
+
+      const simLoadParam = params.get('simload');
+      if (simLoadParam !== null) {
+        const simLoadVal = parseFloat(simLoadParam);
+        if (Number.isFinite(simLoadVal) && simLoadVal >= 1.0 && simLoadVal <= 5.0) {
+          setSimLoad(simLoadVal);
+        }
+      }
+
+      const physLoadParam = params.get('physload');
+      if (physLoadParam !== null) {
+        const physLoadVal = parseFloat(physLoadParam);
+        if (Number.isFinite(physLoadVal) && physLoadVal >= 1.0 && physLoadVal <= 5.0) {
+          setPhysLoad(physLoadVal);
+        }
+      }
+
+      const inputLoadParam = params.get('inputload');
+      if (inputLoadParam !== null) {
+        const inputLoadVal = parseFloat(inputLoadParam);
+        if (Number.isFinite(inputLoadVal) && inputLoadVal >= 1.0 && inputLoadVal <= 5.0) {
+          setInputLoad(inputLoadVal);
         }
       }
 

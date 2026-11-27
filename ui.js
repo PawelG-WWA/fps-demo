@@ -82,12 +82,62 @@
     }
   }
 
+  const mobMenuBtn = document.getElementById('mobMenuBtn');
+  const mobNavMenu = document.getElementById('mobNavMenu');
+  const mobNavCloseBtn = document.getElementById('mobNavCloseBtn');
+  const mobNavItems = Array.from(document.querySelectorAll('.mob-nav-item[data-mob-target]'));
+  const mobileConsoleToggle = document.getElementById('mobileConsoleToggle');
+
+  function persistHintFlag(flag) {
+    if (window.fpsLabHints && typeof window.fpsLabHints.mark === 'function') {
+      window.fpsLabHints.mark(flag);
+      return;
+    }
+    const flags = new Set();
+    const match = document.cookie.match(/(?:^|;\s*)fps_lab_hints=([^;]*)/);
+    if (match && match[1]) {
+      match[1].split(',').forEach((f) => {
+        const clean = f.trim();
+        if (clean) flags.add(clean);
+      });
+    }
+    flags.add(flag);
+    document.cookie = `fps_lab_hints=${Array.from(flags).join(',')}; path=/; max-age=31536000; SameSite=Lax`;
+  }
+
+  function markMobMenuSeen() {
+    if (document.documentElement.classList.contains('is-mob-menu-seen')) return;
+    document.documentElement.classList.add('is-mob-menu-seen');
+    persistHintFlag('mobmenu');
+  }
+
+  function syncMobNavActive(activeId) {
+    mobNavItems.forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.mobTarget === activeId);
+    });
+  }
+
+  function setMobMenuOpen(open) {
+    if (!mobNavMenu || !mobMenuBtn) return;
+    const next = !!open;
+    mobNavMenu.hidden = !next;
+    mobMenuBtn.setAttribute('aria-expanded', String(next));
+    if (next) {
+      markMobMenuSeen();
+      if (mobileConsoleToggle && mobileConsoleToggle.checked) {
+        mobileConsoleToggle.checked = false;
+      }
+      syncMobNavActive(getActiveSectionId());
+    }
+  }
+
   function setActiveIndicators(idx) {
     const prevIdx = activeIndex;
     activeIndex = idx;
     const activeId = slides[idx] ? slides[idx].id : '';
     stepPills.forEach((el) => el.classList.toggle('active', el.dataset.target === activeId));
     railDots.forEach((el) => el.classList.toggle('active', el.dataset.target === activeId));
+    syncMobNavActive(activeId);
     if (idx > 0) {
       document.documentElement.classList.add('has-scrolled-once');
     }
@@ -100,14 +150,14 @@
     }
   }
 
-  function getActiveSectionId() {
+  function getActiveSectionIndex() {
     if (!isStackedLayout()) {
-      return slides[activeIndex] ? slides[activeIndex].id : 'motionSection';
+      return activeIndex;
     }
     const midY = window.innerHeight * 0.42;
-    let bestId = slides[0] ? slides[0].id : 'motionSection';
+    let bestIdx = 0;
     let bestDist = Infinity;
-    slides.forEach((slide) => {
+    slides.forEach((slide, idx) => {
       const rect = slide.getBoundingClientRect();
       if (rect.height <= 0) return;
       const dist = rect.top <= midY && rect.bottom >= midY
@@ -115,10 +165,15 @@
         : Math.min(Math.abs(rect.top - midY), Math.abs(rect.bottom - midY));
       if (dist < bestDist) {
         bestDist = dist;
-        bestId = slide.id;
+        bestIdx = idx;
       }
     });
-    return bestId;
+    return bestIdx;
+  }
+
+  function getActiveSectionId() {
+    const idx = getActiveSectionIndex();
+    return slides[idx] ? slides[idx].id : 'motionSection';
   }
 
   window.fpsLabNav = {
@@ -148,6 +203,10 @@
           inner.style.transform = '';
         }
       });
+      const curMobIdx = getActiveSectionIndex();
+      if (curMobIdx !== activeIndex) {
+        setActiveIndicators(curMobIdx);
+      }
       return;
     }
 
@@ -485,6 +544,35 @@
       handleDirectionalNavigation(1);
     });
   }
+
+  if (mobMenuBtn) {
+    mobMenuBtn.addEventListener('click', () => {
+      const isOpen = mobNavMenu && !mobNavMenu.hidden;
+      setMobMenuOpen(!isOpen);
+    });
+  }
+
+  if (mobNavCloseBtn) {
+    mobNavCloseBtn.addEventListener('click', () => {
+      setMobMenuOpen(false);
+    });
+  }
+
+  mobNavItems.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.mobTarget;
+      setMobMenuOpen(false);
+      if (targetId) {
+        navigateToTarget(targetId, false);
+      }
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobNavMenu && !mobNavMenu.hidden) {
+      setMobMenuOpen(false);
+    }
+  });
 
   const desktopConsoleToggle = document.getElementById('desktopConsoleToggle');
   const desktopConsoleCloseBtn = document.getElementById('desktopConsoleCloseBtn');
