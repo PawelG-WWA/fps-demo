@@ -343,9 +343,9 @@
       }
     }
   </style>
-  <link rel="preload" href="styles.css?v=82" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="preload" href="styles.css?v=83" as="style" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
-    <link rel="stylesheet" href="styles.css?v=82">
+    <link rel="stylesheet" href="styles.css?v=83">
   </noscript>
 </head>
 
@@ -460,8 +460,8 @@
 
         <span class="mob-bar-sep" aria-hidden="true"></span>
 
-        <label for="mobileConsoleToggle" class="mob-console-btn" role="button" aria-label="Toggle simulation controls"
-          title="Simulation controls (Refresh, Speed, Load, Share)">
+        <label for="mobileConsoleToggle" class="mob-console-btn" id="mobConsoleBtn" data-load-tier="low" role="button"
+          aria-label="Toggle simulation controls" title="Simulation controls (Refresh, Speed, Load, Share)">
           <svg class="mob-console-sliders" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="2.5" y1="5" x2="13.5" y2="5" />
@@ -518,6 +518,7 @@
               <circle cx="8" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
             </svg>
             <span class="load-pod-lbl">Load</span>
+            <span class="load-scope-tag mono" id="loadScopeTag" hidden></span>
           </label>
           <div class="load-slider-wrap">
             <input type="range" id="loadSlider" min="1" max="5" step="0.1" value="1" aria-label="Scene Load level" />
@@ -578,8 +579,12 @@
 
       <!-- DESKTOP BOOKMARK TAB TO OPEN CONSOLE -->
       <button class="desktop-console-tab" id="desktopConsoleToggle" type="button" aria-expanded="false"
-        aria-controls="desktopControlPane" title="Open simulation controls">
-        <span class="console-tab-lbl">Open Console</span>
+        aria-controls="desktopControlPane" title="Open simulation controls" data-tier="low">
+        <span class="console-tab-lbl">Console</span>
+        <span class="console-tab-load mono" id="deskConsoleLoadChip">
+          <span class="console-tab-dot" aria-hidden="true"></span>
+          <span id="deskConsoleLoadTxt">Load 1.0</span>
+        </span>
         <svg class="console-tab-chev" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3.5 5.25L7 8.75l3.5-3.5" />
@@ -906,7 +911,7 @@
               <div class="sim-curve-title-row">
                 <div class="card-title-group">
                   <span class="view-kicker">02</span>
-                  <h2>Performance Level</h2>
+                  <h2><span class="lbl-wide">Performance Level</span><span class="lbl-compact" aria-hidden="true">Performance</span></h2>
                 </div>
                 <div class="segmented sim-view-switch" role="group" aria-label="Performance view detail level">
                   <button class="seg-btn active" type="button" data-sim-view-btn="simplified"
@@ -914,9 +919,24 @@
                   <button class="seg-btn" type="button" data-sim-view-btn="detailed"
                     id="btnSimDetailed">Detailed</button>
                 </div>
+                <button class="sec-load-btn sec-load-sim" type="button" data-open-load-console="sim" data-tier="low"
+                  title="Open Console Load slider (adds extra GPU/CPU cost across all sections)">
+                  <span class="sec-load-prefix">Extra Console Load</span>
+                  <span class="sec-load-pill-body">
+                    <svg class="sec-load-ico" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor"
+                      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M2.5 12a6 6 0 1 1 11 0" />
+                      <path d="M8 10l2.8-3.6" />
+                      <circle cx="8" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
+                    </svg>
+                    <span class="sec-load-lbl">Load</span>
+                    <span class="sec-load-val mono" data-sec-load-val="sim">1.0</span>
+                    <span class="sec-load-ms mono" data-sec-load-ms="sim">+0.0 ms</span>
+                  </span>
+                </button>
               </div>
-              <p class="sim-curve-sub">Starts at a 12.0 ms baseline and scales with NPC count (top-bar Load adds extra
-                cost).</p>
+              <p class="sim-curve-sub">Starts at a 12.0 ms baseline and scales with NPC count (Console Load adds +0 to
+                +30 ms).</p>
             </div>
 
             <!-- SIMPLIFIED WORKLOAD LEVEL SELECTOR (SIMPLIFIED VIEW ONLY) -->
@@ -1035,6 +1055,18 @@
               <span class="view-kicker">03</span>
               <h2>Physics Update Timing</h2>
             </div>
+            <button class="sec-load-btn" type="button" data-open-load-console="phys" data-tier="low"
+              title="Open Console Load slider to test frame drops across all sections">
+              <svg class="sec-load-ico" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor"
+                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2.5 12a6 6 0 1 1 11 0" />
+                <path d="M8 10l2.8-3.6" />
+                <circle cx="8" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+              <span class="sec-load-lbl">Load</span>
+              <span class="sec-load-val mono" data-sec-load-val="phys">1.0</span>
+              <span class="sec-load-ms mono" data-sec-load-ms="phys">14.0 ms</span>
+            </button>
           </div>
 
           <div class="phys-body">
@@ -1202,9 +1234,23 @@
         <!-- SEPARATED TOP INTERACTIVE BAR -->
         <div class="latency-card latency-top-card">
           <div class="card-head">
-            <div class="card-title-group">
-              <span class="view-kicker">04</span>
-              <h2>Input Latency &amp; Tracking</h2>
+            <div class="latency-head-main">
+              <div class="card-title-group">
+                <span class="view-kicker">04</span>
+                <h2>Input Latency &amp; Tracking</h2>
+              </div>
+              <button class="sec-load-btn" type="button" data-open-load-console="input" data-tier="low"
+                title="Open Console Load slider to test input lag under load across all sections">
+                <svg class="sec-load-ico" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2.5 12a6 6 0 1 1 11 0" />
+                  <path d="M8 10l2.8-3.6" />
+                  <circle cx="8" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
+                </svg>
+                <span class="sec-load-lbl">Load</span>
+                <span class="sec-load-val mono" data-sec-load-val="input">1.0</span>
+                <span class="sec-load-ms mono" data-sec-load-ms="input">14.0 ms</span>
+              </button>
             </div>
 
             <div class="arena-checks">
@@ -1917,11 +1963,12 @@
             <h3>2. Workload &amp; Physics Timing (01–03)</h3>
             <p><strong>Motion</strong>, <strong>Pipeline</strong>, and <strong>Refresh Map</strong> share a combined
               frame cost (<code>14.0 + (Load − 1) × 7.5 ms</code>, plus <code>+17.5 ms</code> spikes).
-              <strong>Performance (02)</strong>, <strong>Simulation (03)</strong>, and <strong>Latency (04)</strong> each
-              keep their own independent console <code>Load</code> setting (unaffected by Motion scenarios): Performance
-              scales exponentially with NPCs (<code>12.0 × 1.52^(Level − 1) ms</code>) plus optional extra
-              <code>Load</code>, while Simulation compares a fixed <code>30 Hz</code> physics step against variable
-              frame steps, refresh-locked speedups (<code>2×–4×</code>), and thin-floor skipping.</p>
+              <strong>Motion (01)</strong> scenarios adjust <code>Load</code> locally for Motion only (refreshing back to
+              <code>1.0</code> on other sections). When you open the <strong>Console</strong> and explicitly set the
+              <code>Load</code> slider, all sections inherit it globally: <strong>Performance (02)</strong> adds it on top
+              of exponential NPC cost (<code>12.0 × 1.52^(Level − 1) ms</code>), <strong>Simulation (03)</strong> uses it
+              to test fixed vs. variable <code>30 Hz</code> physics under frame drops, and <strong>Latency (04)</strong>,
+              <strong>Pipeline (05)</strong>, and <strong>Refresh Map (06)</strong> scale accordingly.</p>
           </div>
           <div class="model-assumption-item">
             <h3>3. Fixed Refresh &amp; Frame Pacing (01, 06)</h3>
@@ -2007,8 +2054,13 @@
     <span>Setup link copied to clipboard</span>
   </div>
 
-  <script defer src="app.js?v=61"></script>
-  <script defer src="ui.js?v=37"></script>
+  <div class="load-status-toast" id="loadStatusToast" role="status" aria-live="polite" data-tone="info" hidden>
+    <span class="load-toast-dot" aria-hidden="true"></span>
+    <span class="load-toast-txt" id="loadStatusToastTxt"></span>
+  </div>
+
+  <script defer src="app.js?v=62"></script>
+  <script defer src="ui.js?v=38"></script>
 </body>
 
 </html>

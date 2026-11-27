@@ -17,6 +17,7 @@
 
   let activeIndex = (isFirstVisitLocked() && pipelineIdx >= 0) ? pipelineIdx : 0;
   let rafPending = false;
+  let lastStackedSectionId = null;
 
   // Smooth programmatic view glide state
   let animRafId = null;
@@ -146,6 +147,7 @@
       markScrollHintDone();
     }
     if (prevIdx !== idx && activeId) {
+      lastStackedSectionId = activeId;
       window.dispatchEvent(new CustomEvent('fpslab:section-changed', { detail: { id: activeId } }));
     }
   }
@@ -388,7 +390,6 @@
 
   // Handle manual scrollbar drag: settle cleanly to nearest slide when drag stops
   let scrollEndTimer = null;
-  let lastStackedSectionId = null;
   scroller.addEventListener('scroll', () => {
     scheduleUpdate();
     if (isStackedLayout() && !isFirstVisitLocked()) {
@@ -576,11 +577,14 @@
 
   const desktopConsoleToggle = document.getElementById('desktopConsoleToggle');
   const desktopConsoleCloseBtn = document.getElementById('desktopConsoleCloseBtn');
+  const setDesktopConsoleOpen = (open) => {
+    const next = !!open;
+    document.documentElement.classList.toggle('is-console-open', next);
+    if (desktopConsoleToggle) {
+      desktopConsoleToggle.setAttribute('aria-expanded', String(next));
+    }
+  };
   if (desktopConsoleToggle) {
-    const setDesktopConsoleOpen = (open) => {
-      document.documentElement.classList.toggle('is-console-open', open);
-      desktopConsoleToggle.setAttribute('aria-expanded', String(open));
-    };
     desktopConsoleToggle.addEventListener('click', () => {
       setDesktopConsoleOpen(true);
     });
@@ -590,6 +594,28 @@
       });
     }
   }
+
+  window.fpsLabConsole = {
+    open() {
+      if (window.innerWidth <= 820) {
+        if (mobNavMenu && !mobNavMenu.hidden) {
+          setMobMenuOpen(false);
+        }
+        if (mobileConsoleToggle && !mobileConsoleToggle.checked) {
+          mobileConsoleToggle.checked = true;
+          mobileConsoleToggle.dispatchEvent(new Event('change'));
+        }
+      } else {
+        setDesktopConsoleOpen(true);
+      }
+    },
+    isOpen() {
+      if (window.innerWidth <= 820) {
+        return !!(mobileConsoleToggle && mobileConsoleToggle.checked);
+      }
+      return document.documentElement.classList.contains('is-console-open');
+    }
+  };
 
   const initialPendingSection = window.__fpsLabPendingSection || null;
   if (initialPendingSection) {
