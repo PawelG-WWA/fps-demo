@@ -12,24 +12,32 @@
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#eef0f4" />
 
-  <!-- Replace https://example.com/ with your live domain when deploying -->
-  <link rel="canonical" href="https://example.com/" />
+  <link rel="canonical" href="https://fpsexplained.com/" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 
-  <!-- Open Graph / Social Sharing -->
+  <!-- Open Graph / Social Sharing (Facebook, LinkedIn, Discord, Slack, fallback for X) -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="FPS &amp; Refresh Rate Lab" />
+  <meta property="og:url" content="https://fpsexplained.com/" />
   <meta property="og:title" content="FPS &amp; Refresh Rate Lab — 30 vs 40 vs 60 FPS &amp; Motion Interpolation" />
   <meta property="og:description"
     content="See and feel the difference between 30 FPS, 40 FPS, 60 FPS, and motion smoothing on 60Hz vs 120Hz displays, including input lag, load spikes, and the full frame pipeline." />
-  <meta property="og:url" content="https://example.com/" />
+  <meta property="og:image" content="https://fpsexplained.com/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt"
+    content="FPS &amp; Refresh Rate Lab — Compare 30, 40 &amp; 60 FPS and motion interpolation across 60Hz vs 120Hz displays" />
   <meta property="og:locale" content="en_US" />
 
-  <!-- Twitter / X Card -->
-  <meta name="twitter:card" content="summary" />
+  <!-- X / Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="FPS &amp; Refresh Rate Lab — 30 vs 40 vs 60 FPS &amp; Motion Interpolation" />
   <meta name="twitter:description"
     content="Interactive demo of 30, 40, and 60 FPS frame pacing, 60Hz vs 120Hz refresh cadence, motion interpolation lag, workload spikes, and the CPU-to-display pipeline." />
+  <meta name="twitter:image" content="https://fpsexplained.com/og-image.png" />
+  <meta name="twitter:image:alt"
+    content="FPS &amp; Refresh Rate Lab — Compare 30, 40 &amp; 60 FPS and motion interpolation across 60Hz vs 120Hz displays" />
 
   <!-- Structured Data (JSON-LD) -->
   <script type="application/ld+json">
@@ -39,7 +47,7 @@
       {
         "@type": "WebApplication",
         "name": "FPS & Refresh Rate Lab",
-        "url": "https://example.com/",
+        "url": "https://fpsexplained.com/",
         "description": "Interactive web laboratory demonstrating 30 FPS, 40 FPS, 60 FPS, and motion interpolation across 60Hz and 120Hz displays, including frame pacing, exponential workload scaling, input latency, and the CPU-to-display pipeline.",
         "applicationCategory": "EducationalApplication",
         "operatingSystem": "Any",
